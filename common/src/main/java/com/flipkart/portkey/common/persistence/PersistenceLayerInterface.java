@@ -7,33 +7,41 @@ import java.util.List;
 import java.util.Map;
 
 import com.flipkart.portkey.common.entity.Entity;
+import com.flipkart.portkey.common.enumeration.DataStore;
 
 /**
  * @author santosh.p
  */
 public interface PersistenceLayerInterface
 {
-	public int insert(Entity bean);
 
-	public List<Entity> getBySql(String sql, Map<String, Object> whereClauseMap, boolean readMaster);
+	public Result insert(Entity bean);
 
-	public List<Entity> getBySql(String sql, Map<String, Object> whereClauseMap);
+	public Result insert(Entity bean, boolean generateShardId);
 
-	public List<Entity> getByWhereClauseMap(Class<? extends Entity> clazz, Map<String, Object> whereClauseMap,
-	        boolean readMaster);
+	public Result update(Entity bean);
 
-	public List<Entity> getByWhereClauseMap(Map<String, Object> whereClauseMap);
+	public Result update(Class<? extends Entity> clazz, Map<String, Object> updateValuesMap,
+	        Map<String, Object> criteria);
 
-	public List<Entity> getByPrimaryKey(Entity bean, boolean readMaster);
+	public Result delete(Class<? extends Entity> clazz, Map<String, Object> criteria);
 
-	public List<Entity> getByPrimaryKey(Entity bean);
+	public List<Entity> getByCriteria(Class<? extends Entity> clazz, Map<String, Object> criteria);
 
-	public int updateByPrimaryKey(Entity bean);
+	// TODO: fix the order of parameters
+	public List<Entity> getByCriteria(Map<DataStore, Map<String, Object>> dataStoreToCriteriaMap,
+	        Class<? extends Entity> clazz);
 
-	public int updateBySql(String sql, Map<String, Object> mapValues);
+	public List<Entity> getByCriteria(Class<? extends Entity> clazz, List<String> attributeNames,
+	        Map<String, Object> criteria);
 
-	public int deleteByWhereClauseMap(Map<String, Object> whereClauseMap);
+	public List<Entity> getBySql(Class<? extends Entity> clazz, String sql, Map<String, Object> criteria);
 
-	public int deleteByPrimaryKey(Entity bean);
+	public List<Map<String, Object>> getBySql(String sql, Map<String, Object> criteria);
+
+	public List<Entity> getBySql(Class<? extends Entity> clazz, Map<DataStore, String> sqlMap,
+	        Map<String, Object> criteria);
+
+	public List<Map<String, Object>> getBySql(Map<DataStore, String> sqlMap, Map<String, Object> criteria);
 
 }

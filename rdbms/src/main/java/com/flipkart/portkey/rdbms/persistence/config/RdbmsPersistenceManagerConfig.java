@@ -1,7 +1,7 @@
 /**
  * 
  */
-package com.flipkart.portkey.rdbms.persistencemanager.config;
+package com.flipkart.portkey.rdbms.persistence.config;
 
 import java.util.List;
 

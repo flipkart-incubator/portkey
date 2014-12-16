@@ -8,6 +8,7 @@ import java.util.Map;
 
 import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.common.enumeration.ShardStatus;
+import com.flipkart.portkey.common.exception.PortKeyException;
 
 /**
  * @author santosh.p
@@ -16,27 +17,36 @@ public interface PersistenceManager
 {
 	public ShardStatus healthCheck();
 
-	public int insert(Entity bean);
+	public int insert(Entity bean) throws PortKeyException;
 
-	public List<Entity> getBySql(String sql, Map<String, Object> whereClauseMap, boolean readMaster);
+	public int update(Entity bean) throws PortKeyException;
 
-	public List<Entity> getBySql(String sql, Map<String, Object> whereClauseMap);
+	public int update(Class<? extends Entity> clazz, Map<String, Object> updateValuesMap, Map<String, Object> criteria)
+	        throws PortKeyException;
 
-	public List<Entity> getByWhereClauseMap(Class<? extends Entity> clazz, Map<String, Object> whereClauseMap,
-	        boolean readMaster);
+	public int delete(Class<? extends Entity> clazz, Map<String, Object> criteria) throws PortKeyException;
 
-	public List<Entity> getByWhereClauseMap(Map<String, Object> whereClauseMap);
+	public List<? extends Entity> getByCriteria(Class<? extends Entity> clazz, Map<String, Object> criteria)
+	        throws PortKeyException;
 
-	public List<Entity> getByPrimaryKey(Entity bean, boolean readMaster);
+	public List<? extends Entity> getByCriteria(Class<? extends Entity> clazz, Map<String, Object> criteria,
+	        boolean readMaster) throws PortKeyException;
 
-	public List<Entity> getByPrimaryKey(Entity bean);
+	public List<? extends Entity> getByCriteria(Class<? extends Entity> clazz, List<String> attributeNames,
+	        Map<String, Object> criteria) throws PortKeyException;
 
-	public int updateByPrimaryKey(Entity bean);
+	public List<? extends Entity> getByCriteria(Class<? extends Entity> clazz, List<String> attributeNames,
+	        Map<String, Object> criteria, boolean readMaster) throws PortKeyException;
 
-	public int updateBySql(String sql, Map<String, Object> mapValues);
+	public List<? extends Entity> getBySql(Class<? extends Entity> clazz, String sql, Map<String, Object> criteria)
+	        throws PortKeyException;
 
-	public int deleteByWhereClauseMap(Map<String, Object> whereClauseMap);
+	public List<? extends Entity> getBySql(Class<? extends Entity> clazz, String sql, Map<String, Object> criteria,
+	        boolean readMaster) throws PortKeyException;
 
-	public int deleteByPrimaryKey(Entity bean);
+	public List<Map<String, Object>> getBySql(String sql, Map<String, Object> criteria) throws PortKeyException;
+
+	public List<Map<String, Object>> getBySql(String sql, Map<String, Object> criteria, boolean readMaster)
+	        throws PortKeyException;
 
 }

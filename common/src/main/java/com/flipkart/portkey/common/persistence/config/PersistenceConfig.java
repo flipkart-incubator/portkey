@@ -13,15 +13,16 @@ import com.flipkart.portkey.common.entity.persistence.EntityPersistencePreferenc
  */
 public class PersistenceConfig
 {
-	private Map<Entity, EntityPersistencePreference> persistenceConfig;
+	private Map<Class<? extends Entity>, EntityPersistencePreference> persistenceConfig;
 
-	public Map<Entity, EntityPersistencePreference> getPersistenceConfig()
+	public Map<Class<? extends Entity>, EntityPersistencePreference> getPersistenceConfig()
 	{
 		return persistenceConfig;
 	}
 
-	public void setPersistenceConfig(Map<Entity, EntityPersistencePreference> persistenceConfig)
+	public void setPersistenceConfig(Map<Class<? extends Entity>, EntityPersistencePreference> persistenceConfig)
 	{
 		this.persistenceConfig = persistenceConfig;
 	}
+	// public void addToPersistenceonfig()
 }

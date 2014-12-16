@@ -12,26 +12,15 @@ import com.flipkart.portkey.common.enumeration.DataStore;
  */
 public class EntityPersistenceReadConfig
 {
-	private List<DataStore> readOrderForKey;
-	private List<DataStore> readOrderForNonKey;
+	private List<DataStore> readOrder;
 
-	public List<DataStore> getReadOrderForKey()
+	public List<DataStore> getReadOrder()
 	{
-		return readOrderForKey;
+		return readOrder;
 	}
 
-	public void setReadOrderForKey(List<DataStore> readOrderForKey)
+	public void setReadOrder(List<DataStore> readOrder)
 	{
-		this.readOrderForKey = readOrderForKey;
-	}
-
-	public List<DataStore> getReadOrderForNonKey()
-	{
-		return readOrderForNonKey;
-	}
-
-	public void setReadOrderForNonKey(List<DataStore> readOrderForNonKey)
-	{
-		this.readOrderForNonKey = readOrderForNonKey;
+		this.readOrder = readOrder;
 	}
 }

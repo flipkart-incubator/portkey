@@ -10,5 +10,7 @@ import java.util.List;
  */
 public interface ShardIdentifier
 {
-	public String getShardFromShardKey(String key, List<String> liveShards);
+	public String generateShardId(String shardKey, List<String> liveShards);
+
+	public String getShardId(String shardKey);
 }
