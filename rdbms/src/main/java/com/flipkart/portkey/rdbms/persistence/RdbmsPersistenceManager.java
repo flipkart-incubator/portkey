@@ -143,7 +143,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	 * (non-Javadoc)
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#insert(com.flipkart.portkey.common.entity.Entity)
 	 */
-	public int insert(Entity bean)
+	public <T extends Entity> int insert(T bean)
 	{
 		RdbmsTableMetaData metaData = RdbmsMetaDataCache.getMetaData(bean.getClass());
 		String insertQuery = RdbmsQueryBuilder.getInstance().getInsertQuery(metaData);
@@ -156,7 +156,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	 * (non-Javadoc)
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#update(com.flipkart.portkey.common.entity.Entity)
 	 */
-	public int update(Entity bean)
+	public <T extends Entity> int update(T bean)
 	{
 		RdbmsTableMetaData metaData = RdbmsMetaDataCache.getMetaData(bean.getClass());
 		String updateQuery = RdbmsQueryBuilder.getInstance().getUpdateByPkQuery(metaData);
@@ -170,7 +170,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#update(java.lang.Class, java.util.Map,
 	 * java.util.Map)
 	 */
-	public int update(Class<? extends Entity> clazz, Map<String, Object> updateAttributesToValuesMap,
+	public <T extends Entity> int update(Class<T> clazz, Map<String, Object> updateAttributesToValuesMap,
 	        Map<String, Object> criteria)
 	{
 		RdbmsTableMetaData tableMetaData = RdbmsMetaDataCache.getMetaData(clazz);
@@ -185,7 +185,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	 * (non-Javadoc)
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#delete(java.lang.Class, java.util.Map)
 	 */
-	public int delete(Class<? extends Entity> clazz, Map<String, Object> criteria)
+	public <T extends Entity> int delete(Class<T> clazz, Map<String, Object> criteria)
 	{
 		RdbmsTableMetaData tableMetaData = RdbmsMetaDataCache.getMetaData(clazz);
 		String deleteQuery = RdbmsQueryBuilder.getInstance().getDeleteByCriteriaQuery(tableMetaData, criteria);
@@ -197,14 +197,14 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	 * (non-Javadoc)
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#getByCriteria(java.lang.Class, java.util.Map)
 	 */
-	public List<? extends Entity> getByCriteria(Class<? extends Entity> clazz, Map<String, Object> criteria,
-	        boolean readMaster) throws PortKeyException
+	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, Map<String, Object> criteria, boolean readMaster)
+	        throws PortKeyException
 	{
 		RdbmsTableMetaData tableMetaData = RdbmsMetaDataCache.getMetaData(clazz);
 		String updateQuery = RdbmsQueryBuilder.getInstance().getGetByCriteriaQuery(tableMetaData, criteria);
-		RdbmsMapper<? extends Entity> mapper = RdbmsMapper.getInstance(clazz);
+		RdbmsMapper<T> mapper = RdbmsMapper.getInstance(clazz);
 		JdbcTemplate temp;
-		List<? extends Entity> result;
+		List<T> result;
 		if (readMaster)
 		{
 			temp = new JdbcTemplate(master);
@@ -252,7 +252,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#getByCriteria(java.lang.Class, java.util.Map,
 	 * boolean)
 	 */
-	public List<? extends Entity> getByCriteria(Class<? extends Entity> clazz, Map<String, Object> criteria)
+	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, Map<String, Object> criteria)
 	        throws PortKeyException
 	{
 		return getByCriteria(clazz, criteria, false);
@@ -263,15 +263,15 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#getByCriteria(java.lang.Class, java.util.List,
 	 * java.util.Map)
 	 */
-	public List<? extends Entity> getByCriteria(Class<? extends Entity> clazz, List<String> attributeNames,
+	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, List<String> attributeNames,
 	        Map<String, Object> criteria, boolean readMaster) throws PortKeyException
 	{
 		RdbmsTableMetaData tableMetaData = RdbmsMetaDataCache.getMetaData(clazz);
 		String getQuery =
 		        RdbmsQueryBuilder.getInstance().getGetByCriteriaQuery(tableMetaData, attributeNames, criteria);
-		RdbmsMapper<? extends Entity> mapper = RdbmsMapper.getInstance(clazz);
+		RdbmsMapper<T> mapper = RdbmsMapper.getInstance(clazz);
 		JdbcTemplate temp;
-		List<? extends Entity> result;
+		List<T> result;
 		if (readMaster)
 		{
 			temp = new JdbcTemplate(master);
@@ -319,7 +319,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#getByCriteria(java.lang.Class, java.util.List,
 	 * java.util.Map, boolean)
 	 */
-	public List<? extends Entity> getByCriteria(Class<? extends Entity> clazz, List<String> attributeNames,
+	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, List<String> attributeNames,
 	        Map<String, Object> criteria) throws PortKeyException
 	{
 		return getByCriteria(clazz, attributeNames, criteria, false);
@@ -330,12 +330,12 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#getBySql(java.lang.Class, java.lang.String,
 	 * java.util.Map)
 	 */
-	public List<? extends Entity> getBySql(Class<? extends Entity> clazz, String sql, Map<String, Object> criteria,
+	public <T extends Entity> List<T> getBySql(Class<T> clazz, String sql, Map<String, Object> criteria,
 	        boolean readMaster) throws PortKeyException
 	{
-		RdbmsMapper<? extends Entity> mapper = RdbmsMapper.getInstance(clazz);
+		RdbmsMapper<T> mapper = RdbmsMapper.getInstance(clazz);
 		JdbcTemplate temp;
-		List<? extends Entity> result;
+		List<T> result;
 		if (readMaster)
 		{
 			temp = new JdbcTemplate(master);
@@ -383,7 +383,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#getBySql(java.lang.Class, java.lang.String,
 	 * java.util.Map, boolean)
 	 */
-	public List<? extends Entity> getBySql(Class<? extends Entity> clazz, String sql, Map<String, Object> criteria)
+	public <T extends Entity> List<T> getBySql(Class<T> clazz, String sql, Map<String, Object> criteria)
 	        throws PortKeyException
 	{
 		return getBySql(clazz, sql, criteria, false);

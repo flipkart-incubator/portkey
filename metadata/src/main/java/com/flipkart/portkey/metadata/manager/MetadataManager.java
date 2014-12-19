@@ -9,7 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.flipkart.portkey.common.entity.Entity;
-import com.flipkart.portkey.common.enumeration.DataStore;
+import com.flipkart.portkey.common.enumeration.DataStoreType;
 import com.flipkart.portkey.metadata.annotation.RdbmsField;
 import com.flipkart.portkey.metadata.annotation.RdbmsTable;
 import com.flipkart.portkey.metadata.annotation.RedisField;
@@ -22,12 +22,12 @@ import com.flipkart.portkey.metadata.datastore.RedisTableMetaData;
  */
 public class MetadataManager
 {
-	private Map<Class<? extends Entity>, Map<DataStore, RdbmsTableMetaData>> rdbmsTableMetaDataMap;
-	private Map<Class<? extends Entity>, Map<DataStore, RedisTableMetaData>> redisTableMetaDataMap;
+	private Map<Class<? extends Entity>, Map<DataStoreType, RdbmsTableMetaData>> rdbmsTableMetaDataMap;
+	private Map<Class<? extends Entity>, Map<DataStoreType, RedisTableMetaData>> redisTableMetaDataMap;
 
-	public RdbmsTableMetaData getRdbmsMetaData(Class<? extends Entity> clazz, DataStore dataStore, Entity bean)
+	public RdbmsTableMetaData getRdbmsMetaData(Class<? extends Entity> clazz, DataStoreType dataStore, Entity bean)
 	{
-		Map<DataStore, RdbmsTableMetaData> metaData = rdbmsTableMetaDataMap.get(clazz);
+		Map<DataStoreType, RdbmsTableMetaData> metaData = rdbmsTableMetaDataMap.get(clazz);
 		if (metaData == null)
 		{
 			initializeMetaDataMapsForClass(clazz);
@@ -41,9 +41,9 @@ public class MetadataManager
 		return rdbmsMetaData;
 	}
 
-	public RedisTableMetaData getRedisMetaData(Class<? extends Entity> clazz, DataStore dataStore, Entity bean)
+	public RedisTableMetaData getRedisMetaData(Class<? extends Entity> clazz, DataStoreType dataStore, Entity bean)
 	{
-		Map<DataStore, RedisTableMetaData> metaData = redisTableMetaDataMap.get(clazz);
+		Map<DataStoreType, RedisTableMetaData> metaData = redisTableMetaDataMap.get(clazz);
 		if (metaData == null)
 		{
 			initializeMetaDataMapsForClass(clazz);
@@ -59,10 +59,10 @@ public class MetadataManager
 
 	private void initializeMetaDataMapsForClass(Class<? extends Entity> clazz)
 	{
-		Map<DataStore, RdbmsTableMetaData> rdbmsMetaDataMap = new HashMap<DataStore, RdbmsTableMetaData>();
+		Map<DataStoreType, RdbmsTableMetaData> rdbmsMetaDataMap = new HashMap<DataStoreType, RdbmsTableMetaData>();
 		rdbmsTableMetaDataMap.put(clazz, rdbmsMetaDataMap);
 
-		Map<DataStore, RedisTableMetaData> redisMetaDataMap = new HashMap<DataStore, RedisTableMetaData>();
+		Map<DataStoreType, RedisTableMetaData> redisMetaDataMap = new HashMap<DataStoreType, RedisTableMetaData>();
 		redisTableMetaDataMap.put(clazz, redisMetaDataMap);
 	}
 
@@ -128,7 +128,7 @@ public class MetadataManager
 				}
 			}
 		}
-		rdbmsTableMetaDataMap.get(clazz).put(DataStore.RDBMS, rdbmsTableMetaData);
-		redisTableMetaDataMap.get(clazz).put(DataStore.REDIS, redisTableMetaData);
+		rdbmsTableMetaDataMap.get(clazz).put(DataStoreType.RDBMS, rdbmsTableMetaData);
+		redisTableMetaDataMap.get(clazz).put(DataStoreType.REDIS, redisTableMetaData);
 	}
 }

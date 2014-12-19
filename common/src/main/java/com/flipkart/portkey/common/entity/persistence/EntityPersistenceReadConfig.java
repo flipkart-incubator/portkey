@@ -5,21 +5,21 @@ package com.flipkart.portkey.common.entity.persistence;
 
 import java.util.List;
 
-import com.flipkart.portkey.common.enumeration.DataStore;
+import com.flipkart.portkey.common.enumeration.DataStoreType;
 
 /**
  * @author santosh.p
  */
 public class EntityPersistenceReadConfig
 {
-	private List<DataStore> readOrder;
+	private List<DataStoreType> readOrder;
 
-	public List<DataStore> getReadOrder()
+	public List<DataStoreType> getReadOrder()
 	{
 		return readOrder;
 	}
 
-	public void setReadOrder(List<DataStore> readOrder)
+	public void setReadOrder(List<DataStoreType> readOrder)
 	{
 		this.readOrder = readOrder;
 	}

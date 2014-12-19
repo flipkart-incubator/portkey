@@ -13,13 +13,14 @@ import java.util.regex.Pattern;
 
 import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.common.exception.PortKeyException;
+import com.flipkart.portkey.common.metadata.MetaDataCache;
 import com.flipkart.portkey.redis.metadata.annotation.RedisDataStore;
 import com.flipkart.portkey.redis.metadata.annotation.RedisField;
 
 /**
  * @author santosh.p
  */
-public class RedisMetaDataCache
+public class RedisMetaDataCache implements MetaDataCache
 {
 	private static Map<Class<? extends Entity>, RedisMetaData> entityToMetaDataMap;
 
@@ -41,7 +42,7 @@ public class RedisMetaDataCache
 	 * @return
 	 * @throws PortKeyException
 	 */
-	private static String getReplacementValueForKeyWord(String keyword, Class<? extends Entity> clazz)
+	private static <T extends Entity> String getReplacementValueForKeyWord(String keyword, Class<T> clazz)
 	        throws PortKeyException
 	{
 		if (keyword.equalsIgnoreCase("CLASS"))
@@ -51,7 +52,7 @@ public class RedisMetaDataCache
 		throw new PortKeyException("Unrecognized keyword");
 	}
 
-	private static String parseKeyPattern(String keyPattern, Class<? extends Entity> clazz) throws PortKeyException
+	private static <T extends Entity> String parseKeyPattern(String keyPattern, Class<T> clazz) throws PortKeyException
 	{
 		String key;
 		key = keyPattern;
@@ -74,7 +75,7 @@ public class RedisMetaDataCache
 	 * @param bean
 	 * @throws PortKeyException
 	 */
-	private static void addMetaDataToCache(Class<? extends Entity> clazz) throws PortKeyException
+	private static <T extends Entity> void addMetaDataToCache(Class<T> clazz) throws PortKeyException
 	{
 		// metadata specific to redis
 		RedisMetaData redisMetaData = new RedisMetaData();
@@ -113,5 +114,14 @@ public class RedisMetaDataCache
 			}
 		}
 		entityToMetaDataMap.put(clazz, redisMetaData);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.flipkart.portkey.common.metadata.MetaDataCache#getShardKey(java.lang.Class)
+	 */
+	public <T extends Entity> String getShardKey(Class<T> clazz) throws PortKeyException
+	{
+		return getMetaData(clazz).getShardKey();
 	}
 }

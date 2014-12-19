@@ -5,7 +5,7 @@ package com.flipkart.portkey.common.entity.persistence;
 
 import java.util.List;
 
-import com.flipkart.portkey.common.enumeration.DataStore;
+import com.flipkart.portkey.common.enumeration.DataStoreType;
 import com.flipkart.portkey.common.enumeration.FailureAction;
 
 /**
@@ -13,15 +13,15 @@ import com.flipkart.portkey.common.enumeration.FailureAction;
  */
 public class EntityPersistenceWriteConfig
 {
-	private List<DataStore> writeOrder;
+	private List<DataStoreType> writeOrder;
 	private FailureAction failureAction;
 
-	public List<DataStore> getWriteOrder()
+	public List<DataStoreType> getWriteOrder()
 	{
 		return writeOrder;
 	}
 
-	public void setWriteOrder(List<DataStore> writeOrder)
+	public void setWriteOrder(List<DataStoreType> writeOrder)
 	{
 		this.writeOrder = writeOrder;
 	}

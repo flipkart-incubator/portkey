@@ -101,6 +101,7 @@ public class RedisPersistenceManager implements PersistenceManager
 	 * (non-Javadoc)
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#healthCheck()
 	 */
+	@Override
 	public ShardStatus healthCheck()
 	{
 		Jedis conn = cm.getConnection();
@@ -118,8 +119,10 @@ public class RedisPersistenceManager implements PersistenceManager
 	 * (non-Javadoc)
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#insert(com.flipkart.portkey.common.entity.Entity)
 	 */
-	public int insert(Entity bean) throws PortKeyException
+	@Override
+	public <T extends Entity> int insert(T bean) throws PortKeyException
 	{
+		// TODO: Instead of bean.getClass(), identify class using T
 		RedisMetaData metaData = RedisMetaDataCache.getMetaData(bean.getClass());
 		List<String> keys = keyParser.parsePrimaryKeyPattern(bean, metaData);
 
@@ -182,7 +185,8 @@ public class RedisPersistenceManager implements PersistenceManager
 	 * (non-Javadoc)
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#update(com.flipkart.portkey.common.entity.Entity)
 	 */
-	public int update(Entity bean) throws PortKeyException
+	@Override
+	public <T extends Entity> int update(T bean) throws PortKeyException
 	{
 		// TODO: check if following line is compatible
 		return insert(bean);
@@ -193,13 +197,14 @@ public class RedisPersistenceManager implements PersistenceManager
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#update(java.lang.Class, java.util.Map,
 	 * java.util.Map)
 	 */
-	public int update(Class<? extends Entity> clazz, Map<String, Object> updateValuesMap, Map<String, Object> criteria)
-	        throws PortKeyException
+	@Override
+	public <T extends Entity> int update(Class<T> clazz, Map<String, Object> updateValuesMap,
+	        Map<String, Object> criteria) throws PortKeyException
 	{
 		throw new PortKeyException("Method not supported for redis implementation");
 	}
 
-	private void deleteAllSecondaryKeys(Entity bean) throws PortKeyException
+	private <T extends Entity> void deleteAllSecondaryKeys(T bean) throws PortKeyException
 	{
 		RedisMetaData metaData = RedisMetaDataCache.getMetaData(bean.getClass());
 		List<String> secondaryKeys = keyParser.parseSecondaryKeyPatterns(bean, metaData);
@@ -211,7 +216,7 @@ public class RedisPersistenceManager implements PersistenceManager
 	}
 
 	// TODO: make sure the hashset gets deleted when last pojo in it gets deleted
-	private void deletePrimaryKey(Entity bean) throws PortKeyException
+	private <T extends Entity> void deletePrimaryKey(T bean) throws PortKeyException
 	{
 		RedisMetaData metaData = RedisMetaDataCache.getMetaData(bean.getClass());
 		List<String> primaryKeys = keyParser.parsePrimaryKeyPattern(bean, metaData);
@@ -233,10 +238,12 @@ public class RedisPersistenceManager implements PersistenceManager
 	 * (non-Javadoc)
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#delete(java.lang.Class, java.util.Map)
 	 */
-	public int delete(Class<? extends Entity> clazz, Map<String, Object> criteria) throws PortKeyException
+	@Override
+	public <T extends Entity> int delete(Class<T> clazz, Map<String, Object> criteria) throws PortKeyException
 	{
-		List<? extends Entity> beans = getByCriteria(clazz, criteria, true);
-		Entity bean = beans.get(0);
+		// TODO: check if secondary key exists, if not just delete primary key
+		List<T> beans = getByCriteria(clazz, criteria, true);
+		T bean = beans.get(0);
 		if (bean == null)
 		{
 			return 1;
@@ -250,16 +257,17 @@ public class RedisPersistenceManager implements PersistenceManager
 	 * (non-Javadoc)
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#getByCriteria(java.lang.Class, java.util.Map)
 	 */
-	public List<? extends Entity> getByCriteria(Class<? extends Entity> clazz, Map<String, Object> criteria)
+	@Override
+	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, Map<String, Object> criteria)
 	        throws PortKeyException
 	{
 		return getByCriteria(clazz, criteria, false);
 	}
 
-	private Entity getEntityFromPrimaryKeyAttributes(Class<? extends Entity> clazz, Map<String, Object> criteria,
+	private <T extends Entity> T getEntityFromPrimaryKeyAttributes(Class<T> clazz, Map<String, Object> criteria,
 	        RedisMetaData metaData) throws PortKeyException
 	{
-		Entity bean;
+		T bean;
 		List<String> keys;
 		String value;
 		Jedis conn = cm.getConnection();
@@ -295,10 +303,10 @@ public class RedisPersistenceManager implements PersistenceManager
 		return bean;
 	}
 
-	private Entity getEntityFromSecondaryKeyAttributes(Class<? extends Entity> clazz, Map<String, Object> criteria,
+	private <T extends Entity> T getEntityFromSecondaryKeyAttributes(Class<T> clazz, Map<String, Object> criteria,
 	        RedisMetaData metaData) throws PortKeyException
 	{
-		Entity bean;
+		T bean;
 		String key;
 		String primaryKey;
 		String value;
@@ -343,14 +351,15 @@ public class RedisPersistenceManager implements PersistenceManager
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#getByCriteria(java.lang.Class, java.util.Map,
 	 * boolean)
 	 */
-	public List<? extends Entity> getByCriteria(Class<? extends Entity> clazz, Map<String, Object> criteria,
-	        boolean readMaster) throws PortKeyException
+	@Override
+	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, Map<String, Object> criteria, boolean readMaster)
+	        throws PortKeyException
 	{
-		List<Entity> retVal = new ArrayList<Entity>();
+		List<T> retVal = new ArrayList<T>();
 		RedisMetaData metaData = RedisMetaDataCache.getMetaData(clazz);
 		Set<String> criteriaAttributes = criteria.keySet();
 		Set<String> primaryKeyAttributes = new HashSet<String>(metaData.getPrimaryKeyAttributes());
-		Entity bean;
+		T bean;
 		if (criteriaAttributes.equals(primaryKeyAttributes))
 		{
 			bean = getEntityFromPrimaryKeyAttributes(clazz, criteria, metaData);
@@ -376,7 +385,8 @@ public class RedisPersistenceManager implements PersistenceManager
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#getByCriteria(java.lang.Class, java.util.List,
 	 * java.util.Map)
 	 */
-	public List<? extends Entity> getByCriteria(Class<? extends Entity> clazz, List<String> attributeNames,
+	@Override
+	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, List<String> attributeNames,
 	        Map<String, Object> criteria) throws PortKeyException
 	{
 		return getByCriteria(clazz, attributeNames, criteria, false);
@@ -387,7 +397,8 @@ public class RedisPersistenceManager implements PersistenceManager
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#getByCriteria(java.lang.Class, java.util.List,
 	 * java.util.Map, boolean)
 	 */
-	public List<? extends Entity> getByCriteria(Class<? extends Entity> clazz, List<String> attributeNames,
+	@Override
+	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, List<String> attributeNames,
 	        Map<String, Object> criteria, boolean readMaster) throws PortKeyException
 	{
 		return getByCriteria(clazz, criteria, readMaster);
@@ -398,7 +409,8 @@ public class RedisPersistenceManager implements PersistenceManager
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#getBySql(java.lang.Class, java.lang.String,
 	 * java.util.Map)
 	 */
-	public List<? extends Entity> getBySql(Class<? extends Entity> clazz, String sql, Map<String, Object> criteria)
+	@Override
+	public <T extends Entity> List<T> getBySql(Class<T> clazz, String sql, Map<String, Object> criteria)
 	        throws PortKeyException
 	{
 		throw new PortKeyException("Method not supported for redis implementation");
@@ -409,7 +421,8 @@ public class RedisPersistenceManager implements PersistenceManager
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#getBySql(java.lang.Class, java.lang.String,
 	 * java.util.Map, boolean)
 	 */
-	public List<? extends Entity> getBySql(Class<? extends Entity> clazz, String sql, Map<String, Object> criteria,
+	@Override
+	public <T extends Entity> List<T> getBySql(Class<T> clazz, String sql, Map<String, Object> criteria,
 	        boolean readMaster) throws PortKeyException
 	{
 		throw new PortKeyException("Method not supported for redis implementation");
@@ -419,6 +432,7 @@ public class RedisPersistenceManager implements PersistenceManager
 	 * (non-Javadoc)
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#getBySql(java.lang.String, java.util.Map)
 	 */
+	@Override
 	public List<Map<String, Object>> getBySql(String sql, Map<String, Object> criteria) throws PortKeyException
 	{
 		throw new PortKeyException("Method not supported for redis implementation");

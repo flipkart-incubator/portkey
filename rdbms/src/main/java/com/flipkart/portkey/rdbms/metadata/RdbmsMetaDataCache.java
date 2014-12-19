@@ -7,17 +7,18 @@ import java.lang.reflect.Field;
 import java.util.Map;
 
 import com.flipkart.portkey.common.entity.Entity;
+import com.flipkart.portkey.common.metadata.MetaDataCache;
 import com.flipkart.portkey.rdbms.metadata.annotation.RdbmsField;
 import com.flipkart.portkey.rdbms.metadata.annotation.RdbmsTable;
 
 /**
  * @author santosh.p
  */
-public class RdbmsMetaDataCache
+public class RdbmsMetaDataCache implements MetaDataCache
 {
 	private static Map<Class<? extends Entity>, RdbmsTableMetaData> entityToMetaDataMap;
 
-	public static RdbmsTableMetaData getMetaData(Class<? extends Entity> clazz)
+	public static <T extends Entity> RdbmsTableMetaData getMetaData(Class<T> clazz)
 	{
 		RdbmsTableMetaData metaData = entityToMetaDataMap.get(clazz);
 		if (metaData == null)
@@ -32,7 +33,7 @@ public class RdbmsMetaDataCache
 	 * @param clazz
 	 * @param bean
 	 */
-	private static void addMetaDataToCache(Class<? extends Entity> clazz)
+	private static <T extends Entity> void addMetaDataToCache(Class<T> clazz)
 	{
 		// metadata specific to rdbms
 		RdbmsTableMetaData rdbmsTableMetaData = new RdbmsTableMetaData();
@@ -68,5 +69,14 @@ public class RdbmsMetaDataCache
 			}
 		}
 		entityToMetaDataMap.put(clazz, rdbmsTableMetaData);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see com.flipkart.portkey.common.metadata.MetaDataCache#getShardKey(java.lang.Class)
+	 */
+	public <T extends Entity> String getShardKey(Class<T> clazz)
+	{
+		return getMetaData(clazz).getShardKey();
 	}
 }

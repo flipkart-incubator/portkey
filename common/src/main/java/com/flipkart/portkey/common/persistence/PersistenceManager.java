@@ -17,31 +17,31 @@ public interface PersistenceManager
 {
 	public ShardStatus healthCheck();
 
-	public int insert(Entity bean) throws PortKeyException;
+	public <T extends Entity> int insert(T bean) throws PortKeyException;
 
-	public int update(Entity bean) throws PortKeyException;
+	public <T extends Entity> int update(T bean) throws PortKeyException;
 
-	public int update(Class<? extends Entity> clazz, Map<String, Object> updateValuesMap, Map<String, Object> criteria)
-	        throws PortKeyException;
-
-	public int delete(Class<? extends Entity> clazz, Map<String, Object> criteria) throws PortKeyException;
-
-	public List<? extends Entity> getByCriteria(Class<? extends Entity> clazz, Map<String, Object> criteria)
-	        throws PortKeyException;
-
-	public List<? extends Entity> getByCriteria(Class<? extends Entity> clazz, Map<String, Object> criteria,
-	        boolean readMaster) throws PortKeyException;
-
-	public List<? extends Entity> getByCriteria(Class<? extends Entity> clazz, List<String> attributeNames,
+	public <T extends Entity> int update(Class<T> clazz, Map<String, Object> updateValuesMap,
 	        Map<String, Object> criteria) throws PortKeyException;
 
-	public List<? extends Entity> getByCriteria(Class<? extends Entity> clazz, List<String> attributeNames,
-	        Map<String, Object> criteria, boolean readMaster) throws PortKeyException;
+	public <T extends Entity> int delete(Class<T> clazz, Map<String, Object> criteria) throws PortKeyException;
 
-	public List<? extends Entity> getBySql(Class<? extends Entity> clazz, String sql, Map<String, Object> criteria)
+	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, Map<String, Object> criteria)
 	        throws PortKeyException;
 
-	public List<? extends Entity> getBySql(Class<? extends Entity> clazz, String sql, Map<String, Object> criteria,
+	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, Map<String, Object> criteria, boolean readMaster)
+	        throws PortKeyException;
+
+	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, List<String> attributeNames,
+	        Map<String, Object> criteria) throws PortKeyException;
+
+	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, List<String> attributeNames,
+	        Map<String, Object> criteria, boolean readMaster) throws PortKeyException;
+
+	public <T extends Entity> List<T> getBySql(Class<T> clazz, String sql, Map<String, Object> criteria)
+	        throws PortKeyException;
+
+	public <T extends Entity> List<T> getBySql(Class<T> clazz, String sql, Map<String, Object> criteria,
 	        boolean readMaster) throws PortKeyException;
 
 	public List<Map<String, Object>> getBySql(String sql, Map<String, Object> criteria) throws PortKeyException;

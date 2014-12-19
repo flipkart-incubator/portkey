@@ -15,6 +15,7 @@ import com.flipkart.portkey.redis.metadata.annotation.RedisField;
 public class RedisMetaData
 {
 	private int database;
+	private String shardKey;
 	private String primaryKeyPattern;
 	private List<String> primaryKeyAttributes;
 	private String multiLevelDataStructure = "HASH";
@@ -38,6 +39,16 @@ public class RedisMetaData
 	public void setDatabase(int database)
 	{
 		this.database = database;
+	}
+
+	public String getShardKey()
+	{
+		return shardKey;
+	}
+
+	public void setShardKey(String shardKey)
+	{
+		this.shardKey = shardKey;
 	}
 
 	public String getPrimaryKeyPattern()

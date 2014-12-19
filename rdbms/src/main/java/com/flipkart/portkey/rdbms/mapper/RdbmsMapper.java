@@ -25,6 +25,7 @@ public class RdbmsMapper<T> implements RowMapper<T>
 
 	protected RdbmsMapper(Class<T> clazz)
 	{
+		// TODO: remove this casting
 		this.clazz = (Class<Entity>) clazz;
 	}
 

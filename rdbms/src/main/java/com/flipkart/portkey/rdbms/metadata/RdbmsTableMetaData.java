@@ -16,6 +16,7 @@ public class RdbmsTableMetaData
 {
 	private String databaseName;
 	private String tableName;
+	private String shardKey;
 	private List<String> primaryKeys;
 	private List<RdbmsField> rdbmsFieldList;
 	private List<Field> fieldList;
@@ -45,6 +46,16 @@ public class RdbmsTableMetaData
 	public void setTableName(String tableName)
 	{
 		this.tableName = tableName;
+	}
+
+	public String getShardKey()
+	{
+		return shardKey;
+	}
+
+	public void setShardKey(String shardKey)
+	{
+		this.shardKey = shardKey;
 	}
 
 	public List<String> getPrimaryKeys()
