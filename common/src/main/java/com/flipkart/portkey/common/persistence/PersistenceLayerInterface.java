@@ -38,9 +38,10 @@ public interface PersistenceLayerInterface
 
 	public List<Map<String, Object>> getBySql(String sql, Map<String, Object> criteria) throws PortKeyException;
 
-	public <T extends Entity> List<Entity> getBySql(Class<T> clazz, Map<DataStoreType, String> sqlMap,
-	        Map<String, Object> criteria);
+	public <T extends Entity> List<T> getBySql(Class<T> clazz, Map<DataStoreType, String> sqlMap,
+	        Map<String, Object> criteria) throws PortKeyException;
 
-	public List<Map<String, Object>> getBySql(Map<DataStoreType, String> sqlMap, Map<String, Object> criteria);
+	public List<Map<String, Object>> getBySql(Map<DataStoreType, String> sqlMap, Map<String, Object> criteria)
+	        throws PortKeyException;
 
 }

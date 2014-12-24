@@ -11,6 +11,7 @@ import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 
 /**
+ * Connection manager for redis. Internally uses jedis pool for pooling.
  * @author santosh.p
  */
 public class ConnectionManager

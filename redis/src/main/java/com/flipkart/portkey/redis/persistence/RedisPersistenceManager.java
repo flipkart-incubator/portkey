@@ -21,7 +21,10 @@ import redis.clients.jedis.JedisPoolConfig;
 
 import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.common.enumeration.ShardStatus;
-import com.flipkart.portkey.common.exception.PortKeyException;
+import com.flipkart.portkey.common.exception.InvalidAnnotationException;
+import com.flipkart.portkey.common.exception.JsonDeserializationException;
+import com.flipkart.portkey.common.exception.JsonSerializationException;
+import com.flipkart.portkey.common.exception.MethodNotSupportedForDataStoreException;
 import com.flipkart.portkey.common.persistence.PersistenceManager;
 import com.flipkart.portkey.redis.connection.ConnectionManager;
 import com.flipkart.portkey.redis.keyparser.DefaultKeyParser;
@@ -42,6 +45,7 @@ public class RedisPersistenceManager implements PersistenceManager
 	int database = 0;
 	String password;
 	JedisPoolConfig poolConfig = null;
+	
 	ConnectionManager cm;
 	KeyParserInterface keyParser = new DefaultKeyParser();
 	RedisMapper mapper = new DefaultRedisMapper();
@@ -115,15 +119,20 @@ public class RedisPersistenceManager implements PersistenceManager
 		}
 	}
 
+	private <T extends Entity> RedisMetaData getMetaData(Class<T> clazz) throws InvalidAnnotationException
+	{
+		return RedisMetaDataCache.getInstance().getMetaData(clazz);
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#insert(com.flipkart.portkey.common.entity.Entity)
 	 */
 	@Override
-	public <T extends Entity> int insert(T bean) throws PortKeyException
+	public <T extends Entity> int insert(T bean) throws InvalidAnnotationException, JsonSerializationException
 	{
 		// TODO: Instead of bean.getClass(), identify class using T
-		RedisMetaData metaData = RedisMetaDataCache.getMetaData(bean.getClass());
+		RedisMetaData metaData = getMetaData(bean.getClass());
 		List<String> keys = keyParser.parsePrimaryKeyPattern(bean, metaData);
 
 		Jedis conn = cm.getConnection();
@@ -137,15 +146,15 @@ public class RedisPersistenceManager implements PersistenceManager
 			}
 			catch (JsonGenerationException e)
 			{
-				throw new PortKeyException("Failed to serialize bean", e);
+				throw new JsonSerializationException("Exception while trying to serialize bean " + bean + "\n" + e);
 			}
 			catch (JsonMappingException e)
 			{
-				throw new PortKeyException("Failed to serialize bean", e);
+				throw new JsonSerializationException("Exception while trying to serialize bean " + bean + "\n" + e);
 			}
 			catch (IOException e)
 			{
-				throw new PortKeyException("Failed to serialize bean", e);
+				throw new JsonSerializationException("Exception while trying to serialize bean " + bean + "\n" + e);
 			}
 			conn.set(key, serialized);
 			return 1;
@@ -161,24 +170,25 @@ public class RedisPersistenceManager implements PersistenceManager
 			}
 			catch (JsonGenerationException e)
 			{
-				throw new PortKeyException("Failed to serialize bean", e);
+				throw new JsonSerializationException("Exception while trying to serialize bean " + bean + "\n" + e);
 			}
 			catch (JsonMappingException e)
 			{
-				throw new PortKeyException("Failed to serialize bean", e);
+				throw new JsonSerializationException("Exception while trying to serialize bean " + bean + "\n" + e);
 			}
 			catch (IOException e)
 			{
-				throw new PortKeyException("Failed to serialize bean", e);
+				throw new JsonSerializationException("Exception while trying to serialize bean " + bean + "\n" + e);
 			}
 			Long retVal = conn.hset(outerKey, innerKey, serialized);
 			if (retVal == 0)
 			{
-				logger.warn("Key already exists in redis: Outer key:" + outerKey + "Inner key:" + innerKey);
+				logger.info("Key already exists in redis: Outer key:" + outerKey + "Inner key:" + innerKey);
 			}
 			return 1;
 		}
-		throw new PortKeyException("Key size more than 2 not supported.");
+		throw new InvalidAnnotationException("Exception while trying to parse keys:" + keys
+		        + "\nKey size more than 2 is not supported.");
 	}
 
 	/*
@@ -186,7 +196,7 @@ public class RedisPersistenceManager implements PersistenceManager
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#update(com.flipkart.portkey.common.entity.Entity)
 	 */
 	@Override
-	public <T extends Entity> int update(T bean) throws PortKeyException
+	public <T extends Entity> int update(T bean) throws InvalidAnnotationException, JsonSerializationException
 	{
 		// TODO: check if following line is compatible
 		return insert(bean);
@@ -199,14 +209,14 @@ public class RedisPersistenceManager implements PersistenceManager
 	 */
 	@Override
 	public <T extends Entity> int update(Class<T> clazz, Map<String, Object> updateValuesMap,
-	        Map<String, Object> criteria) throws PortKeyException
+	        Map<String, Object> criteria) throws MethodNotSupportedForDataStoreException
 	{
-		throw new PortKeyException("Method not supported for redis implementation");
+		throw new MethodNotSupportedForDataStoreException("Method not supported for redis implementation");
 	}
 
-	private <T extends Entity> void deleteAllSecondaryKeys(T bean) throws PortKeyException
+	private <T extends Entity> void deleteAllSecondaryKeys(T bean) throws InvalidAnnotationException
 	{
-		RedisMetaData metaData = RedisMetaDataCache.getMetaData(bean.getClass());
+		RedisMetaData metaData = getMetaData(bean.getClass());
 		List<String> secondaryKeys = keyParser.parseSecondaryKeyPatterns(bean, metaData);
 		Jedis conn = cm.getConnection();
 		for (String key : secondaryKeys)
@@ -216,9 +226,9 @@ public class RedisPersistenceManager implements PersistenceManager
 	}
 
 	// TODO: make sure the hashset gets deleted when last pojo in it gets deleted
-	private <T extends Entity> void deletePrimaryKey(T bean) throws PortKeyException
+	private <T extends Entity> void deletePrimaryKey(T bean) throws InvalidAnnotationException
 	{
-		RedisMetaData metaData = RedisMetaDataCache.getMetaData(bean.getClass());
+		RedisMetaData metaData = getMetaData(bean.getClass());
 		List<String> primaryKeys = keyParser.parsePrimaryKeyPattern(bean, metaData);
 		Jedis conn = cm.getConnection();
 		if (primaryKeys.size() == 1)
@@ -239,7 +249,8 @@ public class RedisPersistenceManager implements PersistenceManager
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#delete(java.lang.Class, java.util.Map)
 	 */
 	@Override
-	public <T extends Entity> int delete(Class<T> clazz, Map<String, Object> criteria) throws PortKeyException
+	public <T extends Entity> int delete(Class<T> clazz, Map<String, Object> criteria)
+	        throws InvalidAnnotationException, JsonDeserializationException
 	{
 		// TODO: check if secondary key exists, if not just delete primary key
 		List<T> beans = getByCriteria(clazz, criteria, true);
@@ -259,13 +270,13 @@ public class RedisPersistenceManager implements PersistenceManager
 	 */
 	@Override
 	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, Map<String, Object> criteria)
-	        throws PortKeyException
+	        throws InvalidAnnotationException, JsonDeserializationException
 	{
 		return getByCriteria(clazz, criteria, false);
 	}
 
 	private <T extends Entity> T getEntityFromPrimaryKeyAttributes(Class<T> clazz, Map<String, Object> criteria,
-	        RedisMetaData metaData) throws PortKeyException
+	        RedisMetaData metaData) throws JsonDeserializationException, InvalidAnnotationException
 	{
 		T bean;
 		List<String> keys;
@@ -274,15 +285,19 @@ public class RedisPersistenceManager implements PersistenceManager
 		keys = keyParser.parsePrimaryKeyPattern(criteria, metaData);
 		if (keys.size() == 1)
 		{
-			value = conn.get(keys.get(0));
+			String key = keys.get(0);
+			value = conn.get(key);
 		}
 		else if (keys.size() == 2)
 		{
-			value = conn.hget(keys.get(0), keys.get(1));
+			String key = keys.get(0);
+			String field = keys.get(1);
+			value = conn.hget(key, field);
 		}
 		else
 		{
-			throw new PortKeyException("Key size more than 2 not supported.");
+			throw new InvalidAnnotationException("Exception while trying to parse keys:" + keys
+			        + "\nKey size more than 2 is not supported.");
 		}
 		try
 		{
@@ -290,21 +305,24 @@ public class RedisPersistenceManager implements PersistenceManager
 		}
 		catch (JsonParseException e)
 		{
-			throw new PortKeyException("Failed to parse json", e);
+			throw new JsonDeserializationException("Exception while trying to deserialize value fetched from redis "
+			        + value + "\n" + e);
 		}
 		catch (JsonMappingException e)
 		{
-			throw new PortKeyException("Failed to parse json", e);
+			throw new JsonDeserializationException("Exception while trying to deserialize value fetched from redis "
+			        + value + "\n" + e);
 		}
 		catch (IOException e)
 		{
-			throw new PortKeyException("Failed to parse json", e);
+			throw new JsonDeserializationException("Exception while trying to deserialize value fetched from redis "
+			        + value + "\n" + e);
 		}
 		return bean;
 	}
 
 	private <T extends Entity> T getEntityFromSecondaryKeyAttributes(Class<T> clazz, Map<String, Object> criteria,
-	        RedisMetaData metaData) throws PortKeyException
+	        RedisMetaData metaData) throws InvalidAnnotationException, JsonDeserializationException
 	{
 		T bean;
 		String key;
@@ -325,7 +343,8 @@ public class RedisPersistenceManager implements PersistenceManager
 		}
 		else
 		{
-			throw new PortKeyException("Key size more than 2 not supported.");
+			throw new InvalidAnnotationException("Exception while trying to parse keys:" + primaryKeys
+			        + "\nKey size more than 2 is not supported.");
 		}
 		try
 		{
@@ -333,15 +352,18 @@ public class RedisPersistenceManager implements PersistenceManager
 		}
 		catch (JsonParseException e)
 		{
-			throw new PortKeyException("Failed to parse json", e);
+			throw new JsonDeserializationException("Exception while trying to deserialize value fetched from redis "
+			        + value + "\n" + e);
 		}
 		catch (JsonMappingException e)
 		{
-			throw new PortKeyException("Failed to parse json", e);
+			throw new JsonDeserializationException("Exception while trying to deserialize value fetched from redis "
+			        + value + "\n" + e);
 		}
 		catch (IOException e)
 		{
-			throw new PortKeyException("Failed to parse json", e);
+			throw new JsonDeserializationException("Exception while trying to deserialize value fetched from redis "
+			        + value + "\n" + e);
 		}
 		return bean;
 	}
@@ -353,10 +375,10 @@ public class RedisPersistenceManager implements PersistenceManager
 	 */
 	@Override
 	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, Map<String, Object> criteria, boolean readMaster)
-	        throws PortKeyException
+	        throws InvalidAnnotationException, JsonDeserializationException
 	{
 		List<T> retVal = new ArrayList<T>();
-		RedisMetaData metaData = RedisMetaDataCache.getMetaData(clazz);
+		RedisMetaData metaData = getMetaData(clazz);
 		Set<String> criteriaAttributes = criteria.keySet();
 		Set<String> primaryKeyAttributes = new HashSet<String>(metaData.getPrimaryKeyAttributes());
 		T bean;
@@ -387,7 +409,7 @@ public class RedisPersistenceManager implements PersistenceManager
 	 */
 	@Override
 	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, List<String> attributeNames,
-	        Map<String, Object> criteria) throws PortKeyException
+	        Map<String, Object> criteria) throws InvalidAnnotationException, JsonDeserializationException
 	{
 		return getByCriteria(clazz, attributeNames, criteria, false);
 	}
@@ -399,7 +421,8 @@ public class RedisPersistenceManager implements PersistenceManager
 	 */
 	@Override
 	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, List<String> attributeNames,
-	        Map<String, Object> criteria, boolean readMaster) throws PortKeyException
+	        Map<String, Object> criteria, boolean readMaster) throws InvalidAnnotationException,
+	        JsonDeserializationException
 	{
 		return getByCriteria(clazz, criteria, readMaster);
 	}
@@ -411,9 +434,10 @@ public class RedisPersistenceManager implements PersistenceManager
 	 */
 	@Override
 	public <T extends Entity> List<T> getBySql(Class<T> clazz, String sql, Map<String, Object> criteria)
-	        throws PortKeyException
+	        throws MethodNotSupportedForDataStoreException
+
 	{
-		throw new PortKeyException("Method not supported for redis implementation");
+		throw new MethodNotSupportedForDataStoreException("Method not supported for redis implementation");
 	}
 
 	/*
@@ -423,9 +447,9 @@ public class RedisPersistenceManager implements PersistenceManager
 	 */
 	@Override
 	public <T extends Entity> List<T> getBySql(Class<T> clazz, String sql, Map<String, Object> criteria,
-	        boolean readMaster) throws PortKeyException
+	        boolean readMaster) throws MethodNotSupportedForDataStoreException
 	{
-		throw new PortKeyException("Method not supported for redis implementation");
+		throw new MethodNotSupportedForDataStoreException("Method not supported for redis implementation");
 	}
 
 	/*
@@ -433,9 +457,10 @@ public class RedisPersistenceManager implements PersistenceManager
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#getBySql(java.lang.String, java.util.Map)
 	 */
 	@Override
-	public List<Map<String, Object>> getBySql(String sql, Map<String, Object> criteria) throws PortKeyException
+	public List<Map<String, Object>> getBySql(String sql, Map<String, Object> criteria)
+	        throws MethodNotSupportedForDataStoreException
 	{
-		throw new PortKeyException("Method not supported for redis implementation");
+		throw new MethodNotSupportedForDataStoreException("Method not supported for redis implementation");
 	}
 
 	/*
@@ -444,8 +469,8 @@ public class RedisPersistenceManager implements PersistenceManager
 	 * boolean)
 	 */
 	public List<Map<String, Object>> getBySql(String sql, Map<String, Object> criteria, boolean readMaster)
-	        throws PortKeyException
+	        throws MethodNotSupportedForDataStoreException
 	{
-		throw new PortKeyException("Method not supported for redis implementation");
+		throw new MethodNotSupportedForDataStoreException("Method not supported for redis implementation");
 	}
 }

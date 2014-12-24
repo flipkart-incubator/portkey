@@ -17,6 +17,8 @@ public @interface RedisField
 {
 	public String attributeName();
 
+	public boolean isShardKey();
+
 	public boolean isJson();
 
 	public boolean isJsonList();

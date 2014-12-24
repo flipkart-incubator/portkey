@@ -9,7 +9,6 @@
   <modules>
   	<module>rdbms</module>
   	<module>redis</module>
-  	<module>metadata</module>
   	<module>common</module>
   	<module>persistencelayer</module>
   </modules>

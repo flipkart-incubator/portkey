@@ -12,7 +12,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.flipkart.portkey.common.entity.Entity;
-import com.flipkart.portkey.common.exception.PortKeyException;
+import com.flipkart.portkey.common.exception.InvalidAnnotationException;
 import com.flipkart.portkey.common.metadata.MetaDataCache;
 import com.flipkart.portkey.redis.metadata.annotation.RedisDataStore;
 import com.flipkart.portkey.redis.metadata.annotation.RedisField;
@@ -22,9 +22,19 @@ import com.flipkart.portkey.redis.metadata.annotation.RedisField;
  */
 public class RedisMetaDataCache implements MetaDataCache
 {
-	private static Map<Class<? extends Entity>, RedisMetaData> entityToMetaDataMap;
+	private Map<Class<? extends Entity>, RedisMetaData> entityToMetaDataMap;
+	private static RedisMetaDataCache instance = null;
 
-	public static RedisMetaData getMetaData(Class<? extends Entity> clazz) throws PortKeyException
+	public static RedisMetaDataCache getInstance()
+	{
+		if (instance == null)
+		{
+			instance = new RedisMetaDataCache();
+		}
+		return instance;
+	}
+
+	public RedisMetaData getMetaData(Class<? extends Entity> clazz) throws InvalidAnnotationException
 	{
 		RedisMetaData metaData = entityToMetaDataMap.get(clazz);
 		if (metaData == null)
@@ -40,19 +50,20 @@ public class RedisMetaDataCache implements MetaDataCache
 	 * @param bean
 	 * @param metaData
 	 * @return
-	 * @throws PortKeyException
+	 * @throws InvalidAnnotationException
 	 */
-	private static <T extends Entity> String getReplacementValueForKeyWord(String keyword, Class<T> clazz)
-	        throws PortKeyException
+	private <T extends Entity> String getReplacementValueForKeyWord(String keyword, Class<T> clazz)
+	        throws InvalidAnnotationException
 	{
 		if (keyword.equalsIgnoreCase("CLASS"))
 		{
 			return clazz.toString();
 		}
-		throw new PortKeyException("Unrecognized keyword");
+		throw new InvalidAnnotationException("Exception while trying to parse primary key, invalid keyword:" + keyword);
 	}
 
-	private static <T extends Entity> String parseKeyPattern(String keyPattern, Class<T> clazz) throws PortKeyException
+	private <T extends Entity> String parseKeyPattern(String keyPattern, Class<T> clazz)
+	        throws InvalidAnnotationException
 	{
 		String key;
 		key = keyPattern;
@@ -73,9 +84,9 @@ public class RedisMetaDataCache implements MetaDataCache
 	/**
 	 * @param clazz
 	 * @param bean
-	 * @throws PortKeyException
+	 * @throws InvalidAnnotationException
 	 */
-	private static <T extends Entity> void addMetaDataToCache(Class<T> clazz) throws PortKeyException
+	private <T extends Entity> void addMetaDataToCache(Class<T> clazz) throws InvalidAnnotationException
 	{
 		// metadata specific to redis
 		RedisMetaData redisMetaData = new RedisMetaData();
@@ -120,7 +131,7 @@ public class RedisMetaDataCache implements MetaDataCache
 	 * (non-Javadoc)
 	 * @see com.flipkart.portkey.common.metadata.MetaDataCache#getShardKey(java.lang.Class)
 	 */
-	public <T extends Entity> String getShardKey(Class<T> clazz) throws PortKeyException
+	public <T extends Entity> String getShardKey(Class<T> clazz) throws InvalidAnnotationException
 	{
 		return getMetaData(clazz).getShardKey();
 	}

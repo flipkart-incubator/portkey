@@ -9,9 +9,11 @@ import com.flipkart.portkey.common.enumeration.DataStoreType;
 import com.flipkart.portkey.common.enumeration.FailureAction;
 
 /**
+ * Configuration for writing an entity into data stores. It includes the list of data stores to which the entity to be
+ * written, the order for writes and the action to be executed on write failure.
  * @author santosh.p
  */
-public class EntityPersistenceWriteConfig
+public class WriteConfig
 {
 	private List<DataStoreType> writeOrder;
 	private FailureAction failureAction;

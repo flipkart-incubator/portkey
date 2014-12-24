@@ -7,6 +7,7 @@ import java.lang.reflect.Field;
 import java.util.Map;
 
 import com.flipkart.portkey.common.entity.Entity;
+import com.flipkart.portkey.common.exception.InvalidAnnotationException;
 import com.flipkart.portkey.common.metadata.MetaDataCache;
 import com.flipkart.portkey.rdbms.metadata.annotation.RdbmsField;
 import com.flipkart.portkey.rdbms.metadata.annotation.RdbmsTable;
@@ -16,9 +17,24 @@ import com.flipkart.portkey.rdbms.metadata.annotation.RdbmsTable;
  */
 public class RdbmsMetaDataCache implements MetaDataCache
 {
-	private static Map<Class<? extends Entity>, RdbmsTableMetaData> entityToMetaDataMap;
+	private Map<Class<? extends Entity>, RdbmsTableMetaData> entityToMetaDataMap;
+	private static RdbmsMetaDataCache instance = null;
 
-	public static <T extends Entity> RdbmsTableMetaData getMetaData(Class<T> clazz)
+	protected RdbmsMetaDataCache()
+	{
+
+	}
+
+	public static RdbmsMetaDataCache getInstance()
+	{
+		if (instance == null)
+		{
+			instance = new RdbmsMetaDataCache();
+		}
+		return instance;
+	}
+
+	public <T extends Entity> RdbmsTableMetaData getMetaData(Class<T> clazz) throws InvalidAnnotationException
 	{
 		RdbmsTableMetaData metaData = entityToMetaDataMap.get(clazz);
 		if (metaData == null)
@@ -32,8 +48,9 @@ public class RdbmsMetaDataCache implements MetaDataCache
 	/**
 	 * @param clazz
 	 * @param bean
+	 * @throws InvalidAnnotationException
 	 */
-	private static <T extends Entity> void addMetaDataToCache(Class<T> clazz)
+	private <T extends Entity> void addMetaDataToCache(Class<T> clazz) throws InvalidAnnotationException
 	{
 		// metadata specific to rdbms
 		RdbmsTableMetaData rdbmsTableMetaData = new RdbmsTableMetaData();
@@ -45,6 +62,8 @@ public class RdbmsMetaDataCache implements MetaDataCache
 		Field[] fields = clazz.getDeclaredFields();
 		for (Field field : fields)
 		{
+			boolean shardKeyPresent = false;
+			boolean primaryKeyPresent = false;
 			RdbmsField rdbmsField = field.getAnnotation(RdbmsField.class);
 			if (rdbmsField != null)
 			{
@@ -56,7 +75,13 @@ public class RdbmsMetaDataCache implements MetaDataCache
 				rdbmsTableMetaData.addToRdbmsFieldList(rdbmsField);
 				if (rdbmsField.isPrimaryKey())
 				{
+					primaryKeyPresent = true;
 					rdbmsTableMetaData.addToPrimaryKeys(columnName);
+				}
+				if (rdbmsField.isShardKey())
+				{
+					shardKeyPresent = true;
+					rdbmsTableMetaData.setShardKey(columnName);
 				}
 				if (rdbmsField.isJson())
 				{
@@ -67,6 +92,14 @@ public class RdbmsMetaDataCache implements MetaDataCache
 					rdbmsTableMetaData.addToJsonListFields(columnName);
 				}
 			}
+			if (!primaryKeyPresent)
+			{
+				throw new InvalidAnnotationException("Primary key annotation is not set for class" + clazz);
+			}
+			if (!shardKeyPresent)
+			{
+				throw new InvalidAnnotationException("Shard key annotation is not set for class" + clazz);
+			}
 		}
 		entityToMetaDataMap.put(clazz, rdbmsTableMetaData);
 	}
@@ -75,8 +108,9 @@ public class RdbmsMetaDataCache implements MetaDataCache
 	 * (non-Javadoc)
 	 * @see com.flipkart.portkey.common.metadata.MetaDataCache#getShardKey(java.lang.Class)
 	 */
-	public <T extends Entity> String getShardKey(Class<T> clazz)
+	public <T extends Entity> String getShardKey(Class<T> clazz) throws InvalidAnnotationException
 	{
-		return getMetaData(clazz).getShardKey();
+		RdbmsTableMetaData tableMetaData = getMetaData(clazz);
+		return tableMetaData.getShardKey();
 	}
 }

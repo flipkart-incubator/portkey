@@ -8,9 +8,11 @@ import java.util.List;
 import com.flipkart.portkey.common.enumeration.DataStoreType;
 
 /**
+ * Configuration for reading an entity from data stores. It includes the list of data stores from which the entity can
+ * be read and the order for the same.
  * @author santosh.p
  */
-public class EntityPersistenceReadConfig
+public class ReadConfig
 {
 	private List<DataStoreType> readOrder;
 

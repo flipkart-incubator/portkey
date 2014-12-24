@@ -14,6 +14,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.flipkart.portkey.common.entity.Entity;
+import com.flipkart.portkey.common.exception.InvalidAnnotationException;
 import com.flipkart.portkey.common.exception.PortKeyException;
 import com.flipkart.portkey.common.helper.PortKeyHelper;
 import com.flipkart.portkey.redis.metadata.RedisMetaData;
@@ -25,11 +26,13 @@ import com.flipkart.portkey.redis.metadata.annotation.RedisField;
 public class DefaultKeyParser implements KeyParserInterface
 {
 
-	private String parseKeyPattern(String keyPattern, Entity bean, RedisMetaData metaData) throws PortKeyException
+	private String parseKeyPattern(String keyPattern, Entity bean, RedisMetaData metaData)
+	        throws InvalidAnnotationException
 	{
 		if (keyPattern == null)
 		{
-			throw new PortKeyException("Primary key pattern is null");
+			throw new InvalidAnnotationException(
+			        "Exception while trying to parse primary key, primary key pattern is null");
 		}
 		Matcher attributeMatcher = Pattern.compile("\\{(.*?)\\}").matcher(keyPattern);
 		List<String> attributes = new ArrayList<String>();
@@ -44,7 +47,8 @@ public class DefaultKeyParser implements KeyParserInterface
 			RedisField redisField = metaData.getRedisFieldFromFieldName(fieldName);
 			if (field == null)
 			{
-				throw new PortKeyException("primary key field is null");
+				throw new InvalidAnnotationException(
+				        "Exception while trying to parse primary key, primary key field is null");
 			}
 			Object value;
 			try
@@ -53,11 +57,16 @@ public class DefaultKeyParser implements KeyParserInterface
 			}
 			catch (IllegalArgumentException e)
 			{
-				throw new PortKeyException("Exception while fetching primary key value from bean", e);
+				throw new InvalidAnnotationException("Exception while trying to fetch primary key value from bean" + e);
 			}
 			catch (IllegalAccessException e)
 			{
-				throw new PortKeyException("Exception while fetching primary key value from bean", e);
+				throw new InvalidAnnotationException("Exception while trying to fetch primary key value from bean:" + e);
+			}
+			catch (NullPointerException e)
+			{
+				throw new InvalidAnnotationException(
+				        "Exception while trying to fetch primary key from bean, passed bean is null.");
 			}
 			String fieldVal;
 			if (value == null)
@@ -86,7 +95,7 @@ public class DefaultKeyParser implements KeyParserInterface
 	 * @see com.flipkart.portkey.redis.keyparser.KeyParserInterface#parseKey(java.lang.String,
 	 * com.flipkart.portkey.common.entity.Entity, com.flipkart.portkey.redis.metadata.RedisMetaData)
 	 */
-	public List<String> parsePrimaryKeyPattern(Entity bean, RedisMetaData metaData) throws PortKeyException
+	public List<String> parsePrimaryKeyPattern(Entity bean, RedisMetaData metaData) throws InvalidAnnotationException
 	{
 		String keyPattern = metaData.getPrimaryKeyPattern();
 		String key = parseKeyPattern(keyPattern, bean, metaData);
@@ -103,7 +112,8 @@ public class DefaultKeyParser implements KeyParserInterface
 	 * com.flipkart.portkey.redis.keyparser.KeyParserInterface#parseSecondaryKeyPatterns(com.flipkart.portkey.common
 	 * .entity.Entity, com.flipkart.portkey.redis.metadata.RedisMetaData)
 	 */
-	public List<String> parseSecondaryKeyPatterns(Entity bean, RedisMetaData metaData) throws PortKeyException
+	public List<String> parseSecondaryKeyPatterns(Entity bean, RedisMetaData metaData)
+	        throws InvalidAnnotationException
 	{
 		List<String> keyPatterns = metaData.getSecondaryKeyPatterns();
 		List<String> parsedKeyPatterns = new ArrayList<String>();
@@ -123,11 +133,12 @@ public class DefaultKeyParser implements KeyParserInterface
 	 * @throws PortKeyException
 	 */
 	private String parseKeyPattern(String keyPattern, Map<String, Object> attributeToValueMap, RedisMetaData metaData)
-	        throws PortKeyException
+	        throws InvalidAnnotationException
 	{
 		if (keyPattern == null)
 		{
-			throw new PortKeyException("Key pattern is null");
+			throw new InvalidAnnotationException(
+			        "Exception while trying to parse primary key, primary key pattern is null");
 		}
 		Matcher attributeMatcher = Pattern.compile("\\{(.*?)\\}").matcher(keyPattern);
 		List<String> attributes = new ArrayList<String>();
@@ -162,7 +173,7 @@ public class DefaultKeyParser implements KeyParserInterface
 	 * com.flipkart.portkey.redis.metadata.RedisMetaData)
 	 */
 	public List<String> parsePrimaryKeyPattern(Map<String, Object> attributeToValueMap, RedisMetaData metaData)
-	        throws PortKeyException
+	        throws InvalidAnnotationException
 	{
 		String keyPattern = metaData.getPrimaryKeyPattern();
 		String key = parseKeyPattern(keyPattern, attributeToValueMap, metaData);
@@ -179,7 +190,7 @@ public class DefaultKeyParser implements KeyParserInterface
 	 * com.flipkart.portkey.redis.metadata.RedisMetaData)
 	 */
 	public String parseSecondaryKeyPattern(Map<String, Object> attributeToValueMap, RedisMetaData metaData)
-	        throws PortKeyException
+	        throws InvalidAnnotationException
 	{
 		List<String> keyPatterns = metaData.getSecondaryKeyPatterns();
 		for (String keyPattern : keyPatterns)

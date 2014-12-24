@@ -4,21 +4,21 @@
 package com.flipkart.portkey.common.datastore;
 
 import java.util.List;
-import java.util.Map;
 
 import com.flipkart.portkey.common.metadata.MetaDataCache;
 import com.flipkart.portkey.common.persistence.PersistenceManager;
 
 /**
+ * An instance of DataStore represents a data store repository. e.g MySQL, Redis. One DataStore instance contains one or
+ * more shards of same data store type.
  * @author santosh.p
  */
 public interface DataStore
 {
-	public PersistenceManager getPersistenceManager(String id);
 
-	public Map<String, PersistenceManager> getIdToPersistenceManagerMap();
+	public PersistenceManager getPersistenceManager(String shardId);
 
-	public List<PersistenceManager> getPersistenceManagers();
+	public List<String> getShardIds();
 
 	public MetaDataCache getMetaDataCache();
 }

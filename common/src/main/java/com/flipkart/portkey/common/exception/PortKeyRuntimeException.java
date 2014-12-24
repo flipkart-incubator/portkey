@@ -6,25 +6,26 @@ package com.flipkart.portkey.common.exception;
 /**
  * @author santosh.p
  */
-public class PortKeyException extends Exception
+public class PortKeyRuntimeException extends RuntimeException
 {
 
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -3252837916636659705L;
+	private static final long serialVersionUID = 6407840193521312456L;
 
 	/**
 	 * 
 	 */
-	public PortKeyException()
+	public PortKeyRuntimeException()
 	{
+		super();
 	}
 
 	/**
 	 * @param message
 	 */
-	public PortKeyException(String message)
+	public PortKeyRuntimeException(String message)
 	{
 		super(message);
 	}
@@ -32,7 +33,7 @@ public class PortKeyException extends Exception
 	/**
 	 * @param cause
 	 */
-	public PortKeyException(Throwable cause)
+	public PortKeyRuntimeException(Throwable cause)
 	{
 		super(cause);
 	}
@@ -41,7 +42,7 @@ public class PortKeyException extends Exception
 	 * @param message
 	 * @param cause
 	 */
-	public PortKeyException(String message, Throwable cause)
+	public PortKeyRuntimeException(String message, Throwable cause)
 	{
 		super(message, cause);
 	}
@@ -52,9 +53,9 @@ public class PortKeyException extends Exception
 	 * @param enableSuppression
 	 * @param writableStackTrace
 	 */
-	public PortKeyException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace)
+	public PortKeyRuntimeException(String message, Throwable cause, boolean enableSuppression,
+	        boolean writableStackTrace)
 	{
 		super(message, cause, enableSuppression, writableStackTrace);
 	}
-
 }

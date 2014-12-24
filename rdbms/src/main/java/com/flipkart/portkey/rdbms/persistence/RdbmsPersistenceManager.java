@@ -11,12 +11,14 @@ import java.util.Map;
 import javax.sql.DataSource;
 
 import org.apache.log4j.Logger;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.common.enumeration.ShardStatus;
-import com.flipkart.portkey.common.exception.PortKeyException;
+import com.flipkart.portkey.common.exception.InvalidAnnotationException;
+import com.flipkart.portkey.common.exception.ShardNotAvailableException;
 import com.flipkart.portkey.common.helper.PortKeyHelper;
 import com.flipkart.portkey.common.persistence.PersistenceManager;
 import com.flipkart.portkey.rdbms.mapper.RdbmsMapper;
@@ -60,10 +62,11 @@ public class RdbmsPersistenceManager implements PersistenceManager
 		{
 			new JdbcTemplate(master).execute("SELECT 1 FROM DUAL");
 		}
-		catch (Exception e)
+		catch (DataAccessException e)
 		{
 			return false;
 		}
+		// TODO: catch possible unchecked exceptions
 		return true;
 	}
 
@@ -78,10 +81,11 @@ public class RdbmsPersistenceManager implements PersistenceManager
 			{
 				new JdbcTemplate(slave).execute("SELECT 1 FROM DUAL");
 			}
-			catch (Exception e)
+			catch (DataAccessException e)
 			{
 				continue;
 			}
+			// TODO: catch possible unchecked exceptions
 			return true;
 		}
 		return false;
@@ -100,6 +104,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 		{
 			RdbmsField rdbmsField = field.getAnnotation(RdbmsField.class);
 
+			// TODO: write this mapper according to the guidelines given by Ashish
 			if (rdbmsField != null)
 			{
 				Object value;
@@ -110,12 +115,12 @@ public class RdbmsPersistenceManager implements PersistenceManager
 				catch (IllegalArgumentException e)
 				{
 					logger.info(e);
-					value = null;
+					value = null; // TODO: check if this null assignment is correct expected behavior
 				}
 				catch (IllegalAccessException e)
 				{
 					logger.info(e);
-					value = null;
+					value = null;// TODO: check if this null assignment is correct expected behavior
 				}
 				if (value == null)
 				{
@@ -143,26 +148,40 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	 * (non-Javadoc)
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#insert(com.flipkart.portkey.common.entity.Entity)
 	 */
-	public <T extends Entity> int insert(T bean)
+	public <T extends Entity> int insert(T bean) throws ShardNotAvailableException, InvalidAnnotationException
 	{
-		RdbmsTableMetaData metaData = RdbmsMetaDataCache.getMetaData(bean.getClass());
+		RdbmsTableMetaData metaData = RdbmsMetaDataCache.getInstance().getMetaData(bean.getClass());
 		String insertQuery = RdbmsQueryBuilder.getInstance().getInsertQuery(metaData);
 		Map<String, Object> attributeToValueMap = generateAttributeToValueMap(bean, metaData);
 		NamedParameterJdbcTemplate temp = new NamedParameterJdbcTemplate(master);
-		return temp.update(insertQuery, attributeToValueMap);
+		try
+		{
+			return temp.update(insertQuery, attributeToValueMap);
+		}
+		catch (DataAccessException e)
+		{
+			throw new ShardNotAvailableException("Exception while trying to update bean:" + bean + "\n" + e);
+		}
 	}
 
 	/*
 	 * (non-Javadoc)
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#update(com.flipkart.portkey.common.entity.Entity)
 	 */
-	public <T extends Entity> int update(T bean)
+	public <T extends Entity> int update(T bean) throws ShardNotAvailableException, InvalidAnnotationException
 	{
-		RdbmsTableMetaData metaData = RdbmsMetaDataCache.getMetaData(bean.getClass());
+		RdbmsTableMetaData metaData = RdbmsMetaDataCache.getInstance().getMetaData(bean.getClass());
 		String updateQuery = RdbmsQueryBuilder.getInstance().getUpdateByPkQuery(metaData);
 		Map<String, Object> attributeToValueMap = generateAttributeToValueMap(bean, metaData);
 		NamedParameterJdbcTemplate temp = new NamedParameterJdbcTemplate(master);
-		return temp.update(updateQuery, attributeToValueMap);
+		try
+		{
+			return temp.update(updateQuery, attributeToValueMap);
+		}
+		catch (DataAccessException e)
+		{
+			throw new ShardNotAvailableException("Exception while trying to update bean:" + bean + "\n" + e);
+		}
 	}
 
 	/*
@@ -171,14 +190,22 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	 * java.util.Map)
 	 */
 	public <T extends Entity> int update(Class<T> clazz, Map<String, Object> updateAttributesToValuesMap,
-	        Map<String, Object> criteria)
+	        Map<String, Object> criteria) throws ShardNotAvailableException, InvalidAnnotationException
 	{
-		RdbmsTableMetaData tableMetaData = RdbmsMetaDataCache.getMetaData(clazz);
+		RdbmsTableMetaData tableMetaData = RdbmsMetaDataCache.getInstance().getMetaData(clazz);
 		String updateQuery =
 		        RdbmsQueryBuilder.getInstance().getUpdateByCriteriaQuery(tableMetaData, updateAttributesToValuesMap,
 		                criteria);
 		JdbcTemplate temp = new JdbcTemplate(master);
-		return temp.update(updateQuery);
+		try
+		{
+			return temp.update(updateQuery);
+		}
+		catch (DataAccessException e)
+		{
+			throw new ShardNotAvailableException("Exception while trying to execute update query:" + updateQuery + "\n"
+			        + e);
+		}
 	}
 
 	/*
@@ -186,11 +213,20 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#delete(java.lang.Class, java.util.Map)
 	 */
 	public <T extends Entity> int delete(Class<T> clazz, Map<String, Object> criteria)
+	        throws ShardNotAvailableException, InvalidAnnotationException
 	{
-		RdbmsTableMetaData tableMetaData = RdbmsMetaDataCache.getMetaData(clazz);
+		RdbmsTableMetaData tableMetaData = RdbmsMetaDataCache.getInstance().getMetaData(clazz);
 		String deleteQuery = RdbmsQueryBuilder.getInstance().getDeleteByCriteriaQuery(tableMetaData, criteria);
 		JdbcTemplate temp = new JdbcTemplate(master);
-		return temp.update(deleteQuery);
+		try
+		{
+			return temp.update(deleteQuery);
+		}
+		catch (DataAccessException e)
+		{
+			throw new ShardNotAvailableException("Exception while trying to execute delete query:" + deleteQuery + "\n"
+			        + e);
+		}
 	}
 
 	/*
@@ -198,9 +234,9 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#getByCriteria(java.lang.Class, java.util.Map)
 	 */
 	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, Map<String, Object> criteria, boolean readMaster)
-	        throws PortKeyException
+	        throws ShardNotAvailableException, InvalidAnnotationException
 	{
-		RdbmsTableMetaData tableMetaData = RdbmsMetaDataCache.getMetaData(clazz);
+		RdbmsTableMetaData tableMetaData = RdbmsMetaDataCache.getInstance().getMetaData(clazz);
 		String updateQuery = RdbmsQueryBuilder.getInstance().getGetByCriteriaQuery(tableMetaData, criteria);
 		RdbmsMapper<T> mapper = RdbmsMapper.getInstance(clazz);
 		JdbcTemplate temp;
@@ -212,9 +248,10 @@ public class RdbmsPersistenceManager implements PersistenceManager
 			{
 				result = temp.query(updateQuery, mapper);
 			}
-			catch (Exception e)
+			catch (DataAccessException e)
 			{
-				throw new PortKeyException("Shard is down");
+				throw new ShardNotAvailableException("Exception while trying to execute get query:" + updateQuery
+				        + " on master:" + master + "\n" + e);
 			}
 			return result;
 		}
@@ -227,9 +264,11 @@ public class RdbmsPersistenceManager implements PersistenceManager
 				{
 					result = temp.query(updateQuery, mapper);
 				}
-				catch (Exception e)
+				catch (DataAccessException e)
 				{
-					logger.info("Exception while reading from slave:" + slave + "\n" + e);
+					// TODO: catch specific exception
+					logger.info("Exception while trying to execute get query:" + updateQuery + " on slave:" + slave
+					        + "\n" + e);
 					continue;
 				}
 				return result;
@@ -239,9 +278,12 @@ public class RdbmsPersistenceManager implements PersistenceManager
 			{
 				result = temp.query(updateQuery, mapper);
 			}
-			catch (Exception e)
+			catch (DataAccessException e)
 			{
-				throw new PortKeyException("Shard is down");
+				logger.info("Exception while trying to execute get query:" + updateQuery + " on master:" + master
+				        + "\n" + e);
+				throw new ShardNotAvailableException("Exception while executing query:" + updateQuery
+				        + "\nShard is down\n" + e);
 			}
 			return result;
 		}
@@ -253,7 +295,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	 * boolean)
 	 */
 	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, Map<String, Object> criteria)
-	        throws PortKeyException
+	        throws ShardNotAvailableException, InvalidAnnotationException
 	{
 		return getByCriteria(clazz, criteria, false);
 	}
@@ -264,9 +306,10 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	 * java.util.Map)
 	 */
 	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, List<String> attributeNames,
-	        Map<String, Object> criteria, boolean readMaster) throws PortKeyException
+	        Map<String, Object> criteria, boolean readMaster) throws ShardNotAvailableException,
+	        InvalidAnnotationException
 	{
-		RdbmsTableMetaData tableMetaData = RdbmsMetaDataCache.getMetaData(clazz);
+		RdbmsTableMetaData tableMetaData = RdbmsMetaDataCache.getInstance().getMetaData(clazz);
 		String getQuery =
 		        RdbmsQueryBuilder.getInstance().getGetByCriteriaQuery(tableMetaData, attributeNames, criteria);
 		RdbmsMapper<T> mapper = RdbmsMapper.getInstance(clazz);
@@ -279,9 +322,10 @@ public class RdbmsPersistenceManager implements PersistenceManager
 			{
 				result = temp.query(getQuery, mapper);
 			}
-			catch (Exception e)
+			catch (DataAccessException e)
 			{
-				throw new PortKeyException("Shard is down");
+				throw new ShardNotAvailableException("Exception while trying to execute get query:" + getQuery
+				        + " on master:" + master + "\n" + e);
 			}
 			return result;
 		}
@@ -296,7 +340,8 @@ public class RdbmsPersistenceManager implements PersistenceManager
 				}
 				catch (Exception e)
 				{
-					logger.info("Exception while reading from slave:" + slave + "\n" + e);
+					logger.info("Exception while trying to execute get query:" + getQuery + " on slave:" + slave + "\n"
+					        + e);
 					continue;
 				}
 				return result;
@@ -308,7 +353,10 @@ public class RdbmsPersistenceManager implements PersistenceManager
 			}
 			catch (Exception e)
 			{
-				throw new PortKeyException("Shard is down");
+				logger.info("Exception while trying to execute get query:" + getQuery + " on master:" + master + "\n"
+				        + e);
+				throw new ShardNotAvailableException("Exception while executing query:" + getQuery
+				        + "\nShard is down\n" + e);
 			}
 			return result;
 		}
@@ -320,7 +368,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	 * java.util.Map, boolean)
 	 */
 	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, List<String> attributeNames,
-	        Map<String, Object> criteria) throws PortKeyException
+	        Map<String, Object> criteria) throws ShardNotAvailableException, InvalidAnnotationException
 	{
 		return getByCriteria(clazz, attributeNames, criteria, false);
 	}
@@ -331,7 +379,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	 * java.util.Map)
 	 */
 	public <T extends Entity> List<T> getBySql(Class<T> clazz, String sql, Map<String, Object> criteria,
-	        boolean readMaster) throws PortKeyException
+	        boolean readMaster) throws ShardNotAvailableException
 	{
 		RdbmsMapper<T> mapper = RdbmsMapper.getInstance(clazz);
 		JdbcTemplate temp;
@@ -345,7 +393,8 @@ public class RdbmsPersistenceManager implements PersistenceManager
 			}
 			catch (Exception e)
 			{
-				throw new PortKeyException("Shard is down");
+				throw new ShardNotAvailableException("Exception while trying to execute sql:" + sql + " on master:"
+				        + master + "\n" + e);
 			}
 			return result;
 		}
@@ -360,7 +409,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 				}
 				catch (Exception e)
 				{
-					logger.info("Exception while reading from slave:" + slave + "\n" + e);
+					logger.info("Exception while trying to execute sql:" + sql + " on slave:" + slave + "\n" + e);
 					continue;
 				}
 				return result;
@@ -372,7 +421,9 @@ public class RdbmsPersistenceManager implements PersistenceManager
 			}
 			catch (Exception e)
 			{
-				throw new PortKeyException("Shard is down");
+				logger.info("Exception while trying to execute sql:" + sql + " on master:" + master + "\n" + e);
+				throw new ShardNotAvailableException("Exception while trying to execute sql:" + sql + " on master:"
+				        + master + "\n" + e);
 			}
 			return result;
 		}
@@ -384,7 +435,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	 * java.util.Map, boolean)
 	 */
 	public <T extends Entity> List<T> getBySql(Class<T> clazz, String sql, Map<String, Object> criteria)
-	        throws PortKeyException
+	        throws ShardNotAvailableException
 	{
 		return getBySql(clazz, sql, criteria, false);
 	}
@@ -394,7 +445,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#getBySql(java.lang.String, java.util.Map)
 	 */
 	public List<Map<String, Object>> getBySql(String sql, Map<String, Object> criteria, boolean readMaster)
-	        throws PortKeyException
+	        throws ShardNotAvailableException
 	{
 		JdbcTemplate temp;
 		List<Map<String, Object>> result;
@@ -407,7 +458,8 @@ public class RdbmsPersistenceManager implements PersistenceManager
 			}
 			catch (Exception e)
 			{
-				throw new PortKeyException("Shard is down");
+				throw new ShardNotAvailableException("Exception while trying to execute sql:" + sql + " on master:"
+				        + master + "\n" + e);
 			}
 			return result;
 		}
@@ -422,7 +474,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 				}
 				catch (Exception e)
 				{
-					logger.info("Exception while reading from slave:" + slave + "\n" + e);
+					logger.info("Exception while trying to execute sql:" + sql + " on slave:" + slave + "\n" + e);
 					continue;
 				}
 				return result;
@@ -434,7 +486,9 @@ public class RdbmsPersistenceManager implements PersistenceManager
 			}
 			catch (Exception e)
 			{
-				throw new PortKeyException("Shard is down");
+				logger.info("Exception while trying to execute sql:" + sql + " on master:" + master + "\n" + e);
+				throw new ShardNotAvailableException("Exception while trying to execute sql:" + sql + " on master:"
+				        + master + "\n" + e);
 			}
 			return result;
 		}
@@ -445,7 +499,8 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#getBySql(java.lang.String, java.util.Map,
 	 * boolean)
 	 */
-	public List<Map<String, Object>> getBySql(String sql, Map<String, Object> criteria) throws PortKeyException
+	public List<Map<String, Object>> getBySql(String sql, Map<String, Object> criteria)
+	        throws ShardNotAvailableException
 	{
 		return getBySql(sql, criteria, false);
 	}
