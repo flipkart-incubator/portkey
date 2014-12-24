@@ -6,7 +6,7 @@
 		<artifactId>portkey</artifactId>
 		<version>0.0.1-SNAPSHOT</version>
 	</parent>
-	<artifactId>persistencelayer</artifactId>
+	<artifactId>persistence-layer</artifactId>
 	<dependencies>
 		<dependency>
 			<groupId>com.flipkart.portkey</groupId>

@@ -7,9 +7,9 @@
   <name>Portkey</name>
   <description>Portkey parent project</description>
   <modules>
-  	<module>rdbms</module>
-  	<module>redis</module>
   	<module>common</module>
-  	<module>persistencelayer</module>
+  	<module>persistence-layer</module>
+  	<module>rdbms</module>
+    <module>redis</module>
   </modules>
 </project>
