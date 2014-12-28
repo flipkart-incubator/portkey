@@ -83,6 +83,17 @@ public class RedisMetaDataCache implements MetaDataCache
 		return key;
 	}
 
+	List<String> getAttributesFromKeyPattern(String keyPattern)
+	{
+		Matcher attributeMatcher = Pattern.compile("\\{(.*?)\\}").matcher(keyPattern);
+		List<String> attributes = new ArrayList<String>();
+		while (attributeMatcher.find())
+		{
+			attributes.add(attributeMatcher.group(1));
+		}
+		return attributes;
+	}
+
 	/**
 	 * @param clazz
 	 * @param bean
@@ -98,11 +109,16 @@ public class RedisMetaDataCache implements MetaDataCache
 		String primaryKeyPattern = redisDataStore.primaryKeyPattern();
 		String parsedPrimaryKeyPattern = parseKeyPattern(primaryKeyPattern, clazz);
 		redisMetaData.setPrimaryKeyPattern(parsedPrimaryKeyPattern);
+		List<String> primaryKeyAttributes = getAttributesFromKeyPattern(primaryKeyPattern);
+		redisMetaData.setPrimaryKeyAttributes(primaryKeyAttributes);
+
 		List<String> secondaryKeyPatterns = Arrays.asList(redisDataStore.secondaryKeyPatterns());
 		for (String secondaryKeyPattern : secondaryKeyPatterns)
 		{
 			String parsedPattern = parseKeyPattern(secondaryKeyPattern, clazz);
 			redisMetaData.addToSecondaryKeyPatterns(parsedPattern);
+			List<String> secondaryKeyAttributes = getAttributesFromKeyPattern(secondaryKeyPattern);
+			redisMetaData.addToSecondaryKeyAttributesList(secondaryKeyAttributes);
 		}
 		Field[] fields = clazz.getDeclaredFields();
 		boolean shardKeyPresent = false;

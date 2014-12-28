@@ -31,8 +31,7 @@ public class DefaultKeyParser implements KeyParserInterface
 	{
 		if (keyPattern == null)
 		{
-			throw new InvalidAnnotationException(
-			        "Exception while trying to parse primary key, primary key pattern is null");
+			throw new InvalidAnnotationException("Exception while trying to parse key, key pattern is null");
 		}
 		Matcher attributeMatcher = Pattern.compile("\\{(.*?)\\}").matcher(keyPattern);
 		List<String> attributes = new ArrayList<String>();
@@ -47,8 +46,7 @@ public class DefaultKeyParser implements KeyParserInterface
 			RedisField redisField = metaData.getRedisFieldFromFieldName(fieldName);
 			if (field == null)
 			{
-				throw new InvalidAnnotationException(
-				        "Exception while trying to parse primary key, primary key field is null");
+				throw new InvalidAnnotationException("Exception while trying to parse key, key field is null");
 			}
 			Object value;
 			try
@@ -61,16 +59,16 @@ public class DefaultKeyParser implements KeyParserInterface
 			}
 			catch (IllegalArgumentException e)
 			{
-				throw new InvalidAnnotationException("Exception while trying to fetch primary key value from bean" + e);
+				throw new InvalidAnnotationException("Exception while trying to fetch key value from bean" + e);
 			}
 			catch (IllegalAccessException e)
 			{
-				throw new InvalidAnnotationException("Exception while trying to fetch primary key value from bean:" + e);
+				throw new InvalidAnnotationException("Exception while trying to fetch key value from bean:" + e);
 			}
 			catch (NullPointerException e)
 			{
 				throw new InvalidAnnotationException(
-				        "Exception while trying to fetch primary key from bean, passed bean is null.");
+				        "Exception while trying to fetch key from bean, passed bean is null.");
 			}
 			String fieldVal;
 			if (value == null)

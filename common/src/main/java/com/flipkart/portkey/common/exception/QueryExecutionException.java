@@ -6,25 +6,25 @@ package com.flipkart.portkey.common.exception;
 /**
  * @author santosh.p
  */
-public class ShardNotAvailableException extends QueryExecutionException
+public class QueryExecutionException extends PortKeyException
 {
 
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -3231739591791619783L;
+	private static final long serialVersionUID = -1585073982189201178L;
 
 	/**
 	 * 
 	 */
-	public ShardNotAvailableException()
+	public QueryExecutionException()
 	{
 	}
 
 	/**
 	 * @param message
 	 */
-	public ShardNotAvailableException(String message)
+	public QueryExecutionException(String message)
 	{
 		super(message);
 	}
@@ -32,7 +32,7 @@ public class ShardNotAvailableException extends QueryExecutionException
 	/**
 	 * @param cause
 	 */
-	public ShardNotAvailableException(Throwable cause)
+	public QueryExecutionException(Throwable cause)
 	{
 		super(cause);
 	}
@@ -41,7 +41,7 @@ public class ShardNotAvailableException extends QueryExecutionException
 	 * @param message
 	 * @param cause
 	 */
-	public ShardNotAvailableException(String message, Throwable cause)
+	public QueryExecutionException(String message, Throwable cause)
 	{
 		super(message, cause);
 	}
@@ -52,10 +52,9 @@ public class ShardNotAvailableException extends QueryExecutionException
 	 * @param enableSuppression
 	 * @param writableStackTrace
 	 */
-	public ShardNotAvailableException(String message, Throwable cause, boolean enableSuppression,
+	public QueryExecutionException(String message, Throwable cause, boolean enableSuppression,
 	        boolean writableStackTrace)
 	{
 		super(message, cause, enableSuppression, writableStackTrace);
 	}
-
 }

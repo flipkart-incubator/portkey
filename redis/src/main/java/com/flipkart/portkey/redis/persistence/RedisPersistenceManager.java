@@ -26,6 +26,7 @@ import com.flipkart.portkey.common.exception.InvalidAnnotationException;
 import com.flipkart.portkey.common.exception.JsonDeserializationException;
 import com.flipkart.portkey.common.exception.JsonSerializationException;
 import com.flipkart.portkey.common.exception.MethodNotSupportedForDataStoreException;
+import com.flipkart.portkey.common.exception.QueryNotSupportedException;
 import com.flipkart.portkey.common.persistence.PersistenceManager;
 import com.flipkart.portkey.redis.connection.ConnectionManager;
 import com.flipkart.portkey.redis.keyparser.DefaultKeyParser;
@@ -250,7 +251,7 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 	 */
 	@Override
 	public <T extends Entity> int delete(Class<T> clazz, Map<String, Object> criteria)
-	        throws InvalidAnnotationException, JsonDeserializationException
+	        throws InvalidAnnotationException, JsonDeserializationException, QueryNotSupportedException
 	{
 		// TODO: check if secondary key exists, if not just delete primary key
 		List<T> beans = getByCriteria(clazz, criteria, true);
@@ -270,7 +271,7 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 	 */
 	@Override
 	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, Map<String, Object> criteria)
-	        throws InvalidAnnotationException, JsonDeserializationException
+	        throws InvalidAnnotationException, JsonDeserializationException, QueryNotSupportedException
 	{
 		return getByCriteria(clazz, criteria, false);
 	}
@@ -375,7 +376,7 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 	 */
 	@Override
 	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, Map<String, Object> criteria, boolean readMaster)
-	        throws InvalidAnnotationException, JsonDeserializationException
+	        throws InvalidAnnotationException, JsonDeserializationException, QueryNotSupportedException
 	{
 		List<T> retVal = new ArrayList<T>();
 		RedisMetaData metaData = getMetaData(clazz);
@@ -399,7 +400,8 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 				return retVal;
 			}
 		}
-		return null;
+		throw new QueryNotSupportedException(
+		        "Passed criteria contains attributes other than primary or secondary keys.");
 	}
 
 	/*
@@ -409,7 +411,8 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 	 */
 	@Override
 	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, List<String> attributeNames,
-	        Map<String, Object> criteria) throws InvalidAnnotationException, JsonDeserializationException
+	        Map<String, Object> criteria) throws InvalidAnnotationException, JsonDeserializationException,
+	        QueryNotSupportedException
 	{
 		return getByCriteria(clazz, attributeNames, criteria, false);
 	}
@@ -422,7 +425,7 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 	@Override
 	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, List<String> attributeNames,
 	        Map<String, Object> criteria, boolean readMaster) throws InvalidAnnotationException,
-	        JsonDeserializationException
+	        JsonDeserializationException, QueryNotSupportedException
 	{
 		return getByCriteria(clazz, criteria, readMaster);
 	}

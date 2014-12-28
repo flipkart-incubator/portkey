@@ -257,13 +257,15 @@ public class RdbmsPersistenceManager implements PersistenceManager
 			try
 			{
 				result = temp.query(updateQuery, mapper);
+				return result;
 			}
 			catch (DataAccessException e)
 			{
+				logger.info("Exception while trying to execute get query:" + updateQuery + " on master:" + master
+				        + "\n" + e);
 				throw new ShardNotAvailableException("Exception while trying to execute get query:" + updateQuery
 				        + " on master:" + master + "\n" + e);
 			}
-			return result;
 		}
 		else
 		{
@@ -273,6 +275,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 				try
 				{
 					result = temp.query(updateQuery, mapper);
+					return result;
 				}
 				catch (DataAccessException e)
 				{
@@ -281,21 +284,20 @@ public class RdbmsPersistenceManager implements PersistenceManager
 					        + "\n" + e);
 					continue;
 				}
-				return result;
 			}
 			temp = new JdbcTemplate(master);
 			try
 			{
 				result = temp.query(updateQuery, mapper);
+				return result;
 			}
 			catch (DataAccessException e)
 			{
 				logger.info("Exception while trying to execute get query:" + updateQuery + " on master:" + master
 				        + "\n" + e);
-				throw new ShardNotAvailableException("Exception while executing query:" + updateQuery
-				        + "\nShard is down\n" + e);
+				throw new ShardNotAvailableException("Exception while trying to execute get query:" + updateQuery
+				        + " on master:" + master + "\n" + e);
 			}
-			return result;
 		}
 	}
 

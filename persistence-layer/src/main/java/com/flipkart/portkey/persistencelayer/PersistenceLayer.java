@@ -26,6 +26,7 @@ import com.flipkart.portkey.common.enumeration.ShardStatus;
 import com.flipkart.portkey.common.exception.InvalidAnnotationException;
 import com.flipkart.portkey.common.exception.JsonSerializationException;
 import com.flipkart.portkey.common.exception.PortKeyException;
+import com.flipkart.portkey.common.exception.QueryExecutionException;
 import com.flipkart.portkey.common.exception.ShardNotAvailableException;
 import com.flipkart.portkey.common.metadata.MetaDataCache;
 import com.flipkart.portkey.common.persistence.PersistenceLayerInterface;
@@ -128,7 +129,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		ScheduledExecutorService scheduledThreadPool = Executors.newScheduledThreadPool(5);
 		HealthCheckScheduler healthCheckScheduler = new HealthCheckScheduler();
 		scheduledThreadPool.scheduleAtFixedRate(healthCheckScheduler, 0, 100, TimeUnit.SECONDS);
-		Thread.sleep(10000);
+		Thread.sleep(3000);
 		logger.info("scheduled health checker");
 		logger.info("Initialized Persistence Layer");
 	}
@@ -499,9 +500,9 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 	        throws PortKeyException
 	{
 		List<T> result = new ArrayList<T>();
-		WriteConfig writeConfig = getWriteConfigForEntity(clazz);
-		List<DataStoreType> writeOrder = writeConfig.getWriteOrder();
-		for (DataStoreType type : writeOrder)
+		ReadConfig readConfig = getReadConfigForEntity(clazz);
+		List<DataStoreType> readOrder = readConfig.getReadOrder();
+		for (DataStoreType type : readOrder)
 		{
 			MetaDataCache metaDataCache = getMetaDataCache(type);
 			String shardKeyFieldName = metaDataCache.getShardKey(clazz);
@@ -510,7 +511,17 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 				String shardKey = (String) criteria.get(shardKeyFieldName);
 				String shardId = shardIdentifier.getShardId(shardKey);
 				PersistenceManager pm = getPersistenceManager(type, shardId);
-				result = pm.getByCriteria(clazz, criteria);
+				try
+				{
+					result = pm.getByCriteria(clazz, criteria);
+				}
+				catch (QueryExecutionException e)
+				{
+					logger.info("Encountered exception while trying to execute query \n DataStoreType=" + type
+					        + "\ncriteria=" + criteria + "\nexception=" + e);
+					continue;
+				}
+				return result;
 			}
 			else
 			{
@@ -521,9 +532,10 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 					List<T> intermediateResult = pm.getByCriteria(clazz, criteria);
 					result.addAll(intermediateResult);
 				}
+				return result;
 			}
 		}
-		return result;
+		return null;
 	}
 
 	/*
