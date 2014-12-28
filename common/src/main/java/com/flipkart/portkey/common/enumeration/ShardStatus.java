@@ -15,4 +15,8 @@ package com.flipkart.portkey.common.enumeration;
 public enum ShardStatus
 {
 	AVAILABLE_FOR_WRITE, AVAILABLE_FOR_READ, UNAVAILABLE, DISABLED;
+	public static ShardStatus getDefaultStatus()
+	{
+		return ShardStatus.UNAVAILABLE;
+	}
 }

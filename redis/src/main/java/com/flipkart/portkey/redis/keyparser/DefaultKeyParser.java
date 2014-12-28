@@ -53,6 +53,10 @@ public class DefaultKeyParser implements KeyParserInterface
 			Object value;
 			try
 			{
+				if (!field.isAccessible())
+				{
+					field.setAccessible(true);
+				}
 				value = field.get(bean);
 			}
 			catch (IllegalArgumentException e)

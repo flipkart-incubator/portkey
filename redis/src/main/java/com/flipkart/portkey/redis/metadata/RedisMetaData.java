@@ -4,6 +4,8 @@
 package com.flipkart.portkey.redis.metadata;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -17,19 +19,19 @@ public class RedisMetaData
 	private int database;
 	private String shardKey;
 	private String primaryKeyPattern;
-	private List<String> primaryKeyAttributes;
+	private List<String> primaryKeyAttributes = new ArrayList<String>();
 	private String multiLevelDataStructure = "HASH";
-	private List<String> secondaryKeyPatterns;
-	private List<List<String>> secondaryKeyAttributesList;
-	private Map<String, List<String>> secondaryKeyPatternToAttributeList;
-	private List<RedisField> redisFields;
-	private List<Field> fields;
-	private List<String> jsonFields;
-	private List<String> jsonListFields;
-	private Map<String, String> fieldNameToAttributeMap;
-	private Map<String, String> attributeToFieldNameMap;
-	private Map<String, Field> fieldNameToFieldMap;
-	private Map<String, RedisField> fieldNameToRedisFieldMap;
+	private List<String> secondaryKeyPatterns = new ArrayList<String>();
+	private List<List<String>> secondaryKeyAttributesList = new ArrayList<List<String>>();
+	private List<RedisField> redisFields = new ArrayList<RedisField>();
+	private List<Field> fields = new ArrayList<Field>();
+	private List<String> jsonFields = new ArrayList<String>();
+	private List<String> jsonListFields = new ArrayList<String>();
+	private Map<String, List<String>> secondaryKeyPatternToAttributeList = new HashMap<String, List<String>>();
+	private Map<String, String> fieldNameToAttributeMap = new HashMap<String, String>();
+	private Map<String, String> attributeToFieldNameMap = new HashMap<String, String>();
+	private Map<String, Field> fieldNameToFieldMap = new HashMap<String, Field>();
+	private Map<String, RedisField> fieldNameToRedisFieldMap = new HashMap<String, RedisField>();
 
 	public int getDatabase()
 	{
@@ -202,10 +204,6 @@ public class RedisMetaData
 
 	public String getAttributeFromFieldName(String fieldName)
 	{
-		if (fieldNameToAttributeMap == null)
-		{
-			return null;
-		}
 		return fieldNameToAttributeMap.get(fieldName);
 	}
 
@@ -226,10 +224,6 @@ public class RedisMetaData
 
 	public String getFieldNameFromAttribute(String attribute)
 	{
-		if (attributeToFieldNameMap == null)
-		{
-			return null;
-		}
 		return attributeToFieldNameMap.get(attribute);
 	}
 
@@ -250,10 +244,6 @@ public class RedisMetaData
 
 	public Field getFieldFromFieldName(String fieldName)
 	{
-		if (fieldNameToFieldMap == null)
-		{
-			return null;
-		}
 		return fieldNameToFieldMap.get(fieldName);
 	}
 
@@ -274,15 +264,16 @@ public class RedisMetaData
 
 	public RedisField getRedisFieldFromFieldName(String fieldName)
 	{
-		if (fieldNameToRedisFieldMap == null)
-		{
-			return null;
-		}
 		return fieldNameToRedisFieldMap.get(fieldName);
 	}
 
 	public void setFieldNameToRedisFieldMap(Map<String, RedisField> fieldNameToRedisFieldMap)
 	{
 		this.fieldNameToRedisFieldMap = fieldNameToRedisFieldMap;
+	}
+
+	public void addToFieldNameToRedisFieldMap(String fieldName, RedisField redisField)
+	{
+		this.fieldNameToRedisFieldMap.put(fieldName, redisField);
 	}
 }

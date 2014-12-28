@@ -4,6 +4,8 @@
 package com.flipkart.portkey.rdbms.metadata;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -17,14 +19,14 @@ public class RdbmsTableMetaData
 	private String databaseName;
 	private String tableName;
 	private String shardKey;
-	private List<String> primaryKeys;
-	private List<RdbmsField> rdbmsFieldList;
-	private List<Field> fieldList;
-	private List<String> jsonFields;
-	private Map<String, String> fieldNameToRdbmsColumnMap;
-	private Map<String, String> rdbmsColumnToFieldNameMap;
-	private Map<String, Field> fieldNameToFieldMap;
-	private List<String> jsonListFields;
+	private List<String> primaryKeys = new ArrayList<String>();
+	private List<RdbmsField> rdbmsFieldList = new ArrayList<RdbmsField>();
+	private List<Field> fieldList = new ArrayList<Field>();
+	private List<String> jsonFields = new ArrayList<String>();
+	private Map<String, String> fieldNameToRdbmsColumnMap = new HashMap<String, String>();
+	private Map<String, String> rdbmsColumnToFieldNameMap = new HashMap<String, String>();
+	private Map<String, Field> fieldNameToFieldMap = new HashMap<String, Field>();
+	private List<String> jsonListFields = new ArrayList<String>();
 	private String insertQuery;
 	private String updateByPkQuery;
 
@@ -145,7 +147,7 @@ public class RdbmsTableMetaData
 
 	public void addToRdbmsColumnToFieldNameMap(String column, String fieldName)
 	{
-		this.fieldNameToRdbmsColumnMap.put(column, fieldName);
+		this.rdbmsColumnToFieldNameMap.put(column, fieldName);
 	}
 
 	public Map<String, Field> getFieldNameToFieldMap()

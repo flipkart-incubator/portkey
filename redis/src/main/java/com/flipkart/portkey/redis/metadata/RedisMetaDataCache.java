@@ -6,6 +6,7 @@ package com.flipkart.portkey.redis.metadata;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -22,7 +23,8 @@ import com.flipkart.portkey.redis.metadata.annotation.RedisField;
  */
 public class RedisMetaDataCache implements MetaDataCache
 {
-	private Map<Class<? extends Entity>, RedisMetaData> entityToMetaDataMap;
+	private Map<Class<? extends Entity>, RedisMetaData> entityToMetaDataMap =
+	        new HashMap<Class<? extends Entity>, RedisMetaData>();
 	private static RedisMetaDataCache instance = null;
 
 	public static RedisMetaDataCache getInstance()
@@ -57,7 +59,7 @@ public class RedisMetaDataCache implements MetaDataCache
 	{
 		if (keyword.equalsIgnoreCase("CLASS"))
 		{
-			return clazz.toString();
+			return clazz.getSimpleName();
 		}
 		throw new InvalidAnnotationException("Exception while trying to parse primary key, invalid keyword:" + keyword);
 	}
@@ -103,6 +105,7 @@ public class RedisMetaDataCache implements MetaDataCache
 			redisMetaData.addToSecondaryKeyPatterns(parsedPattern);
 		}
 		Field[] fields = clazz.getDeclaredFields();
+		boolean shardKeyPresent = false;
 		for (Field field : fields)
 		{
 			RedisField redisField = field.getAnnotation(RedisField.class);
@@ -113,16 +116,27 @@ public class RedisMetaDataCache implements MetaDataCache
 				redisMetaData.addToFieldNameToAttributeMap(fieldName, attributeName);
 				redisMetaData.addToAttributeToFieldNameMap(attributeName, fieldName);
 				redisMetaData.addToFieldNameToFieldMap(fieldName, field);
+				redisMetaData.addToFieldNameToRedisFieldMap(fieldName, redisField);
+				redisMetaData.addToFields(field);
 				redisMetaData.addToRedisFieldList(redisField);
 				if (redisField.isJson())
 				{
 					redisMetaData.addToJsonFields(attributeName);
+				}
+				if (redisField.isShardKey())
+				{
+					shardKeyPresent = true;
+					redisMetaData.setShardKey(attributeName);
 				}
 				if (redisField.isJsonList())
 				{
 					redisMetaData.addToJsonListFields(attributeName);
 				}
 			}
+		}
+		if (!shardKeyPresent)
+		{
+			throw new InvalidAnnotationException("Shard key is not set for class" + clazz);
 		}
 		entityToMetaDataMap.put(clazz, redisMetaData);
 	}

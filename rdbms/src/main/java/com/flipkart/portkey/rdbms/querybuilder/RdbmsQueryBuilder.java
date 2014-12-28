@@ -113,7 +113,7 @@ public class RdbmsQueryBuilder
 		for (String criteria : criteriaMap.keySet())
 		{
 
-			SqlBuilder.WHERE(criteria + "=" + criteriaMap.get(criteria));
+			SqlBuilder.WHERE(criteria + "=" + "'" + criteriaMap.get(criteria) + "'");
 		}
 
 		String updateQuery = SqlBuilder.SQL();
@@ -131,7 +131,7 @@ public class RdbmsQueryBuilder
 		SqlBuilder.DELETE_FROM(tableMetaData.getTableName());
 		for (String attribute : criteria.keySet())
 		{
-			SqlBuilder.WHERE(attribute + "=" + criteria.get(attribute));
+			SqlBuilder.WHERE(attribute + "=" + "'" + criteria.get(attribute) + "'");
 		}
 
 		String updateQuery = SqlBuilder.SQL();
@@ -150,7 +150,7 @@ public class RdbmsQueryBuilder
 		SqlBuilder.FROM(tableMetaData.getTableName());
 		for (String attribute : criteria.keySet())
 		{
-			SqlBuilder.WHERE(attribute + "=" + criteria.get(attribute));
+			SqlBuilder.WHERE(attribute + "=" + "'" + criteria.get(attribute) + "'");
 		}
 		String getQuery = SqlBuilder.SQL();
 		return getQuery;
@@ -173,7 +173,7 @@ public class RdbmsQueryBuilder
 		SqlBuilder.FROM(tableMetaData.getTableName());
 		for (String attribute : criteria.keySet())
 		{
-			SqlBuilder.WHERE(attribute + "=" + criteria.get(attribute));
+			SqlBuilder.WHERE(attribute + "=" + "'" + criteria.get(attribute) + "'");
 		}
 		String getQuery = SqlBuilder.SQL();
 		return getQuery;

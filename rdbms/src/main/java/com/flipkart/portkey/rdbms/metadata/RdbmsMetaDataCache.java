@@ -4,6 +4,7 @@
 package com.flipkart.portkey.rdbms.metadata;
 
 import java.lang.reflect.Field;
+import java.util.HashMap;
 import java.util.Map;
 
 import com.flipkart.portkey.common.entity.Entity;
@@ -22,7 +23,7 @@ public class RdbmsMetaDataCache implements MetaDataCache
 
 	protected RdbmsMetaDataCache()
 	{
-
+		entityToMetaDataMap = new HashMap<Class<? extends Entity>, RdbmsTableMetaData>();
 	}
 
 	public static RdbmsMetaDataCache getInstance()
@@ -60,19 +61,21 @@ public class RdbmsMetaDataCache implements MetaDataCache
 		rdbmsTableMetaData.setDatabaseName(rdbmsTable.databaseName());
 
 		Field[] fields = clazz.getDeclaredFields();
+		boolean shardKeyPresent = false;
+		boolean primaryKeyPresent = false;
 		for (Field field : fields)
 		{
-			boolean shardKeyPresent = false;
-			boolean primaryKeyPresent = false;
 			RdbmsField rdbmsField = field.getAnnotation(RdbmsField.class);
 			if (rdbmsField != null)
 			{
 				String columnName = rdbmsField.columnName();
 				String fieldName = field.getName();
+				rdbmsTableMetaData.addToFieldList(field);
+				rdbmsTableMetaData.addToRdbmsFieldList(rdbmsField);
+
 				rdbmsTableMetaData.addToFieldNameToRdbmsColumnMap(fieldName, columnName);
 				rdbmsTableMetaData.addToRdbmsColumnToFieldNameMap(columnName, fieldName);
 				rdbmsTableMetaData.addToFieldNameToFieldMap(fieldName, field);
-				rdbmsTableMetaData.addToRdbmsFieldList(rdbmsField);
 				if (rdbmsField.isPrimaryKey())
 				{
 					primaryKeyPresent = true;
@@ -92,14 +95,14 @@ public class RdbmsMetaDataCache implements MetaDataCache
 					rdbmsTableMetaData.addToJsonListFields(columnName);
 				}
 			}
-			if (!primaryKeyPresent)
-			{
-				throw new InvalidAnnotationException("Primary key annotation is not set for class" + clazz);
-			}
-			if (!shardKeyPresent)
-			{
-				throw new InvalidAnnotationException("Shard key annotation is not set for class" + clazz);
-			}
+		}
+		if (!primaryKeyPresent)
+		{
+			throw new InvalidAnnotationException("Primary key is not set for class" + clazz);
+		}
+		if (!shardKeyPresent)
+		{
+			throw new InvalidAnnotationException("Shard key is not set for class" + clazz);
 		}
 		entityToMetaDataMap.put(clazz, rdbmsTableMetaData);
 	}

@@ -12,7 +12,7 @@ import java.lang.annotation.Target;
  * @author santosh.p
  */
 @Retention (RetentionPolicy.RUNTIME)
-@Target (ElementType.METHOD)
+@Target (ElementType.FIELD)
 public @interface RdbmsField
 {
 	public String columnName();

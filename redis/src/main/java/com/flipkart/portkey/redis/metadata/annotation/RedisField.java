@@ -12,14 +12,14 @@ import java.lang.annotation.Target;
  * @author santosh.p
  */
 @Retention (RetentionPolicy.RUNTIME)
-@Target (ElementType.METHOD)
+@Target (ElementType.FIELD)
 public @interface RedisField
 {
 	public String attributeName();
 
-	public boolean isShardKey();
+	public boolean isShardKey() default false;
 
-	public boolean isJson();
+	public boolean isJson() default false;
 
-	public boolean isJsonList();
+	public boolean isJsonList() default false;
 }

@@ -15,6 +15,7 @@ import org.apache.log4j.Logger;
 import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.JsonMappingException;
+import org.springframework.beans.factory.InitializingBean;
 
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPoolConfig;
@@ -37,7 +38,7 @@ import com.flipkart.portkey.redis.metadata.RedisMetaDataCache;
 /**
  * @author santosh.p
  */
-public class RedisPersistenceManager implements PersistenceManager
+public class RedisPersistenceManager implements PersistenceManager, InitializingBean
 {
 	private static final Logger logger = Logger.getLogger(RedisPersistenceManager.class);
 	String host = "localhost";
@@ -45,49 +46,42 @@ public class RedisPersistenceManager implements PersistenceManager
 	int database = 0;
 	String password;
 	JedisPoolConfig poolConfig = null;
-	
+
 	ConnectionManager cm;
 	KeyParserInterface keyParser = new DefaultKeyParser();
 	RedisMapper mapper = new DefaultRedisMapper();
 
-	public RedisPersistenceManager(String host, int port)
+	public void setHost(String host)
 	{
 		this.host = host;
-		this.port = port;
-		initializeConnectionPool();
 	}
 
-	public RedisPersistenceManager(String host, int port, JedisPoolConfig poolConfig)
+	public void setPort(int port)
 	{
-		this.host = host;
 		this.port = port;
-		initializeConnectionPool();
+	}
+
+	public void setDatabase(int database)
+	{
+		this.database = database;
+	}
+
+	public void setPassword(String password)
+	{
+		this.password = password;
+	}
+
+	public void setPoolConfig(JedisPoolConfig poolConfig)
+	{
 		this.poolConfig = poolConfig;
 	}
 
-	public RedisPersistenceManager(String host, int port, int database, String password)
-	{
-		this.host = host;
-		this.port = port;
-		this.database = database;
-		this.password = password;
-		initializeConnectionPool();
-	}
-
-	public RedisPersistenceManager(String host, int port, int database, String password, JedisPoolConfig poolConfig)
-	{
-		this.host = host;
-		this.port = port;
-		this.database = database;
-		this.password = password;
-		this.poolConfig = poolConfig;
-		initializeConnectionPool();
-	}
-
-	/**
-	 * 
+	/*
+	 * (non-Javadoc)
+	 * @see org.springframework.beans.factory.InitializingBean#afterPropertiesSet()
 	 */
-	private void initializeConnectionPool()
+	@Override
+	public void afterPropertiesSet() throws Exception
 	{
 		cm = new ConnectionManager();
 		cm.setHost(this.host);
@@ -99,6 +93,7 @@ public class RedisPersistenceManager implements PersistenceManager
 			cm.setJedisPoolConfig(poolConfig);
 		}
 		cm.build();
+		logger.info("initialized connection manager");
 	}
 
 	/*
@@ -108,13 +103,18 @@ public class RedisPersistenceManager implements PersistenceManager
 	@Override
 	public ShardStatus healthCheck()
 	{
+		logger.info("health checking for redis, host=" + host + " port=" + port);
 		Jedis conn = cm.getConnection();
-		if (conn.ping() == "PONG")
+		logger.info("acquired redis connection, checking for response");
+		logger.info(conn.ping());
+		if (conn.ping().equals("PONG"))
 		{
+			logger.info("instance is available");
 			return ShardStatus.AVAILABLE_FOR_WRITE;
 		}
 		else
 		{
+			logger.info("instance is unavailable");
 			return ShardStatus.UNAVAILABLE;
 		}
 	}

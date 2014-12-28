@@ -19,6 +19,6 @@ public @interface RedisDataStore
 
 	public String primaryKeyPattern();
 
-	public String[] secondaryKeyPatterns();
+	public String[] secondaryKeyPatterns() default {};
 
 }

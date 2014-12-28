@@ -8,6 +8,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.log4j.Logger;
+
 import com.flipkart.portkey.common.enumeration.DataStoreType;
 import com.flipkart.portkey.common.enumeration.ShardStatus;
 import com.flipkart.portkey.common.sharding.ShardLifeCycleManagerInterface;
@@ -21,19 +23,22 @@ import com.hazelcast.core.IMap;
  */
 public class ShardLifeCycleManager implements ShardLifeCycleManagerInterface
 {
+	private static final Logger logger = Logger.getLogger(ShardLifeCycleManager.class);
 	Config cfg = new Config();
 	List<DataStoreType> dataStoreTypesList;
-	IMap<DataStoreType, IMap<String, ShardStatus>> shardStatusMap;
+	IMap<DataStoreType, Map<String, ShardStatus>> shardStatusMap;
 
 	private void initialize()
 	{
+		logger.info("initializing ShardLifeCycleManager");
 		HazelcastInstance instance = Hazelcast.newHazelcastInstance(cfg);
 		shardStatusMap = instance.getMap("liveShards");
-		for (DataStoreType ds : dataStoreTypesList)
+		for (DataStoreType dataStoreType : dataStoreTypesList)
 		{
-			IMap<String, ShardStatus> innerMap = instance.getMap(ds.toString());
-			shardStatusMap.put(ds, innerMap);
+			Map<String, ShardStatus> innerMap = new HashMap<String, ShardStatus>();
+			shardStatusMap.put(dataStoreType, innerMap);
 		}
+		logger.info("initialization complete");
 	}
 
 	public ShardLifeCycleManager(List<DataStoreType> dataStores)
@@ -48,10 +53,15 @@ public class ShardLifeCycleManager implements ShardLifeCycleManagerInterface
 	 * com.flipkart.portkey.common.sharding.ShardLifeCycleManagerInterface#setShardStatus(com.flipkart.portkey.common
 	 * .enumeration.DataStoreType, java.lang.String, com.flipkart.portkey.common.enumeration.ShardStatus)
 	 */
-	public void setShardStatus(DataStoreType ds, String shardId, ShardStatus shardStatus)
+	public void setShardStatus(DataStoreType dataStoreType, String shardId, ShardStatus shardStatus)
 	{
+		logger.info("setting shard status datastoretype=" + dataStoreType + " shardId=" + shardId + " shardStatus="
+		        + shardStatus);
 		// TODO: handle NullPointerException
-		shardStatusMap.get(ds).set(shardId, shardStatus);
+		Map<String, ShardStatus> statusMapForDS = shardStatusMap.get(dataStoreType);
+		statusMapForDS.put(shardId, shardStatus);
+		shardStatusMap.put(dataStoreType, statusMapForDS);
+		logger.info("value set=" + shardStatusMap.get(dataStoreType).get(shardId));
 	}
 
 	/*
@@ -60,13 +70,17 @@ public class ShardLifeCycleManager implements ShardLifeCycleManagerInterface
 	 * com.flipkart.portkey.common.sharding.ShardLifeCycleManagerInterface#getShardListForStatus(com.flipkart.portkey
 	 * .common.enumeration.DataStoreType, com.flipkart.portkey.common.enumeration.ShardStatus)
 	 */
-	public List<String> getShardListForStatus(DataStoreType ds, ShardStatus shardStatus)
+	public List<String> getShardListForStatus(DataStoreType dataStoreType, ShardStatus shardStatus)
 	{
-		IMap<String, ShardStatus> statusMapForDS = shardStatusMap.get(ds);
+		logger.info("generating shard list with status=" + shardStatus + " for datastoretype=" + dataStoreType);
+		Map<String, ShardStatus> statusMapForDS = shardStatusMap.get(dataStoreType);
 		if (statusMapForDS == null)
 		{
+			logger.info("no shards are registered for datastore type=" + dataStoreType);
+			logger.info("returning null");
 			return null;
 		}
+		logger.info("number of shards registered for " + dataStoreType + "=" + statusMapForDS.size());
 		List<String> shardList = new ArrayList<String>();
 		for (String shardId : statusMapForDS.keySet())
 		{
@@ -75,6 +89,7 @@ public class ShardLifeCycleManager implements ShardLifeCycleManagerInterface
 				shardList.add(shardId);
 			}
 		}
+		logger.info("shard list=" + shardList);
 		return shardList.size() > 0 ? shardList : null;
 	}
 
@@ -84,10 +99,10 @@ public class ShardLifeCycleManager implements ShardLifeCycleManagerInterface
 	 * com.flipkart.portkey.common.sharding.ShardLifeCycleManagerInterface#getShardStatus(com.flipkart.portkey.common
 	 * .enumeration.DataStoreType, java.lang.String)
 	 */
-	public ShardStatus getShardStatus(DataStoreType ds, String shardId)
+	public ShardStatus getShardStatus(DataStoreType dataStoreType, String shardId)
 	{
 		// TODO: handle NullPointerException
-		return shardStatusMap.get(ds).get(shardId);
+		return shardStatusMap.get(dataStoreType).get(shardId);
 	}
 
 	/*
@@ -96,9 +111,9 @@ public class ShardLifeCycleManager implements ShardLifeCycleManagerInterface
 	 * com.flipkart.portkey.common.sharding.ShardLifeCycleManagerInterface#getStatusForDataStore(com.flipkart.portkey
 	 * .common.enumeration.DataStoreType)
 	 */
-	public Map<String, ShardStatus> getStatusMapForDataStore(DataStoreType ds)
+	public Map<String, ShardStatus> getStatusMapForDataStore(DataStoreType dataStoreType)
 	{
-		Map<String, ShardStatus> statusMap = new HashMap<String, ShardStatus>(shardStatusMap.get(ds));
+		Map<String, ShardStatus> statusMap = new HashMap<String, ShardStatus>(shardStatusMap.get(dataStoreType));
 		return statusMap;
 	}
 

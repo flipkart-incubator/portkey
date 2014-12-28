@@ -45,6 +45,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 
 	public ShardStatus healthCheck()
 	{
+		logger.info("health checking for rdbms shard master=" + master);
 		if (isAvailableForWrite())
 			return ShardStatus.AVAILABLE_FOR_WRITE;
 		else if (isAvailableForRead())
@@ -58,15 +59,17 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	 */
 	private boolean isAvailableForWrite()
 	{
+		logger.info("checking if master is available for write");
 		try
 		{
 			new JdbcTemplate(master).execute("SELECT 1 FROM DUAL");
 		}
 		catch (DataAccessException e)
 		{
+			logger.info("exception while trying to execute query on master" + master);
 			return false;
 		}
-		// TODO: catch possible unchecked exceptions
+		logger.info("master is available for write");
 		return true;
 	}
 
@@ -75,6 +78,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	 */
 	private boolean isAvailableForRead()
 	{
+		logger.info("checking if any slave is available");
 		for (DataSource slave : slaves)
 		{
 			try
@@ -83,11 +87,13 @@ public class RdbmsPersistenceManager implements PersistenceManager
 			}
 			catch (DataAccessException e)
 			{
+				logger.info("exception while trying to execute query on slave" + slave);
 				continue;
 			}
-			// TODO: catch possible unchecked exceptions
+			logger.info("slave is up" + slave);
 			return true;
 		}
+		logger.info("no slave is up");
 		return false;
 	}
 
@@ -110,6 +116,10 @@ public class RdbmsPersistenceManager implements PersistenceManager
 				Object value;
 				try
 				{
+					if (!field.isAccessible())
+					{
+						field.setAccessible(true);
+					}
 					value = field.get(obj);
 				}
 				catch (IllegalArgumentException e)

@@ -32,7 +32,7 @@ public class ShardIdentifier implements ShardIdentifierInterface
 		{
 			return null;
 		}
-		int shardId = Math.abs(shardKey.hashCode() % liveShards.size());
+		int shardId = Math.abs(shardKey.hashCode() % liveShards.size() + 1);
 		if (shardId < 10)
 		{
 			return "0" + shardId;

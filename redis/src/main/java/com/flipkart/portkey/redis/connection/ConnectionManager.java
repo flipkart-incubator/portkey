@@ -6,6 +6,8 @@ package com.flipkart.portkey.redis.connection;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.log4j.Logger;
+
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
@@ -16,11 +18,14 @@ import redis.clients.jedis.JedisPoolConfig;
  */
 public class ConnectionManager
 {
+	private static final Logger logger = Logger.getLogger(ConnectionManager.class);
 	private String host = "localhost";
 	private int port = 6379;
 
 	private int database = 0;
 	private String password = null;
+
+	private int timeout = 2000;
 
 	private boolean blockWhenExhausted = true;
 	private boolean jmxEnabled = true;
@@ -241,19 +246,22 @@ public class ConnectionManager
 			poolConfig.setBlockWhenExhausted(this.blockWhenExhausted);
 			poolConfig.setJmxEnabled(this.jmxEnabled);
 			poolConfig.setJmxNamePrefix(this.jmxPrefix);
-			JedisPool pool = new JedisPool(poolConfig, host, port);
+			JedisPool pool = new JedisPool(poolConfig, host, port, timeout, password);
 			jedisPoolMap.put(key, pool);
 		}
 	}
 
 	public Jedis getConnection()
 	{
+		logger.info("inside connectionmanager.getConnection");
 		String key = getJedisPoolMapKey();
 		JedisPool pool = jedisPoolMap.get(key);
 		if (pool != null)
 		{
+			logger.info("returning a resource from jedis pool");
 			return pool.getResource();
 		}
+		logger.info("no jedis pool available, returning null");
 		return null;
 	}
 

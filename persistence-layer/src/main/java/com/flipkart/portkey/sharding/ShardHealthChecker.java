@@ -15,7 +15,6 @@ import com.flipkart.portkey.common.sharding.ShardHealthCheckerInterface;
  */
 public class ShardHealthChecker implements ShardHealthCheckerInterface
 {
-
 	/*
 	 * (non-Javadoc)
 	 * @see com.flipkart.portkey.common.sharding.ShardHealthChecker#healthCheck(java.util.List)

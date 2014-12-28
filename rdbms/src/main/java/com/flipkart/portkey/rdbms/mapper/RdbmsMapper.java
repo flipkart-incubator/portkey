@@ -98,6 +98,10 @@ public class RdbmsMapper<V extends Entity> implements RowMapper<V>
 			Field field = tableMetaData.getFieldNameToFieldMap().get(fieldName);
 			try
 			{
+				if (!field.isAccessible())
+				{
+					field.setAccessible(true);
+				}
 				field.set(bean, columnValue);
 			}
 			catch (IllegalArgumentException e)

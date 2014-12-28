@@ -17,5 +17,5 @@ public @interface RdbmsTable
 {
 	public String tableName();
 
-	public String databaseName();
+	public String databaseName() default "";
 }
