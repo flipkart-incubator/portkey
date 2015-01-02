@@ -8,6 +8,9 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import com.flipkart.portkey.common.serializer.JsonSerializer;
+import com.flipkart.portkey.common.serializer.Serializer;
+
 /**
  * @author santosh.p
  */
@@ -23,7 +26,5 @@ public @interface RdbmsField
 
 	public boolean isUnique() default false;
 
-	public boolean isJson() default false;
-
-	public boolean isJsonList() default false;
+	public Class<? extends Serializer> serializer() default JsonSerializer.class;
 }

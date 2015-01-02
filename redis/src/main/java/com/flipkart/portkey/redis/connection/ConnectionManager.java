@@ -11,6 +11,7 @@ import org.apache.log4j.Logger;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
+import redis.clients.jedis.exceptions.JedisConnectionException;
 
 /**
  * Connection manager for redis. Internally uses jedis pool for pooling.
@@ -259,7 +260,14 @@ public class ConnectionManager
 		if (pool != null)
 		{
 			logger.info("returning a resource from jedis pool");
-			return pool.getResource();
+			try
+			{
+				return pool.getResource();
+			}
+			catch (JedisConnectionException e)
+			{
+				return null;
+			}
 		}
 		logger.info("no jedis pool available, returning null");
 		return null;

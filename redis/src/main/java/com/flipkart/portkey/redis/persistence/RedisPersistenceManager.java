@@ -19,14 +19,16 @@ import org.springframework.beans.factory.InitializingBean;
 
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPoolConfig;
+import redis.clients.jedis.exceptions.JedisConnectionException;
 
 import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.common.enumeration.ShardStatus;
+import com.flipkart.portkey.common.exception.BeanDeserializationException;
+import com.flipkart.portkey.common.exception.BeanSerializationException;
 import com.flipkart.portkey.common.exception.InvalidAnnotationException;
-import com.flipkart.portkey.common.exception.JsonDeserializationException;
-import com.flipkart.portkey.common.exception.JsonSerializationException;
 import com.flipkart.portkey.common.exception.MethodNotSupportedForDataStoreException;
 import com.flipkart.portkey.common.exception.QueryNotSupportedException;
+import com.flipkart.portkey.common.exception.ShardNotAvailableException;
 import com.flipkart.portkey.common.persistence.PersistenceManager;
 import com.flipkart.portkey.redis.connection.ConnectionManager;
 import com.flipkart.portkey.redis.keyparser.DefaultKeyParser;
@@ -104,23 +106,35 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 	@Override
 	public ShardStatus healthCheck()
 	{
-		logger.info("health checking for redis, host=" + host + " port=" + port);
-		Jedis conn = cm.getConnection();
-		logger.info("acquired redis connection, checking for response");
-		logger.info(conn.ping());
+		logger.debug("health checking for redis, host=" + host + " port=" + port);
+		Jedis conn;
+		try
+		{
+			conn = cm.getConnection();
+		}
+		catch (JedisConnectionException e)
+		{
+			return ShardStatus.UNAVAILABLE;
+		}
+		if (conn == null)
+		{
+			return ShardStatus.UNAVAILABLE;
+		}
+		logger.debug("acquired redis connection, checking for response");
+		logger.debug(conn.ping());
 		if (conn.ping().equals("PONG"))
 		{
-			logger.info("instance is available");
+			logger.debug("instance is available");
 			return ShardStatus.AVAILABLE_FOR_WRITE;
 		}
 		else
 		{
-			logger.info("instance is unavailable");
+			logger.debug("instance is unavailable");
 			return ShardStatus.UNAVAILABLE;
 		}
 	}
 
-	private <T extends Entity> RedisMetaData getMetaData(Class<T> clazz) throws InvalidAnnotationException
+	private <T extends Entity> RedisMetaData getMetaData(Class<T> clazz)
 	{
 		return RedisMetaDataCache.getInstance().getMetaData(clazz);
 	}
@@ -130,13 +144,16 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#insert(com.flipkart.portkey.common.entity.Entity)
 	 */
 	@Override
-	public <T extends Entity> int insert(T bean) throws InvalidAnnotationException, JsonSerializationException
+	public <T extends Entity> int insert(T bean) throws ShardNotAvailableException
 	{
-		// TODO: Instead of bean.getClass(), identify class using T
 		RedisMetaData metaData = getMetaData(bean.getClass());
 		List<String> keys = keyParser.parsePrimaryKeyPattern(bean, metaData);
 
 		Jedis conn = cm.getConnection();
+		if (conn == null)
+		{
+			throw new ShardNotAvailableException("Failed to acquire redis connection, bean=" + bean);
+		}
 		if (keys.size() == 1)
 		{
 			String key = keys.get(0);
@@ -147,23 +164,23 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 			}
 			catch (JsonGenerationException e)
 			{
-				throw new JsonSerializationException("Exception while trying to serialize bean " + bean + "\n" + e);
+				throw new BeanSerializationException("Exception while trying to serialize bean " + bean + "\n" + e);
 			}
 			catch (JsonMappingException e)
 			{
-				throw new JsonSerializationException("Exception while trying to serialize bean " + bean + "\n" + e);
+				throw new BeanSerializationException("Exception while trying to serialize bean " + bean + "\n" + e);
 			}
 			catch (IOException e)
 			{
-				throw new JsonSerializationException("Exception while trying to serialize bean " + bean + "\n" + e);
+				throw new BeanSerializationException("Exception while trying to serialize bean " + bean + "\n" + e);
 			}
 			conn.set(key, serialized);
 			return 1;
 		}
 		if (keys.size() == 2)
 		{
-			String outerKey = keys.get(0);
-			String innerKey = keys.get(1);
+			String key = keys.get(0);
+			String field = keys.get(1);
 			String serialized = null;
 			try
 			{
@@ -171,25 +188,25 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 			}
 			catch (JsonGenerationException e)
 			{
-				throw new JsonSerializationException("Exception while trying to serialize bean " + bean + "\n" + e);
+				throw new BeanSerializationException("Exception while trying to serialize bean " + bean + "\n" + e);
 			}
 			catch (JsonMappingException e)
 			{
-				throw new JsonSerializationException("Exception while trying to serialize bean " + bean + "\n" + e);
+				throw new BeanSerializationException("Exception while trying to serialize bean " + bean + "\n" + e);
 			}
 			catch (IOException e)
 			{
-				throw new JsonSerializationException("Exception while trying to serialize bean " + bean + "\n" + e);
+				throw new BeanSerializationException("Exception while trying to serialize bean " + bean + "\n" + e);
 			}
-			Long retVal = conn.hset(outerKey, innerKey, serialized);
+			Long retVal = conn.hset(key, field, serialized);
 			if (retVal == 0)
 			{
-				logger.info("Key already exists in redis: Outer key:" + outerKey + "Inner key:" + innerKey);
+				logger.info("Key already exists in redis: Outer key:" + key + "Inner key:" + field);
 			}
 			return 1;
 		}
 		throw new InvalidAnnotationException("Exception while trying to parse keys:" + keys
-		        + "\nKey size more than 2 is not supported.");
+		        + "\nKey consists of more than 2 parts.");
 	}
 
 	/*
@@ -197,9 +214,9 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#update(com.flipkart.portkey.common.entity.Entity)
 	 */
 	@Override
-	public <T extends Entity> int update(T bean) throws InvalidAnnotationException, JsonSerializationException
+	public <T extends Entity> int update(T bean) throws ShardNotAvailableException
 	{
-		// TODO: check if following line is compatible
+		// TODO: check if this has same impact as update
 		return insert(bean);
 	}
 
@@ -215,7 +232,7 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 		throw new MethodNotSupportedForDataStoreException("Method not supported for redis implementation");
 	}
 
-	private <T extends Entity> void deleteAllSecondaryKeys(T bean) throws InvalidAnnotationException
+	private <T extends Entity> void deleteAllSecondaryKeys(T bean)
 	{
 		RedisMetaData metaData = getMetaData(bean.getClass());
 		List<String> secondaryKeys = keyParser.parseSecondaryKeyPatterns(bean, metaData);
@@ -227,7 +244,7 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 	}
 
 	// TODO: make sure the hashset gets deleted when last pojo in it gets deleted
-	private <T extends Entity> void deletePrimaryKey(T bean) throws InvalidAnnotationException
+	private <T extends Entity> void deletePrimaryKey(T bean)
 	{
 		RedisMetaData metaData = getMetaData(bean.getClass());
 		List<String> primaryKeys = keyParser.parsePrimaryKeyPattern(bean, metaData);
@@ -239,9 +256,9 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 		}
 		else if (primaryKeys.size() == 2)
 		{
-			String outerKey = primaryKeys.get(0);
-			String innerKey = primaryKeys.get(1);
-			conn.hdel(outerKey, innerKey);
+			String key = primaryKeys.get(0);
+			String field = primaryKeys.get(1);
+			conn.hdel(key, field);
 		}
 	}
 
@@ -251,7 +268,7 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 	 */
 	@Override
 	public <T extends Entity> int delete(Class<T> clazz, Map<String, Object> criteria)
-	        throws InvalidAnnotationException, JsonDeserializationException, QueryNotSupportedException
+	        throws QueryNotSupportedException, ShardNotAvailableException
 	{
 		// TODO: check if secondary key exists, if not just delete primary key
 		List<T> beans = getByCriteria(clazz, criteria, true);
@@ -271,18 +288,22 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 	 */
 	@Override
 	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, Map<String, Object> criteria)
-	        throws InvalidAnnotationException, JsonDeserializationException, QueryNotSupportedException
+	        throws QueryNotSupportedException, ShardNotAvailableException
 	{
 		return getByCriteria(clazz, criteria, false);
 	}
 
 	private <T extends Entity> T getEntityFromPrimaryKeyAttributes(Class<T> clazz, Map<String, Object> criteria,
-	        RedisMetaData metaData) throws JsonDeserializationException, InvalidAnnotationException
+	        RedisMetaData metaData) throws ShardNotAvailableException
 	{
 		T bean;
 		List<String> keys;
 		String value;
 		Jedis conn = cm.getConnection();
+		if (conn == null)
+		{
+			throw new ShardNotAvailableException("Failed to acquire redis connection");
+		}
 		keys = keyParser.parsePrimaryKeyPattern(criteria, metaData);
 		if (keys.size() == 1)
 		{
@@ -306,24 +327,24 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 		}
 		catch (JsonParseException e)
 		{
-			throw new JsonDeserializationException("Exception while trying to deserialize value fetched from redis "
+			throw new BeanDeserializationException("Exception while trying to deserialize value fetched from redis "
 			        + value + "\n" + e);
 		}
 		catch (JsonMappingException e)
 		{
-			throw new JsonDeserializationException("Exception while trying to deserialize value fetched from redis "
+			throw new BeanDeserializationException("Exception while trying to deserialize value fetched from redis "
 			        + value + "\n" + e);
 		}
 		catch (IOException e)
 		{
-			throw new JsonDeserializationException("Exception while trying to deserialize value fetched from redis "
+			throw new BeanDeserializationException("Exception while trying to deserialize value fetched from redis "
 			        + value + "\n" + e);
 		}
 		return bean;
 	}
 
 	private <T extends Entity> T getEntityFromSecondaryKeyAttributes(Class<T> clazz, Map<String, Object> criteria,
-	        RedisMetaData metaData) throws InvalidAnnotationException, JsonDeserializationException
+	        RedisMetaData metaData)
 	{
 		T bean;
 		String key;
@@ -353,17 +374,17 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 		}
 		catch (JsonParseException e)
 		{
-			throw new JsonDeserializationException("Exception while trying to deserialize value fetched from redis "
+			throw new BeanDeserializationException("Exception while trying to deserialize value fetched from redis "
 			        + value + "\n" + e);
 		}
 		catch (JsonMappingException e)
 		{
-			throw new JsonDeserializationException("Exception while trying to deserialize value fetched from redis "
+			throw new BeanDeserializationException("Exception while trying to deserialize value fetched from redis "
 			        + value + "\n" + e);
 		}
 		catch (IOException e)
 		{
-			throw new JsonDeserializationException("Exception while trying to deserialize value fetched from redis "
+			throw new BeanDeserializationException("Exception while trying to deserialize value fetched from redis "
 			        + value + "\n" + e);
 		}
 		return bean;
@@ -376,7 +397,7 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 	 */
 	@Override
 	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, Map<String, Object> criteria, boolean readMaster)
-	        throws InvalidAnnotationException, JsonDeserializationException, QueryNotSupportedException
+	        throws QueryNotSupportedException, ShardNotAvailableException
 	{
 		List<T> retVal = new ArrayList<T>();
 		RedisMetaData metaData = getMetaData(clazz);
@@ -411,8 +432,7 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 	 */
 	@Override
 	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, List<String> attributeNames,
-	        Map<String, Object> criteria) throws InvalidAnnotationException, JsonDeserializationException,
-	        QueryNotSupportedException
+	        Map<String, Object> criteria) throws QueryNotSupportedException, ShardNotAvailableException
 	{
 		return getByCriteria(clazz, attributeNames, criteria, false);
 	}
@@ -424,8 +444,8 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 	 */
 	@Override
 	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, List<String> attributeNames,
-	        Map<String, Object> criteria, boolean readMaster) throws InvalidAnnotationException,
-	        JsonDeserializationException, QueryNotSupportedException
+	        Map<String, Object> criteria, boolean readMaster) throws QueryNotSupportedException,
+	        ShardNotAvailableException
 	{
 		return getByCriteria(clazz, criteria, readMaster);
 	}

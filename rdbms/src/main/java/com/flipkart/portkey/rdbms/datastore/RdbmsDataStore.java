@@ -7,14 +7,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import com.flipkart.portkey.common.datastore.DataStore;
+import com.flipkart.portkey.common.datastore.DataStoreConfig;
 import com.flipkart.portkey.common.persistence.PersistenceManager;
 import com.flipkart.portkey.rdbms.metadata.RdbmsMetaDataCache;
 
 /**
  * @author santosh.p
  */
-public class RdbmsDataStore implements DataStore
+public class RdbmsDataStore implements DataStoreConfig
 {
 
 	private Map<String, PersistenceManager> shardIdToPersistenceManagerMap;

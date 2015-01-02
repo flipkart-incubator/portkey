@@ -1,9 +1,8 @@
 /**
  * 
  */
-package com.flipkart.portkey.persistencelayer;
+package com.flipkart.portkey.persistence;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -15,7 +14,7 @@ import org.apache.log4j.Logger;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.util.Assert;
 
-import com.flipkart.portkey.common.datastore.DataStore;
+import com.flipkart.portkey.common.datastore.DataStoreConfig;
 import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.common.entity.persistence.EntityPersistencePreference;
 import com.flipkart.portkey.common.entity.persistence.ReadConfig;
@@ -23,10 +22,11 @@ import com.flipkart.portkey.common.entity.persistence.WriteConfig;
 import com.flipkart.portkey.common.enumeration.DataStoreType;
 import com.flipkart.portkey.common.enumeration.FailureAction;
 import com.flipkart.portkey.common.enumeration.ShardStatus;
+import com.flipkart.portkey.common.exception.BeanSerializationException;
 import com.flipkart.portkey.common.exception.InvalidAnnotationException;
-import com.flipkart.portkey.common.exception.JsonSerializationException;
 import com.flipkart.portkey.common.exception.PortKeyException;
 import com.flipkart.portkey.common.exception.QueryExecutionException;
+import com.flipkart.portkey.common.exception.QueryNotSupportedException;
 import com.flipkart.portkey.common.exception.ShardNotAvailableException;
 import com.flipkart.portkey.common.metadata.MetaDataCache;
 import com.flipkart.portkey.common.persistence.PersistenceLayerInterface;
@@ -34,6 +34,7 @@ import com.flipkart.portkey.common.persistence.PersistenceManager;
 import com.flipkart.portkey.common.persistence.Result;
 import com.flipkart.portkey.common.sharding.ShardIdentifierInterface;
 import com.flipkart.portkey.common.sharding.ShardLifeCycleManagerInterface;
+import com.flipkart.portkey.common.util.PortKeyUtils;
 import com.flipkart.portkey.sharding.ShardIdentifier;
 import com.flipkart.portkey.sharding.ShardLifeCycleManager;
 
@@ -45,9 +46,10 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 	private static final Logger logger = Logger.getLogger(PersistenceLayer.class);
 	private EntityPersistencePreference defaultPersistencePreference;
 	private Map<Class<? extends Entity>, EntityPersistencePreference> entityPersistencePreferenceMap;
-	private Map<DataStoreType, DataStore> dataStoresMap;
+	private Map<DataStoreType, DataStoreConfig> dataStoreConfigMap;
 	private ShardIdentifierInterface shardIdentifier;
 	private ShardLifeCycleManagerInterface shardLifeCycleManager;
+	private ScheduledExecutorService scheduledThreadPool;
 
 	class HealthCheckScheduler implements Runnable
 	{
@@ -56,9 +58,9 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		{
 			logger.info("running healthckecker");
 			// TODO: try fetching a snapshot of shard statuses, instead of individual fetches from shardLifeCycleManager
-			for (DataStoreType type : dataStoresMap.keySet())
+			for (DataStoreType type : dataStoreConfigMap.keySet())
 			{
-				DataStore ds = dataStoresMap.get(type);
+				DataStoreConfig ds = dataStoreConfigMap.get(type);
 				List<String> shardIds = ds.getShardIds();
 				for (String shardId : shardIds)
 				{
@@ -88,9 +90,9 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		this.entityPersistencePreferenceMap = entityPersistencePreferenceMap;
 	}
 
-	public void setDataStoresMap(Map<DataStoreType, DataStore> dataStoresMap)
+	public void setDataStoresMap(Map<DataStoreType, DataStoreConfig> dataStoresMap)
 	{
-		this.dataStoresMap = dataStoresMap;
+		this.dataStoreConfigMap = dataStoresMap;
 	}
 
 	/*
@@ -100,9 +102,8 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 	@Override
 	public void afterPropertiesSet() throws Exception
 	{
-		logger.info("Entry: afterPropertiesSet");
 		Assert.notNull(defaultPersistencePreference);
-		Assert.notNull(dataStoresMap);
+		Assert.notNull(dataStoreConfigMap);
 
 		logger.info("Assertions passed");
 
@@ -110,15 +111,15 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		logger.info("shardIdentifier initialized");
 
 		logger.info("initializing ShardLifeCycleManager");
-		List<DataStoreType> dataStoreTypes = new ArrayList<DataStoreType>(dataStoresMap.keySet());
+		List<DataStoreType> dataStoreTypes = new ArrayList<DataStoreType>(dataStoreConfigMap.keySet());
 		shardLifeCycleManager = new ShardLifeCycleManager(dataStoreTypes);
 		logger.info("number of data stores to be registered=" + dataStoreTypes.size());
 		logger.info("datastores=" + dataStoreTypes);
 		for (DataStoreType type : dataStoreTypes)
 		{
-			DataStore ds = dataStoresMap.get(type);
+			DataStoreConfig ds = dataStoreConfigMap.get(type);
 			List<String> shardIds = ds.getShardIds();
-			logger.info("registering shards for datastoretype=" + dataStoreTypes);
+			logger.info("registering " + shardIds.size() + " shards for datastoretype=" + dataStoreTypes);
 			for (String shardId : shardIds)
 			{
 				logger.info("registering shard id=" + shardId);
@@ -126,10 +127,10 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 			}
 		}
 		logger.info("ShardLifeCycleManager initialized");
-		ScheduledExecutorService scheduledThreadPool = Executors.newScheduledThreadPool(5);
+		scheduledThreadPool = Executors.newScheduledThreadPool(5);
 		HealthCheckScheduler healthCheckScheduler = new HealthCheckScheduler();
+		healthCheckScheduler.run();
 		scheduledThreadPool.scheduleAtFixedRate(healthCheckScheduler, 0, 100, TimeUnit.SECONDS);
-		Thread.sleep(3000);
 		logger.info("scheduled health checker");
 		logger.info("Initialized Persistence Layer");
 	}
@@ -180,108 +181,28 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		return entityPersistencePreference.getReadConfig();
 	}
 
-	private DataStore getDataStore(DataStoreType type)
+	private DataStoreConfig getDataStore(DataStoreType type)
 	{
-		return dataStoresMap.get(type);
+		return dataStoreConfigMap.get(type);
 	}
 
 	private PersistenceManager getPersistenceManager(DataStoreType type, String shardId)
 	{
-		DataStore ds = getDataStore(type);
+		DataStoreConfig ds = getDataStore(type);
 		return ds.getPersistenceManager(shardId);
 	}
 
 	private MetaDataCache getMetaDataCache(DataStoreType type)
 	{
-		DataStore dataStore = getDataStore(type);
+		DataStoreConfig dataStore = getDataStore(type);
 		return dataStore.getMetaDataCache();
 	}
 
-	private <T extends Entity> Field getFieldFromBean(T bean, String fieldName) throws InvalidAnnotationException
-	{
-		Field field = null;
-		try
-		{
-
-			field = bean.getClass().getDeclaredField(fieldName);
-			field.setAccessible(true);
-		}
-		catch (NoSuchFieldException e)
-		{
-			logger.info("exception while trying to get field from field name, fieldName=" + fieldName + "\n bean="
-			        + bean + "\n" + e);
-			throw new InvalidAnnotationException("bean=" + bean + "\nfieldName=" + fieldName, e);
-		}
-		catch (SecurityException e)
-		{
-			logger.info("exception while trying to get field from field name, fieldName=" + fieldName + "\n bean="
-			        + bean + "\n" + e);
-			throw new InvalidAnnotationException("bean=" + bean + "\nfieldName=" + fieldName, e);
-		}
-		return field;
-	}
-
-	private <T extends Entity> String getFieldValueFromBean(T bean, String fieldName) throws InvalidAnnotationException
-	{
-		String value = null;
-		Field field = null;
-		field = getFieldFromBean(bean, fieldName);
-		try
-		{
-			if (!field.isAccessible())
-			{
-				field.setAccessible(true);
-			}
-			value = field.get(bean).toString();
-		}
-		catch (IllegalArgumentException e)
-		{
-			logger.info("exception while trying to get value from bean and field, bean=" + bean + "\n field=" + field
-			        + "\n" + e);
-			throw new InvalidAnnotationException("bean=" + bean + "\nfield=" + field, e);
-		}
-		catch (IllegalAccessException e)
-		{
-			logger.info("exception while trying to get value from bean and field, bean=" + bean + "\n field=" + field
-			        + "\n" + e);
-			throw new InvalidAnnotationException("bean=" + bean + "\nfield=" + field, e);
-		}
-		return value;
-	}
-
-	private <T extends Entity> void setFieldValueInBean(T bean, String fieldName, String value)
-	        throws InvalidAnnotationException
-	{
-		Field field = null;
-		field = getFieldFromBean(bean, fieldName);
-		try
-		{
-			if (!field.isAccessible())
-			{
-				field.setAccessible(true);
-			}
-			field.set(bean, value);
-		}
-		catch (IllegalArgumentException e)
-		{
-			logger.info("exception while trying to set value of bean, bean=" + bean + "field=" + field + "value="
-			        + value + "\n" + e);
-			throw new InvalidAnnotationException("bean=" + bean + "\nfield=" + field, e);
-		}
-		catch (IllegalAccessException e)
-		{
-			logger.info("exception while trying to set value of bean, bean=" + bean + "field=" + field + "value="
-			        + value + "\n" + e);
-			throw new InvalidAnnotationException("bean=" + bean + "\nfield=" + field, e);
-		}
-	}
-
-	private <T extends Entity> int insertIntoDataStore(DataStoreType type, T bean) throws InvalidAnnotationException,
-	        ShardNotAvailableException, JsonSerializationException
+	private <T extends Entity> int insertIntoDataStore(DataStoreType type, T bean) throws ShardNotAvailableException
 	{
 		MetaDataCache metaDataCache = getMetaDataCache(type);
 		String shardKeyFieldName = metaDataCache.getShardKey(bean.getClass());
-		String shardKey = getFieldValueFromBean(bean, shardKeyFieldName);;
+		String shardKey = PortKeyUtils.toString(PortKeyUtils.getFieldValueFromBean(bean, shardKeyFieldName));
 		String shardId = shardIdentifier.getShardId(shardKey);
 		PersistenceManager pm = getPersistenceManager(type, shardId);
 		int rowsUpdated = pm.insert(bean);
@@ -293,7 +214,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		MetaDataCache metaDataCache = getMetaDataCache(type);
 		String shardKeyFieldName = metaDataCache.getShardKey(bean.getClass());
 		String shardKey;
-		shardKey = getFieldValueFromBean(bean, shardKeyFieldName);
+		shardKey = PortKeyUtils.toString(PortKeyUtils.getFieldValueFromBean(bean, shardKeyFieldName));
 		return shardKey;
 	}
 
@@ -307,12 +228,12 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 	{
 		MetaDataCache metaDataCache = getMetaDataCache(type);
 		String shardKeyFieldName = metaDataCache.getShardKey(bean.getClass());
-		String shardKey = getFieldValueFromBean(bean, shardKeyFieldName);
+		String shardKey = PortKeyUtils.toString(PortKeyUtils.getFieldValueFromBean(bean, shardKeyFieldName));
 		ShardLifeCycleManagerInterface shardLifeCycleManager = getShardLifeCycleManager();
 		List<String> liveShards = shardLifeCycleManager.getShardListForStatus(type, ShardStatus.AVAILABLE_FOR_WRITE);
 		String shardId = shardIdentifier.generateShardId(shardKey, liveShards);
 		String newShardKey = shardIdentifier.generateNewShardKey(shardKey, shardId);
-		setFieldValueInBean(bean, shardKeyFieldName, newShardKey);
+		PortKeyUtils.setFieldValueInBean(bean, shardKeyFieldName, newShardKey);
 		return bean;
 	}
 
@@ -322,9 +243,10 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 	 * com.flipkart.portkey.common.persistence.PersistenceLayerInterface#insert(com.flipkart.portkey.common.entity.Entity
 	 * )
 	 */
-	public <T extends Entity> Result insert(T bean) throws PortKeyException
+	public <T extends Entity> Result insert(T bean) throws InvalidAnnotationException, ShardNotAvailableException,
+	        BeanSerializationException
 	{
-		logger.debug("Entry,  bean=" + bean);
+		logger.debug("bean=" + bean);
 		return insert(bean, false);
 	}
 
@@ -334,60 +256,39 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 	 * com.flipkart.portkey.common.persistence.PersistenceLayerInterface#insert(com.flipkart.portkey.common.entity.Entity
 	 * , boolean)
 	 */
-	public <T extends Entity> Result insert(T bean, boolean generateShardId) throws InvalidAnnotationException,
-	        ShardNotAvailableException, JsonSerializationException
+	public <T extends Entity> Result insert(T bean, boolean generateShardId) throws ShardNotAvailableException
 	{
-		logger.debug("Entry,  bean=" + bean + "generateShardId=" + generateShardId);
+		logger.debug("bean=" + bean + "generateShardId=" + generateShardId);
+
 		Result result = new Result();
 		WriteConfig writeConfig = getWriteConfigForEntity(bean.getClass());
 		List<DataStoreType> writeOrder = writeConfig.getWriteOrder();
 		if (generateShardId)
 		{
-			DataStoreType typeForShardIdGeneration = writeOrder.get(0);
-			bean = generateShardIdAndUpdateBean(typeForShardIdGeneration, bean);
+			DataStoreType dataStoreTypeForShardIdGeneration = writeOrder.get(0);
+			bean = generateShardIdAndUpdateBean(dataStoreTypeForShardIdGeneration, bean);
 		}
 
-		for (DataStoreType type : writeOrder)
+		for (DataStoreType dataStoreType : writeOrder)
 		{
 			int rowsUpdated = 0;
 			try
 			{
-				rowsUpdated = insertIntoDataStore(type, bean);
-			}
-			catch (InvalidAnnotationException e)
-			{
-				logger.info("Caught exception while trying to insert bean=" + bean + "\n into data store" + type + "\n"
-				        + e);
-				FailureAction failureAction = writeConfig.getFailureAction();
-				if (failureAction == FailureAction.ABORT)
-				{
-					throw e;
-				}
-				continue;
+				rowsUpdated = insertIntoDataStore(dataStoreType, bean);
 			}
 			catch (ShardNotAvailableException e)
 			{
-				logger.info("Caught exception while trying to insert bean=" + bean + "\n into data store" + type + "\n"
-				        + e);
+				logger.info("Caught exception while trying to insert bean=" + bean + "\n into data store"
+				        + dataStoreType + "\n" + e);
 				FailureAction failureAction = writeConfig.getFailureAction();
 				if (failureAction == FailureAction.ABORT)
 				{
-					throw e;
+					throw new ShardNotAvailableException("Exception while inserting bean into datastore, bean=" + bean
+					        + "\ndatastoretype=" + dataStoreType, e);
 				}
 				continue;
 			}
-			catch (JsonSerializationException e)
-			{
-				logger.info("Caught exception while trying to insert bean=" + bean + "\n into data store" + type + "\n"
-				        + e);
-				FailureAction failureAction = writeConfig.getFailureAction();
-				if (failureAction == FailureAction.ABORT)
-				{
-					throw e;
-				}
-				continue;
-			}
-			result.setRowsUpdatedForDataStore(type, rowsUpdated);
+			result.setRowsUpdatedForDataStore(dataStoreType, rowsUpdated);
 		}
 		result.setEntity(bean);
 		return result;
@@ -442,7 +343,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 			}
 			else
 			{
-				List<String> shardIds = dataStoresMap.get(type).getShardIds();
+				List<String> shardIds = dataStoreConfigMap.get(type).getShardIds();
 				int rowsUpdated = 0;
 				for (String shardId : shardIds)
 				{
@@ -459,7 +360,8 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 	 * (non-Javadoc)
 	 * @see com.flipkart.portkey.common.persistence.PersistenceLayerInterface#delete(java.lang.Class, java.util.Map)
 	 */
-	public <T extends Entity> Result delete(Class<T> clazz, Map<String, Object> criteria) throws PortKeyException
+	public <T extends Entity> Result delete(Class<T> clazz, Map<String, Object> criteria)
+	        throws ShardNotAvailableException, QueryNotSupportedException
 	{
 		Result result = new Result();
 		WriteConfig writeConfig = getWriteConfigForEntity(clazz);
@@ -470,15 +372,43 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 			String shardKeyFieldName = metaDataCache.getShardKey(clazz);
 			if (criteria.containsKey(shardKeyFieldName))
 			{
+				int rowsUpdated = 0;
 				String shardKey = (String) criteria.get(shardKeyFieldName);
 				String shardId = shardIdentifier.getShardId(shardKey);
-				PersistenceManager pm = getPersistenceManager(type, shardId);
-				int rowsUpdated = pm.delete(clazz, criteria);
-				result.setRowsUpdatedForDataStore(type, rowsUpdated);
+				try
+				{
+					PersistenceManager pm = getPersistenceManager(type, shardId);
+					rowsUpdated = pm.delete(clazz, criteria);
+					result.setRowsUpdatedForDataStore(type, rowsUpdated);
+				}
+				catch (QueryNotSupportedException e)
+				{
+					logger.info("Caught exception while trying to delete from data store" + type + "\n" + e);
+					FailureAction failureAction = writeConfig.getFailureAction();
+					if (failureAction == FailureAction.ABORT)
+					{
+						throw new QueryNotSupportedException("Exception while executing delete from datastore, type="
+						        + type, e);
+					}
+					result.setRowsUpdatedForDataStore(type, rowsUpdated);
+					continue;
+				}
+				catch (ShardNotAvailableException e)
+				{
+					logger.info("Caught exception while trying to delete from data store" + type + "\n" + e);
+					FailureAction failureAction = writeConfig.getFailureAction();
+					if (failureAction == FailureAction.ABORT)
+					{
+						throw new QueryNotSupportedException("Exception while executing delete from datastore, type="
+						        + type, e);
+					}
+					result.setRowsUpdatedForDataStore(type, rowsUpdated);
+					continue;
+				}
 			}
 			else
 			{
-				List<String> shardIds = dataStoresMap.get(type).getShardIds();
+				List<String> shardIds = dataStoreConfigMap.get(type).getShardIds();
 				int rowsUpdated = 0;
 				for (String shardId : shardIds)
 				{
@@ -525,7 +455,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 			}
 			else
 			{
-				List<String> shardIds = dataStoresMap.get(type).getShardIds();
+				List<String> shardIds = dataStoreConfigMap.get(type).getShardIds();
 				for (String shardId : shardIds)
 				{
 					PersistenceManager pm = getPersistenceManager(type, shardId);
@@ -562,7 +492,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 			}
 			else
 			{
-				List<String> shardIds = dataStoresMap.get(type).getShardIds();
+				List<String> shardIds = dataStoreConfigMap.get(type).getShardIds();
 				for (String shardId : shardIds)
 				{
 					PersistenceManager pm = getPersistenceManager(type, shardId);
@@ -583,20 +513,21 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 	public <T extends Entity> List<T> getBySql(Class<T> clazz, String sql, Map<String, Object> criteria)
 	        throws PortKeyException
 	{
-		List<T> result = new ArrayList<T>();
 		WriteConfig writeConfig = getWriteConfigForEntity(clazz);
 		List<DataStoreType> writeOrder = writeConfig.getWriteOrder();
 		for (DataStoreType type : writeOrder)
 		{
-			List<String> shardIds = dataStoresMap.get(type).getShardIds();
+			List<T> result = new ArrayList<T>();
+			List<String> shardIds = dataStoreConfigMap.get(type).getShardIds();
 			for (String shardId : shardIds)
 			{
 				PersistenceManager pm = getPersistenceManager(type, shardId);
 				List<T> intermediateResult = pm.getBySql(clazz, sql, criteria);
 				result.addAll(intermediateResult);
 			}
+			return result;
 		}
-		return result;
+		return null;
 	}
 
 	/*
@@ -610,7 +541,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		List<DataStoreType> readOrder = readConfig.getReadOrder();
 		for (DataStoreType type : readOrder)
 		{
-			List<String> shardIds = dataStoresMap.get(type).getShardIds();
+			List<String> shardIds = dataStoreConfigMap.get(type).getShardIds();
 			for (String shardId : shardIds)
 			{
 				PersistenceManager pm = getPersistenceManager(type, shardId);
@@ -637,7 +568,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		{
 			String sql = sqlMap.get(type);
 			result = new ArrayList<T>();
-			List<String> shardIds = dataStoresMap.get(type).getShardIds();
+			List<String> shardIds = dataStoreConfigMap.get(type).getShardIds();
 			for (String shardId : shardIds)
 			{
 				PersistenceManager pm = getPersistenceManager(type, shardId);
@@ -663,7 +594,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		{
 			String sql = sqlMap.get(type);
 			result = new ArrayList<Map<String, Object>>();
-			List<String> shardIds = dataStoresMap.get(type).getShardIds();
+			List<String> shardIds = dataStoreConfigMap.get(type).getShardIds();
 			for (String shardId : shardIds)
 			{
 				PersistenceManager pm = getPersistenceManager(type, shardId);

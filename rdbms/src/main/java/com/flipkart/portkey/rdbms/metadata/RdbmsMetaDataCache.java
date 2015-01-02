@@ -7,9 +7,12 @@ import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.log4j.Logger;
+
 import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.common.exception.InvalidAnnotationException;
 import com.flipkart.portkey.common.metadata.MetaDataCache;
+import com.flipkart.portkey.common.serializer.Serializer;
 import com.flipkart.portkey.rdbms.metadata.annotation.RdbmsField;
 import com.flipkart.portkey.rdbms.metadata.annotation.RdbmsTable;
 
@@ -18,6 +21,7 @@ import com.flipkart.portkey.rdbms.metadata.annotation.RdbmsTable;
  */
 public class RdbmsMetaDataCache implements MetaDataCache
 {
+	private static Logger logger = Logger.getLogger(RdbmsMetaDataCache.class);
 	private Map<Class<? extends Entity>, RdbmsTableMetaData> entityToMetaDataMap;
 	private static RdbmsMetaDataCache instance = null;
 
@@ -70,12 +74,26 @@ public class RdbmsMetaDataCache implements MetaDataCache
 			{
 				String columnName = rdbmsField.columnName();
 				String fieldName = field.getName();
-				rdbmsTableMetaData.addToFieldList(field);
-				rdbmsTableMetaData.addToRdbmsFieldList(rdbmsField);
-
+				rdbmsTableMetaData.addRdbmsField(fieldName, rdbmsField);
 				rdbmsTableMetaData.addToFieldNameToRdbmsColumnMap(fieldName, columnName);
 				rdbmsTableMetaData.addToRdbmsColumnToFieldNameMap(columnName, fieldName);
 				rdbmsTableMetaData.addToFieldNameToFieldMap(fieldName, field);
+				Serializer serializer;
+				try
+				{
+					serializer = rdbmsField.serializer().newInstance();
+				}
+				catch (InstantiationException e)
+				{
+					logger.info("Exception while fetching serializer for class:" + clazz);
+					throw new InvalidAnnotationException("Exception while fetching serializer for class:" + clazz, e);
+				}
+				catch (IllegalAccessException e)
+				{
+					logger.info("Exception while fetching serializer for class:" + clazz);
+					throw new InvalidAnnotationException("Exception while fetching serializer for class:" + clazz, e);
+				}
+				rdbmsTableMetaData.setSerializer(fieldName, serializer);
 				if (rdbmsField.isPrimaryKey())
 				{
 					primaryKeyPresent = true;
@@ -86,14 +104,7 @@ public class RdbmsMetaDataCache implements MetaDataCache
 					shardKeyPresent = true;
 					rdbmsTableMetaData.setShardKey(columnName);
 				}
-				if (rdbmsField.isJson())
-				{
-					rdbmsTableMetaData.addToJsonFields(columnName);
-				}
-				if (rdbmsField.isJsonList())
-				{
-					rdbmsTableMetaData.addToJsonListFields(columnName);
-				}
+
 			}
 		}
 		if (!primaryKeyPresent)

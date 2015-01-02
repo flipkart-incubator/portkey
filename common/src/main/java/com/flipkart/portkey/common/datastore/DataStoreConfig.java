@@ -13,7 +13,7 @@ import com.flipkart.portkey.common.persistence.PersistenceManager;
  * more shards of same data store type.
  * @author santosh.p
  */
-public interface DataStore
+public interface DataStoreConfig
 {
 
 	public PersistenceManager getPersistenceManager(String shardId);

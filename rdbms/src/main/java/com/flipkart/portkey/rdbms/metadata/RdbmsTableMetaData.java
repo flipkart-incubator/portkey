@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.flipkart.portkey.common.serializer.Serializer;
 import com.flipkart.portkey.rdbms.metadata.annotation.RdbmsField;
 
 /**
@@ -20,13 +21,11 @@ public class RdbmsTableMetaData
 	private String tableName;
 	private String shardKey;
 	private List<String> primaryKeys = new ArrayList<String>();
-	private List<RdbmsField> rdbmsFieldList = new ArrayList<RdbmsField>();
-	private List<Field> fieldList = new ArrayList<Field>();
-	private List<String> jsonFields = new ArrayList<String>();
+	private Map<String, RdbmsField> fieldNameToRdbmsFieldMap = new HashMap<String, RdbmsField>();
+	private Map<String, Serializer> fieldNameToSerializerMap = new HashMap<String, Serializer>();
 	private Map<String, String> fieldNameToRdbmsColumnMap = new HashMap<String, String>();
 	private Map<String, String> rdbmsColumnToFieldNameMap = new HashMap<String, String>();
 	private Map<String, Field> fieldNameToFieldMap = new HashMap<String, Field>();
-	private List<String> jsonListFields = new ArrayList<String>();
 	private String insertQuery;
 	private String updateByPkQuery;
 
@@ -70,19 +69,14 @@ public class RdbmsTableMetaData
 		this.primaryKeys = primaryKeys;
 	}
 
-	public List<RdbmsField> getRdbmsFieldList()
+	public RdbmsField getRdbmsField(String fieldName)
 	{
-		return rdbmsFieldList;
+		return fieldNameToRdbmsFieldMap.get(fieldName);
 	}
 
-	public void setRdbmsFieldList(List<RdbmsField> rdbmsFieldList)
+	public void addRdbmsField(String fieldName, RdbmsField rdbmsField)
 	{
-		this.rdbmsFieldList = rdbmsFieldList;
-	}
-
-	public void addToRdbmsFieldList(RdbmsField rdbmsField)
-	{
-		this.rdbmsFieldList.add(rdbmsField);
+		this.fieldNameToRdbmsFieldMap.put(fieldName, rdbmsField);
 	}
 
 	public void addToPrimaryKeys(String priamryKey)
@@ -92,32 +86,7 @@ public class RdbmsTableMetaData
 
 	public List<Field> getFieldList()
 	{
-		return fieldList;
-	}
-
-	public void setFieldList(List<Field> fieldList)
-	{
-		this.fieldList = fieldList;
-	}
-
-	public void addToFieldList(Field field)
-	{
-		this.fieldList.add(field);
-	}
-
-	public List<String> getJsonFields()
-	{
-		return jsonFields;
-	}
-
-	public void setJsonFields(List<String> jsonFields)
-	{
-		this.jsonFields = jsonFields;
-	}
-
-	public void addToJsonFields(String jsonField)
-	{
-		this.jsonFields.add(jsonField);
+		return new ArrayList<Field>(fieldNameToFieldMap.values());
 	}
 
 	public Map<String, String> getFieldNameToRdbmsColumnMap()
@@ -133,6 +102,16 @@ public class RdbmsTableMetaData
 	public void addToFieldNameToRdbmsColumnMap(String fieldName, String column)
 	{
 		this.fieldNameToRdbmsColumnMap.put(fieldName, column);
+	}
+
+	public Serializer getSerializer(String fieldName)
+	{
+		return fieldNameToSerializerMap.get(fieldName);
+	}
+
+	public void setSerializer(String fieldName, Serializer serializer)
+	{
+		this.fieldNameToSerializerMap.put(fieldName, serializer);
 	}
 
 	public Map<String, String> getRdbmsColumnToFieldNameMap()
@@ -163,21 +142,6 @@ public class RdbmsTableMetaData
 	public void addToFieldNameToFieldMap(String fieldName, Field field)
 	{
 		this.fieldNameToFieldMap.put(fieldName, field);
-	}
-
-	public List<String> getJsonListFields()
-	{
-		return jsonListFields;
-	}
-
-	public void setJsonListFields(List<String> jsonListFields)
-	{
-		this.jsonListFields = jsonListFields;
-	}
-
-	public void addToJsonListFields(String jsonListField)
-	{
-		this.jsonListFields.add(jsonListField);
 	}
 
 	public String getInsertQuery()

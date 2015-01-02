@@ -6,7 +6,7 @@ package com.flipkart.portkey.common.exception;
 /**
  * @author santosh.p
  */
-public class DataStoreNotRegisteredException extends PortKeyException
+public class DataStoreNotRegisteredException extends PortKeyRuntimeException
 {
 
 	/**

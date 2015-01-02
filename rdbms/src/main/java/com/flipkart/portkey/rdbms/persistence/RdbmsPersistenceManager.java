@@ -19,7 +19,6 @@ import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.common.enumeration.ShardStatus;
 import com.flipkart.portkey.common.exception.InvalidAnnotationException;
 import com.flipkart.portkey.common.exception.ShardNotAvailableException;
-import com.flipkart.portkey.common.helper.PortKeyHelper;
 import com.flipkart.portkey.common.persistence.PersistenceManager;
 import com.flipkart.portkey.rdbms.mapper.RdbmsMapper;
 import com.flipkart.portkey.rdbms.metadata.RdbmsMetaDataCache;
@@ -109,48 +108,14 @@ public class RdbmsPersistenceManager implements PersistenceManager
 		for (Field field : fieldList)
 		{
 			RdbmsField rdbmsField = field.getAnnotation(RdbmsField.class);
-
 			// TODO: write this mapper according to the guidelines given by Ashish
 			if (rdbmsField != null)
 			{
 				Object value;
-				try
-				{
-					if (!field.isAccessible())
-					{
-						field.setAccessible(true);
-					}
-					value = field.get(obj);
-				}
-				catch (IllegalArgumentException e)
-				{
-					logger.info(e);
-					value = null; // TODO: check if this null assignment is correct expected behavior
-				}
-				catch (IllegalAccessException e)
-				{
-					logger.info(e);
-					value = null;// TODO: check if this null assignment is correct expected behavior
-				}
-				if (value == null)
-				{
-					mapValues.put(field.getName(), null);
-				}
-				else if (value.getClass().isEnum())
-				{
-					mapValues.put(field.getName(), value.toString());
-				}
-				else if (rdbmsField.isJson() || rdbmsField.isJsonList())
-				{
-					mapValues.put(field.getName(), PortKeyHelper.toJsonString(value));
-				}
-				else
-				{
-					mapValues.put(field.getName(), value);
-				}
+				value = RdbmsMapper.get(obj, field.getName());
+				mapValues.put(field.getName(), value);
 			}
 		}
-
 		return mapValues;
 	}
 
@@ -158,7 +123,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	 * (non-Javadoc)
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#insert(com.flipkart.portkey.common.entity.Entity)
 	 */
-	public <T extends Entity> int insert(T bean) throws ShardNotAvailableException, InvalidAnnotationException
+	public <T extends Entity> int insert(T bean) throws ShardNotAvailableException
 	{
 		RdbmsTableMetaData metaData = RdbmsMetaDataCache.getInstance().getMetaData(bean.getClass());
 		String insertQuery = RdbmsQueryBuilder.getInstance().getInsertQuery(metaData);
@@ -178,7 +143,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	 * (non-Javadoc)
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#update(com.flipkart.portkey.common.entity.Entity)
 	 */
-	public <T extends Entity> int update(T bean) throws ShardNotAvailableException, InvalidAnnotationException
+	public <T extends Entity> int update(T bean) throws ShardNotAvailableException
 	{
 		RdbmsTableMetaData metaData = RdbmsMetaDataCache.getInstance().getMetaData(bean.getClass());
 		String updateQuery = RdbmsQueryBuilder.getInstance().getUpdateByPkQuery(metaData);
@@ -200,7 +165,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	 * java.util.Map)
 	 */
 	public <T extends Entity> int update(Class<T> clazz, Map<String, Object> updateAttributesToValuesMap,
-	        Map<String, Object> criteria) throws ShardNotAvailableException, InvalidAnnotationException
+	        Map<String, Object> criteria) throws ShardNotAvailableException
 	{
 		RdbmsTableMetaData tableMetaData = RdbmsMetaDataCache.getInstance().getMetaData(clazz);
 		String updateQuery =
@@ -223,7 +188,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#delete(java.lang.Class, java.util.Map)
 	 */
 	public <T extends Entity> int delete(Class<T> clazz, Map<String, Object> criteria)
-	        throws ShardNotAvailableException, InvalidAnnotationException
+	        throws ShardNotAvailableException
 	{
 		RdbmsTableMetaData tableMetaData = RdbmsMetaDataCache.getInstance().getMetaData(clazz);
 		String deleteQuery = RdbmsQueryBuilder.getInstance().getDeleteByCriteriaQuery(tableMetaData, criteria);
@@ -234,6 +199,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 		}
 		catch (DataAccessException e)
 		{
+			logger.info("Exception while trying to execute delete query:" + deleteQuery + "\n" + e);
 			throw new ShardNotAvailableException("Exception while trying to execute delete query:" + deleteQuery + "\n"
 			        + e);
 		}
@@ -244,7 +210,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#getByCriteria(java.lang.Class, java.util.Map)
 	 */
 	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, Map<String, Object> criteria, boolean readMaster)
-	        throws ShardNotAvailableException, InvalidAnnotationException
+	        throws ShardNotAvailableException
 	{
 		RdbmsTableMetaData tableMetaData = RdbmsMetaDataCache.getInstance().getMetaData(clazz);
 		String updateQuery = RdbmsQueryBuilder.getInstance().getGetByCriteriaQuery(tableMetaData, criteria);
@@ -279,7 +245,6 @@ public class RdbmsPersistenceManager implements PersistenceManager
 				}
 				catch (DataAccessException e)
 				{
-					// TODO: catch specific exception
 					logger.info("Exception while trying to execute get query:" + updateQuery + " on slave:" + slave
 					        + "\n" + e);
 					continue;
@@ -307,7 +272,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	 * boolean)
 	 */
 	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, Map<String, Object> criteria)
-	        throws ShardNotAvailableException, InvalidAnnotationException
+	        throws ShardNotAvailableException
 	{
 		return getByCriteria(clazz, criteria, false);
 	}
@@ -318,8 +283,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	 * java.util.Map)
 	 */
 	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, List<String> attributeNames,
-	        Map<String, Object> criteria, boolean readMaster) throws ShardNotAvailableException,
-	        InvalidAnnotationException
+	        Map<String, Object> criteria, boolean readMaster) throws ShardNotAvailableException
 	{
 		RdbmsTableMetaData tableMetaData = RdbmsMetaDataCache.getInstance().getMetaData(clazz);
 		String getQuery =
@@ -394,14 +358,14 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	        boolean readMaster) throws ShardNotAvailableException
 	{
 		RdbmsMapper<T> mapper = RdbmsMapper.getInstance(clazz);
-		JdbcTemplate temp;
+		NamedParameterJdbcTemplate temp;
 		List<T> result;
 		if (readMaster)
 		{
-			temp = new JdbcTemplate(master);
+			temp = new NamedParameterJdbcTemplate(master);
 			try
 			{
-				result = temp.query(sql, mapper);
+				result = temp.query(sql, criteria, mapper);
 			}
 			catch (Exception e)
 			{
@@ -414,10 +378,10 @@ public class RdbmsPersistenceManager implements PersistenceManager
 		{
 			for (DataSource slave : slaves)
 			{
-				temp = new JdbcTemplate(slave);
+				temp = new NamedParameterJdbcTemplate(slave);
 				try
 				{
-					result = temp.query(sql, mapper);
+					result = temp.query(sql, criteria, mapper);
 				}
 				catch (Exception e)
 				{
@@ -426,10 +390,10 @@ public class RdbmsPersistenceManager implements PersistenceManager
 				}
 				return result;
 			}
-			temp = new JdbcTemplate(master);
+			temp = new NamedParameterJdbcTemplate(master);
 			try
 			{
-				result = temp.query(sql, mapper);
+				result = temp.query(sql, criteria, mapper);
 			}
 			catch (Exception e)
 			{
@@ -459,14 +423,14 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	public List<Map<String, Object>> getBySql(String sql, Map<String, Object> criteria, boolean readMaster)
 	        throws ShardNotAvailableException
 	{
-		JdbcTemplate temp;
+		NamedParameterJdbcTemplate temp;
 		List<Map<String, Object>> result;
 		if (readMaster)
 		{
-			temp = new JdbcTemplate(master);
+			temp = new NamedParameterJdbcTemplate(master);
 			try
 			{
-				result = temp.queryForList(sql);
+				result = temp.queryForList(sql, criteria);
 			}
 			catch (Exception e)
 			{
@@ -479,10 +443,10 @@ public class RdbmsPersistenceManager implements PersistenceManager
 		{
 			for (DataSource slave : slaves)
 			{
-				temp = new JdbcTemplate(slave);
+				temp = new NamedParameterJdbcTemplate(slave);
 				try
 				{
-					result = temp.queryForList(sql);
+					result = temp.queryForList(sql, criteria);
 				}
 				catch (Exception e)
 				{
@@ -491,10 +455,10 @@ public class RdbmsPersistenceManager implements PersistenceManager
 				}
 				return result;
 			}
-			temp = new JdbcTemplate(master);
+			temp = new NamedParameterJdbcTemplate(master);
 			try
 			{
-				result = temp.queryForList(sql);
+				result = temp.queryForList(sql, criteria);
 			}
 			catch (Exception e)
 			{

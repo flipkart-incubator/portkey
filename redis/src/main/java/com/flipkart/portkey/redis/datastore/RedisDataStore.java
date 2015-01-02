@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import com.flipkart.portkey.common.datastore.DataStore;
+import com.flipkart.portkey.common.datastore.DataStoreConfig;
 import com.flipkart.portkey.common.metadata.MetaDataCache;
 import com.flipkart.portkey.common.persistence.PersistenceManager;
 import com.flipkart.portkey.redis.metadata.RedisMetaDataCache;
@@ -15,7 +15,7 @@ import com.flipkart.portkey.redis.metadata.RedisMetaDataCache;
 /**
  * @author santosh.p
  */
-public class RedisDataStore implements DataStore
+public class RedisDataStore implements DataStoreConfig
 {
 
 	private Map<String, PersistenceManager> shardIdToPersistenceManagerMap;

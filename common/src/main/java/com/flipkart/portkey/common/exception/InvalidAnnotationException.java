@@ -6,7 +6,7 @@ package com.flipkart.portkey.common.exception;
 /**
  * @author santosh.p
  */
-public class InvalidAnnotationException extends PortKeyException
+public class InvalidAnnotationException extends PortKeyRuntimeException
 {
 
 	/**

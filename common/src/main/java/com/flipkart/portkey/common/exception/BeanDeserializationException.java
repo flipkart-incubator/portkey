@@ -6,25 +6,25 @@ package com.flipkart.portkey.common.exception;
 /**
  * @author santosh.p
  */
-public class JsonSerializationException extends PortKeyException
+public class BeanDeserializationException extends PortKeyRuntimeException
 {
 
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -4261198445963044487L;
+	private static final long serialVersionUID = 7317399041859505681L;
 
 	/**
 	 * 
 	 */
-	public JsonSerializationException()
+	public BeanDeserializationException()
 	{
 	}
 
 	/**
 	 * @param message
 	 */
-	public JsonSerializationException(String message)
+	public BeanDeserializationException(String message)
 	{
 		super(message);
 	}
@@ -32,7 +32,7 @@ public class JsonSerializationException extends PortKeyException
 	/**
 	 * @param cause
 	 */
-	public JsonSerializationException(Throwable cause)
+	public BeanDeserializationException(Throwable cause)
 	{
 		super(cause);
 	}
@@ -41,7 +41,7 @@ public class JsonSerializationException extends PortKeyException
 	 * @param message
 	 * @param cause
 	 */
-	public JsonSerializationException(String message, Throwable cause)
+	public BeanDeserializationException(String message, Throwable cause)
 	{
 		super(message, cause);
 	}
@@ -52,7 +52,7 @@ public class JsonSerializationException extends PortKeyException
 	 * @param enableSuppression
 	 * @param writableStackTrace
 	 */
-	public JsonSerializationException(String message, Throwable cause, boolean enableSuppression,
+	public BeanDeserializationException(String message, Throwable cause, boolean enableSuppression,
 	        boolean writableStackTrace)
 	{
 		super(message, cause, enableSuppression, writableStackTrace);
