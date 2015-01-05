@@ -24,6 +24,7 @@ import com.flipkart.portkey.common.enumeration.FailureAction;
 import com.flipkart.portkey.common.enumeration.ShardStatus;
 import com.flipkart.portkey.common.exception.BeanSerializationException;
 import com.flipkart.portkey.common.exception.InvalidAnnotationException;
+import com.flipkart.portkey.common.exception.MethodNotSupportedForDataStoreException;
 import com.flipkart.portkey.common.exception.PortKeyException;
 import com.flipkart.portkey.common.exception.QueryExecutionException;
 import com.flipkart.portkey.common.exception.QueryNotSupportedException;
@@ -455,12 +456,28 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 			}
 			else
 			{
+				boolean encounteredExecption = false;
 				List<String> shardIds = dataStoreConfigMap.get(type).getShardIds();
 				for (String shardId : shardIds)
 				{
 					PersistenceManager pm = getPersistenceManager(type, shardId);
-					List<T> intermediateResult = pm.getByCriteria(clazz, criteria);
+					List<T> intermediateResult;
+					try
+					{
+						intermediateResult = pm.getByCriteria(clazz, criteria);
+					}
+					catch (QueryExecutionException e)
+					{
+						logger.info("Encountered exception while trying to execute query \n DataStoreType=" + type
+						        + "\ncriteria=" + criteria + "\nexception=" + e);
+						encounteredExecption = true;
+						break;
+					}
 					result.addAll(intermediateResult);
+				}
+				if (encounteredExecption)
+				{
+					continue;
 				}
 				return result;
 			}
@@ -513,19 +530,27 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 	public <T extends Entity> List<T> getBySql(Class<T> clazz, String sql, Map<String, Object> criteria)
 	        throws PortKeyException
 	{
-		WriteConfig writeConfig = getWriteConfigForEntity(clazz);
-		List<DataStoreType> writeOrder = writeConfig.getWriteOrder();
-		for (DataStoreType type : writeOrder)
+		ReadConfig readConfig = getReadConfigForEntity(clazz);
+		List<DataStoreType> readOrder = readConfig.getReadOrder();
+		for (DataStoreType type : readOrder)
 		{
-			List<T> result = new ArrayList<T>();
-			List<String> shardIds = dataStoreConfigMap.get(type).getShardIds();
-			for (String shardId : shardIds)
+			try
 			{
-				PersistenceManager pm = getPersistenceManager(type, shardId);
-				List<T> intermediateResult = pm.getBySql(clazz, sql, criteria);
-				result.addAll(intermediateResult);
+				List<T> result = new ArrayList<T>();
+				List<String> shardIds = dataStoreConfigMap.get(type).getShardIds();
+				for (String shardId : shardIds)
+				{
+					PersistenceManager pm = getPersistenceManager(type, shardId);
+					List<T> intermediateResult = pm.getBySql(clazz, sql, criteria);
+					result.addAll(intermediateResult);
+				}
+				return result;
 			}
-			return result;
+			catch (MethodNotSupportedForDataStoreException e)
+			{
+				logger.info("Method not supported by datastore" + type);
+				continue;
+			}
 		}
 		return null;
 	}
