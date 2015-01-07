@@ -119,6 +119,7 @@ public class RedisMetaDataCache implements MetaDataCache
 			redisMetaData.addToSecondaryKeyPatterns(parsedPattern);
 			List<String> secondaryKeyAttributes = getAttributesFromKeyPattern(secondaryKeyPattern);
 			redisMetaData.addToSecondaryKeyAttributesList(secondaryKeyAttributes);
+			redisMetaData.addToSecondaryKeyPatternToAttributeList(parsedPattern, secondaryKeyAttributes);
 		}
 		Field[] fields = clazz.getDeclaredFields();
 		boolean shardKeyPresent = false;
@@ -137,16 +138,16 @@ public class RedisMetaDataCache implements MetaDataCache
 				redisMetaData.addToRedisFieldList(redisField);
 				if (redisField.isJson())
 				{
-					redisMetaData.addToJsonFields(attributeName);
+					redisMetaData.addToJsonFields(fieldName);
 				}
 				if (redisField.isShardKey())
 				{
 					shardKeyPresent = true;
-					redisMetaData.setShardKey(attributeName);
+					redisMetaData.setShardKey(fieldName);
 				}
 				if (redisField.isJsonList())
 				{
-					redisMetaData.addToJsonListFields(attributeName);
+					redisMetaData.addToJsonListFields(fieldName);
 				}
 			}
 		}

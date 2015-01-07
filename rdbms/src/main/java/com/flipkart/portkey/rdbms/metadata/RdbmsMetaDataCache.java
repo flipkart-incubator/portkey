@@ -97,12 +97,12 @@ public class RdbmsMetaDataCache implements MetaDataCache
 				if (rdbmsField.isPrimaryKey())
 				{
 					primaryKeyPresent = true;
-					rdbmsTableMetaData.addToPrimaryKeys(columnName);
+					rdbmsTableMetaData.addToPrimaryKeys(fieldName);
 				}
 				if (rdbmsField.isShardKey())
 				{
 					shardKeyPresent = true;
-					rdbmsTableMetaData.setShardKey(columnName);
+					rdbmsTableMetaData.setShardKey(fieldName);
 				}
 
 			}

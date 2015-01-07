@@ -3,7 +3,6 @@
  */
 package com.flipkart.portkey.redis.persistence;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -12,9 +11,6 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
-import org.codehaus.jackson.JsonGenerationException;
-import org.codehaus.jackson.JsonParseException;
-import org.codehaus.jackson.map.JsonMappingException;
 import org.springframework.beans.factory.InitializingBean;
 
 import redis.clients.jedis.Jedis;
@@ -23,8 +19,6 @@ import redis.clients.jedis.exceptions.JedisConnectionException;
 
 import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.common.enumeration.ShardStatus;
-import com.flipkart.portkey.common.exception.BeanDeserializationException;
-import com.flipkart.portkey.common.exception.BeanSerializationException;
 import com.flipkart.portkey.common.exception.InvalidAnnotationException;
 import com.flipkart.portkey.common.exception.MethodNotSupportedForDataStoreException;
 import com.flipkart.portkey.common.exception.QueryNotSupportedException;
@@ -148,6 +142,7 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 	{
 		RedisMetaData metaData = getMetaData(bean.getClass());
 		List<String> keys = keyParser.parsePrimaryKeyPattern(bean, metaData);
+		String primaryKey = null;
 
 		Jedis conn = cm.getConnection();
 		if (conn == null)
@@ -158,55 +153,34 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 		{
 			String key = keys.get(0);
 			String serialized = null;
-			try
-			{
-				serialized = mapper.serialize(bean);
-			}
-			catch (JsonGenerationException e)
-			{
-				throw new BeanSerializationException("Exception while trying to serialize bean " + bean + "\n" + e);
-			}
-			catch (JsonMappingException e)
-			{
-				throw new BeanSerializationException("Exception while trying to serialize bean " + bean + "\n" + e);
-			}
-			catch (IOException e)
-			{
-				throw new BeanSerializationException("Exception while trying to serialize bean " + bean + "\n" + e);
-			}
+			serialized = mapper.serialize(bean);
 			conn.set(key, serialized);
-			return 1;
+			primaryKey = key;
 		}
-		if (keys.size() == 2)
+		else if (keys.size() == 2)
 		{
 			String key = keys.get(0);
 			String field = keys.get(1);
 			String serialized = null;
-			try
-			{
-				serialized = mapper.serialize(bean);
-			}
-			catch (JsonGenerationException e)
-			{
-				throw new BeanSerializationException("Exception while trying to serialize bean " + bean + "\n" + e);
-			}
-			catch (JsonMappingException e)
-			{
-				throw new BeanSerializationException("Exception while trying to serialize bean " + bean + "\n" + e);
-			}
-			catch (IOException e)
-			{
-				throw new BeanSerializationException("Exception while trying to serialize bean " + bean + "\n" + e);
-			}
+			serialized = mapper.serialize(bean);
 			Long retVal = conn.hset(key, field, serialized);
+			primaryKey = key + ":" + field;
 			if (retVal == 0)
 			{
 				logger.info("Key already exists in redis: Outer key:" + key + "Inner key:" + field);
 			}
-			return 1;
 		}
-		throw new InvalidAnnotationException("Exception while trying to parse keys:" + keys
-		        + "\nKey consists of more than 2 parts.");
+		else
+		{
+			throw new InvalidAnnotationException("Exception while trying to parse keys:" + keys
+			        + "\nKey consists of more than 2 parts.");
+		}
+		List<String> secondaryKeys = keyParser.parseSecondaryKeyPatterns(bean, metaData);
+		for (String secondaryKey : secondaryKeys)
+		{
+			conn.set(secondaryKey, primaryKey);
+		}
+		return 1;
 	}
 
 	/*
@@ -321,36 +295,22 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 			throw new InvalidAnnotationException("Exception while trying to parse keys:" + keys
 			        + "\nKey size more than 2 is not supported.");
 		}
-		try
-		{
-			bean = mapper.deserialize(value, clazz);
-		}
-		catch (JsonParseException e)
-		{
-			throw new BeanDeserializationException("Exception while trying to deserialize value fetched from redis "
-			        + value + "\n" + e);
-		}
-		catch (JsonMappingException e)
-		{
-			throw new BeanDeserializationException("Exception while trying to deserialize value fetched from redis "
-			        + value + "\n" + e);
-		}
-		catch (IOException e)
-		{
-			throw new BeanDeserializationException("Exception while trying to deserialize value fetched from redis "
-			        + value + "\n" + e);
-		}
+		bean = mapper.deserialize(value, clazz);
 		return bean;
 	}
 
 	private <T extends Entity> T getEntityFromSecondaryKeyAttributes(Class<T> clazz, Map<String, Object> criteria,
-	        RedisMetaData metaData)
+	        RedisMetaData metaData) throws ShardNotAvailableException
 	{
 		T bean;
 		String key;
 		String primaryKey;
 		String value;
 		Jedis conn = cm.getConnection();
+		if (conn == null)
+		{
+			throw new ShardNotAvailableException("Redis is down");
+		}
 		key = keyParser.parseSecondaryKeyPattern(criteria, metaData);
 
 		primaryKey = conn.get(key);
@@ -368,25 +328,7 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 			throw new InvalidAnnotationException("Exception while trying to parse keys:" + primaryKeys
 			        + "\nKey size more than 2 is not supported.");
 		}
-		try
-		{
-			bean = mapper.deserialize(value, clazz);
-		}
-		catch (JsonParseException e)
-		{
-			throw new BeanDeserializationException("Exception while trying to deserialize value fetched from redis "
-			        + value + "\n" + e);
-		}
-		catch (JsonMappingException e)
-		{
-			throw new BeanDeserializationException("Exception while trying to deserialize value fetched from redis "
-			        + value + "\n" + e);
-		}
-		catch (IOException e)
-		{
-			throw new BeanDeserializationException("Exception while trying to deserialize value fetched from redis "
-			        + value + "\n" + e);
-		}
+		bean = mapper.deserialize(value, clazz);
 		return bean;
 	}
 

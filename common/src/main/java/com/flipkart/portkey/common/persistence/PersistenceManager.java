@@ -9,6 +9,7 @@ import java.util.Map;
 import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.common.enumeration.ShardStatus;
 import com.flipkart.portkey.common.exception.PortKeyException;
+import com.flipkart.portkey.common.exception.QueryExecutionException;
 import com.flipkart.portkey.common.exception.QueryNotSupportedException;
 import com.flipkart.portkey.common.exception.ShardNotAvailableException;
 
@@ -19,9 +20,9 @@ public interface PersistenceManager
 {
 	public ShardStatus healthCheck();
 
-	public <T extends Entity> int insert(T bean) throws ShardNotAvailableException;
+	public <T extends Entity> int insert(T bean) throws QueryExecutionException;
 
-	public <T extends Entity> int update(T bean) throws PortKeyException;
+	public <T extends Entity> int update(T bean) throws QueryExecutionException;
 
 	public <T extends Entity> int update(Class<T> clazz, Map<String, Object> updateValuesMap,
 	        Map<String, Object> criteria) throws PortKeyException;

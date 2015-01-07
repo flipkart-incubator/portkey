@@ -3,18 +3,14 @@
  */
 package com.flipkart.portkey.redis.mapper;
 
-import java.io.IOException;
-
-import org.codehaus.jackson.JsonGenerationException;
-import org.codehaus.jackson.JsonParseException;
-import org.codehaus.jackson.map.JsonMappingException;
+import com.flipkart.portkey.common.exception.BeanSerializationException;
 
 /**
  * @author santosh.p
  */
 public interface RedisMapper
 {
-	public String serialize(Object obj) throws JsonGenerationException, JsonMappingException, IOException;
+	public String serialize(Object obj) throws BeanSerializationException;
 
-	public <T> T deserialize(String str, Class<T> clazz) throws JsonParseException, JsonMappingException, IOException;
+	public <T> T deserialize(String str, Class<T> clazz) throws BeanSerializationException;
 }

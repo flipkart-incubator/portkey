@@ -11,5 +11,7 @@
   	<module>persistence-layer</module>
   	<module>rdbms</module>
     <module>redis</module>
+    <module>example</module>
+    <module>example2</module>
   </modules>
 </project>

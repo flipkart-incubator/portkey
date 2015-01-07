@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:util="http://www.springframework.org/schema/util" xmlns:mockito="http://www.mockito.org/spring/mockito"
+	xsi:schemaLocation="
+        http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-3.0.xsd
+        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
+
+	<bean
+		class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<property name="location" value="classpath:project.properties" />
+	</bean>
+
+	<bean id="rdbmsDataStore" class="com.flipkart.portkey.rdbms.datastore.RdbmsDataStore">
+		<property name="shardIdToPersistenceManagerMap" ref="rdbmsPersistenceManagerMap" />
+		<property name="metaDataCache" ref="rdbmsMetaDataCache" />
+	</bean>
+
+	<util:map id="rdbmsPersistenceManagerMap"
+		value-type="com.flipkart.portkey.common.persistence.PersistenceManager">
+		<entry key="01" value-ref="rdbmsShard1" />
+	</util:map>
+
+	<bean id="rdbmsMetaDataCache" class="com.flipkart.portkey.rdbms.metadata.RdbmsMetaDataCache"
+		factory-method="getInstance" />
+
+	<bean id="rdbmsShard1"
+		class="com.flipkart.portkey.rdbms.persistence.RdbmsPersistenceManager">
+		<constructor-arg ref="rdbmsShard1Config" />
+	</bean>
+	<bean id="rdbmsShard1Config"
+		class="com.flipkart.portkey.rdbms.persistence.config.RdbmsPersistenceManagerConfig">
+		<property name="master" ref="rdbmsShard1Master" />
+		<property name="slaves" ref="rdbmsShard1Slaves" />
+	</bean>
+
+	<bean id="rdbmsShard1Master" class="com.mchange.v2.c3p0.ComboPooledDataSource"
+		destroy-method="close">
+		
+		<property name="driverClass" value="com.mysql.jdbc.Driver"/>
+        <property name="jdbcUrl" value="${RDBMS.SHARD1.MASTER.JDBC_URL}"/>
+        <property name="user" value="${RDBMS.SHARD1.MASTER.USER}"/>
+        <property name="password" value="${RDBMS.SHARD1.MASTER.PASSWORD}"/>
+        
+        <property name="acquireIncrement" value="${C3P0_ACQUIRE_INCREMENT}"/>
+        <property name="acquireRetryAttempts" value="${C3P0_ACQUIRE_RETRY_ATTEMPTS}"/>
+        <property name="acquireRetryDelay" value="${C3P0_ACQUIRE_RETRY_DELAY}"/>
+        <property name="maxIdleTime" value="${C3P0_MAX_IDLE_TIME}"/>
+        <property name="maxPoolSize" value="${C3P0_MAX_POOL_SIZE}"/>
+        <property name="maxStatements" value="${C3P0_MAX_STATEMENTS}"/>
+        <property name="minPoolSize" value="${C3P0_MIN_POOL_SIZE}"/>
+        <property name="testConnectionOnCheckin" value="true"/>
+        <property name="idleConnectionTestPeriod" value="900" />
+        <property name="preferredTestQuery" value="select 1 from DUAL" />
+	</bean>
+
+	<util:list id="rdbmsShard1Slaves" value-type="com.mchange.v2.c3p0.ComboPooledDataSource">
+		<ref local="rdbmsShard1Slave1" />
+	</util:list>
+
+	<bean id="rdbmsShard1Slave1" class="com.mchange.v2.c3p0.ComboPooledDataSource"
+		destroy-method="close">
+		<property name="driverClass" value="com.mysql.jdbc.Driver"/>
+		<property name="jdbcUrl" value="${RDBMS.SHARD1.SLAVE.JDBC_URL}"/>
+		<property name="user" value="${RDBMS.SHARD1.SLAVE.USER}"/>
+		<property name="password" value="${RDBMS.SHARD1.SLAVE.PASSWORD}"/>
+		
+		<property name="acquireIncrement" value="${C3P0_ACQUIRE_INCREMENT}"/>
+		<property name="acquireRetryAttempts" value="${C3P0_ACQUIRE_RETRY_ATTEMPTS}"/>
+		<property name="acquireRetryDelay" value="${C3P0_ACQUIRE_RETRY_DELAY}"/>
+		<property name="maxIdleTime" value="${C3P0_MAX_IDLE_TIME}"/>
+		<property name="maxPoolSize" value="${C3P0_MAX_POOL_SIZE}"/>
+		<property name="maxStatements" value="${C3P0_MAX_STATEMENTS}"/>
+		<property name="minPoolSize" value="${C3P0_MIN_POOL_SIZE}"/>
+		<property name="testConnectionOnCheckin" value="true"/>
+		<property name="idleConnectionTestPeriod" value="900" />
+		<property name="preferredTestQuery" value="select 1 from DUAL" />
+	</bean>
+</beans>

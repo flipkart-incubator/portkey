@@ -205,6 +205,17 @@ public class RdbmsPersistenceManager implements PersistenceManager
 		}
 	}
 
+	private Map<String, Object> getRdbmsCriteria(Map<String, Object> criteria, RdbmsTableMetaData tableMetaData)
+	{
+		Map<String, Object> rdbmsCriteria = new HashMap<String, Object>();
+		for (String key : criteria.keySet())
+		{
+			String columnName = tableMetaData.getRdbmsColumnFromFieldName(key);
+			rdbmsCriteria.put(columnName, criteria.get(key));
+		}
+		return rdbmsCriteria;
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#getByCriteria(java.lang.Class, java.util.Map)
@@ -213,7 +224,8 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	        throws ShardNotAvailableException
 	{
 		RdbmsTableMetaData tableMetaData = RdbmsMetaDataCache.getInstance().getMetaData(clazz);
-		String updateQuery = RdbmsQueryBuilder.getInstance().getGetByCriteriaQuery(tableMetaData, criteria);
+		Map<String, Object> rdbmsCriteria = getRdbmsCriteria(criteria, tableMetaData);
+		String updateQuery = RdbmsQueryBuilder.getInstance().getGetByCriteriaQuery(tableMetaData, rdbmsCriteria);
 		RdbmsMapper<T> mapper = RdbmsMapper.getInstance(clazz);
 		JdbcTemplate temp;
 		List<T> result;

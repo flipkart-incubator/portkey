@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:util="http://www.springframework.org/schema/util" xmlns:mockito="http://www.mockito.org/spring/mockito"
+	xsi:schemaLocation="
+	    http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-3.0.xsd
+        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
+
+	<bean
+		class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<property name="location" value="classpath:project.properties" />
+	</bean>
+
+	<bean id="redisDataStore" class="com.flipkart.portkey.redis.datastore.RedisDataStore">
+		<property name="shardIdToPersistenceManagerMap" ref="shardIdToPersistenceManagerMap" />
+		<property name="metaDataCache" ref="redisMetaDataCache" />
+	</bean>
+
+	<util:map id="shardIdToPersistenceManagerMap"
+		value-type="com.flipkart.portkey.common.persistence.PersistenceManager">
+		<entry key="01" value-ref="redisShard1" />
+	</util:map>
+	<bean id="redisMetaDataCache" class="com.flipkart.portkey.redis.metadata.RedisMetaDataCache"
+		factory-method="getInstance" />
+
+	<bean id="redisShard1"
+		class="com.flipkart.portkey.redis.persistence.RedisPersistenceManager">
+		<property name="host">
+			<value>${REDIS.SHARD1.HOST}</value>
+		</property>
+		<property name="port">
+			<value>${REDIS.SHARD1.PORT}</value>
+		</property>
+		<property name="database">
+			<value>${REDIS.SHARD1.DATABASE}</value>
+		</property>
+		<property name="password">
+			<value>${REDIS.SHARD1.PASSWORD}</value>
+		</property>
+		<property name="poolConfig" ref="jedisPoolConfig" />
+	</bean>
+	<bean id="jedisPoolConfig" class="redis.clients.jedis.JedisPoolConfig">
+		<property name="blockWhenExhausted">
+			<value>${REDIS_POOL_CONFIG.BLOCK_WHEN_EXHAUSTED}</value>
+		</property>
+		<property name="jmxEnabled">
+			<value>${REDIS_POOL_CONFIG.JMX_ENABLED}</value>
+		</property>
+		<property name="jmxNamePrefix">
+			<value>${REDIS_POOL_CONFIG.JMX_PREFIX}</value>
+		</property>
+		<property name="maxIdle">
+			<value>${REDIS_POOL_CONFIG.MAX_IDLE}</value>
+		</property>
+		<property name="maxTotal">
+			<value>${REDIS_POOL_CONFIG.MAX_TOTAL}</value>
+		</property>
+		<property name="maxWaitMillis">
+			<value>${REDIS_POOL_CONFIG.MAX_WAIT_MILLS}</value>
+		</property>
+		<property name="minEvictableIdleTimeMillis">
+			<value>${REDIS_POOL_CONFIG.MIN_EVICTABLE_IDLE_TIME_MILLS}</value>
+		</property>
+		<property name="minIdle">
+			<value>${REDIS_POOL_CONFIG.MIN_IDLE}</value>
+		</property>
+		<property name="testOnBorrow">
+			<value>${REDIS_POOL_CONFIG.TEST_ON_BORROW}</value>
+		</property>
+		<property name="testOnReturn">
+			<value>${REDIS_POOL_CONFIG.TEST_ON_RETURN}</value>
+		</property>
+		<property name="timeBetweenEvictionRunsMillis">
+			<value>${REDIS_POOL_CONFIG.TIME_BETWEEN_EVICTION_RUNS_MILLS}</value>
+		</property>
+	</bean>
+</beans>

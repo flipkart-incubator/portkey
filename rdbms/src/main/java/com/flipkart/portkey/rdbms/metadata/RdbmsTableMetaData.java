@@ -94,6 +94,11 @@ public class RdbmsTableMetaData
 		return fieldNameToRdbmsColumnMap;
 	}
 
+	public String getRdbmsColumnFromFieldName(String fieldName)
+	{
+		return fieldNameToRdbmsColumnMap.get(fieldName);
+	}
+
 	public void setFieldNameToRdbmsColumnMap(Map<String, String> fieldNameToSqlColumnMap)
 	{
 		this.fieldNameToRdbmsColumnMap = fieldNameToSqlColumnMap;

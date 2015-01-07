@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:util="http://www.springframework.org/schema/util" xmlns:mockito="http://www.mockito.org/spring/mockito"
+	xsi:schemaLocation="
+        http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-3.0.xsd
+        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
+
+	<bean
+		class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<property name="location" value="classpath:project.properties" />
+	</bean>
+	<util:map id="entityPersistencePreferenceMap" key-type="java.lang.Class"
+		value-type="com.flipkart.portkey.common.entity.persistence.EntityPersistencePreference">
+		<entry key="com.flipkart.portkey.example.dao.Person" value-ref="essentialConfig" />
+	</util:map>
+
+
+	<bean id="essentialConfig"
+		class="com.flipkart.portkey.common.entity.persistence.EntityPersistencePreference">
+		<property name="readConfig" ref="defaultReadConfig" />
+		<property name="writeConfig" ref="essentialWriteConfig" />
+	</bean>
+	<bean id="nonEssentialConfig"
+		class="com.flipkart.portkey.common.entity.persistence.EntityPersistencePreference">
+		<property name="readConfig" ref="defaultReadConfig" />
+		<property name="writeConfig" ref="nonEssentialWriteConfig" />
+	</bean>
+
+	<bean id="essentialWriteConfig"
+		class="com.flipkart.portkey.common.entity.persistence.WriteConfig">
+		<property name="writeOrder">
+			<util:list value-type="com.flipkart.portkey.common.enumeration.DataStoreType">
+				<value>RDBMS</value>
+				<value>REDIS</value>
+			</util:list>
+		</property>
+		<property name="failureAction" value="CONTINUE" />
+	</bean>
+	<bean id="nonEssentialWriteConfig"
+		class="com.flipkart.portkey.common.entity.persistence.WriteConfig">
+		<property name="writeOrder">
+			<util:list value-type="com.flipkart.portkey.common.enumeration.DataStoreType">
+				<value>REDIS</value>
+			</util:list>
+		</property>
+		<property name="failureAction" value="CONTINUE" />
+	</bean>
+	<bean id="defaultReadConfig"
+		class="com.flipkart.portkey.common.entity.persistence.ReadConfig">
+		<property name="readOrder">
+			<util:list value-type="com.flipkart.portkey.common.enumeration.DataStoreType">
+				<value>REDIS</value>
+				<value>RDBMS</value>
+			</util:list>
+		</property>
+	</bean>
+</beans>

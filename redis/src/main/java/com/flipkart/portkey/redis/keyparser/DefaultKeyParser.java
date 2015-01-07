@@ -33,15 +33,14 @@ public class DefaultKeyParser implements KeyParserInterface
 		{
 			throw new InvalidAnnotationException("Exception while trying to parse key, key pattern is null");
 		}
-		Matcher attributeMatcher = Pattern.compile("\\{(.*?)\\}").matcher(keyPattern);
-		List<String> attributes = new ArrayList<String>();
-		while (attributeMatcher.find())
+		Matcher fieldNameMatcher = Pattern.compile("\\{(.*?)\\}").matcher(keyPattern);
+		List<String> fieldNames = new ArrayList<String>();
+		while (fieldNameMatcher.find())
 		{
-			attributes.add(attributeMatcher.group(1));
+			fieldNames.add(fieldNameMatcher.group(1));
 		}
-		for (String attribute : attributes)
+		for (String fieldName : fieldNames)
 		{
-			String fieldName = metaData.getFieldNameFromAttribute(attribute);
 			Field field = metaData.getFieldFromFieldName(fieldName);
 			RedisField redisField = metaData.getRedisFieldFromFieldName(fieldName);
 			if (field == null)
@@ -87,7 +86,7 @@ public class DefaultKeyParser implements KeyParserInterface
 			{
 				fieldVal = PortKeyHelper.toString(value);
 			}
-			keyPattern = keyPattern.replace("{" + attribute + "}", fieldVal);
+			keyPattern = keyPattern.replace("{" + fieldName + "}", fieldVal);
 		}
 		return keyPattern;
 	}

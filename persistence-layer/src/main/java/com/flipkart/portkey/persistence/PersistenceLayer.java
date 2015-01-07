@@ -22,8 +22,6 @@ import com.flipkart.portkey.common.entity.persistence.WriteConfig;
 import com.flipkart.portkey.common.enumeration.DataStoreType;
 import com.flipkart.portkey.common.enumeration.FailureAction;
 import com.flipkart.portkey.common.enumeration.ShardStatus;
-import com.flipkart.portkey.common.exception.BeanSerializationException;
-import com.flipkart.portkey.common.exception.InvalidAnnotationException;
 import com.flipkart.portkey.common.exception.MethodNotSupportedForDataStoreException;
 import com.flipkart.portkey.common.exception.PortKeyException;
 import com.flipkart.portkey.common.exception.QueryExecutionException;
@@ -96,10 +94,6 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		this.dataStoreConfigMap = dataStoresMap;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see org.springframework.beans.factory.InitializingBean#afterPropertiesSet()
-	 */
 	@Override
 	public void afterPropertiesSet() throws Exception
 	{
@@ -199,7 +193,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		return dataStore.getMetaDataCache();
 	}
 
-	private <T extends Entity> int insertIntoDataStore(DataStoreType type, T bean) throws ShardNotAvailableException
+	private <T extends Entity> int insertIntoDataStore(DataStoreType type, T bean) throws QueryExecutionException
 	{
 		MetaDataCache metaDataCache = getMetaDataCache(type);
 		String shardKeyFieldName = metaDataCache.getShardKey(bean.getClass());
@@ -210,7 +204,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		return rowsUpdated;
 	}
 
-	private <T extends Entity> String getShardKey(DataStoreType type, T bean) throws InvalidAnnotationException
+	private <T extends Entity> String getShardKey(DataStoreType type, T bean)
 	{
 		MetaDataCache metaDataCache = getMetaDataCache(type);
 		String shardKeyFieldName = metaDataCache.getShardKey(bean.getClass());
@@ -225,7 +219,6 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 	}
 
 	private <T extends Entity> T generateShardIdAndUpdateBean(DataStoreType type, T bean)
-	        throws InvalidAnnotationException
 	{
 		MetaDataCache metaDataCache = getMetaDataCache(type);
 		String shardKeyFieldName = metaDataCache.getShardKey(bean.getClass());
@@ -244,10 +237,8 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 	 * com.flipkart.portkey.common.persistence.PersistenceLayerInterface#insert(com.flipkart.portkey.common.entity.Entity
 	 * )
 	 */
-	public <T extends Entity> Result insert(T bean) throws InvalidAnnotationException, ShardNotAvailableException,
-	        BeanSerializationException
+	public <T extends Entity> Result insert(T bean) throws QueryExecutionException
 	{
-		logger.debug("bean=" + bean);
 		return insert(bean, false);
 	}
 
@@ -257,10 +248,8 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 	 * com.flipkart.portkey.common.persistence.PersistenceLayerInterface#insert(com.flipkart.portkey.common.entity.Entity
 	 * , boolean)
 	 */
-	public <T extends Entity> Result insert(T bean, boolean generateShardId) throws ShardNotAvailableException
+	public <T extends Entity> Result insert(T bean, boolean generateShardId) throws QueryExecutionException
 	{
-		logger.debug("bean=" + bean + "generateShardId=" + generateShardId);
-
 		Result result = new Result();
 		WriteConfig writeConfig = getWriteConfigForEntity(bean.getClass());
 		List<DataStoreType> writeOrder = writeConfig.getWriteOrder();
@@ -277,14 +266,14 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 			{
 				rowsUpdated = insertIntoDataStore(dataStoreType, bean);
 			}
-			catch (ShardNotAvailableException e)
+			catch (QueryExecutionException e)
 			{
 				logger.info("Caught exception while trying to insert bean=" + bean + "\n into data store"
 				        + dataStoreType + "\n" + e);
 				FailureAction failureAction = writeConfig.getFailureAction();
 				if (failureAction == FailureAction.ABORT)
 				{
-					throw new ShardNotAvailableException("Exception while inserting bean into datastore, bean=" + bean
+					throw new QueryExecutionException("Exception while inserting bean into datastore, bean=" + bean
 					        + "\ndatastoretype=" + dataStoreType, e);
 				}
 				continue;
@@ -301,7 +290,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 	 * com.flipkart.portkey.common.persistence.PersistenceLayerInterface#update(com.flipkart.portkey.common.entity.Entity
 	 * )
 	 */
-	public <T extends Entity> Result update(T bean) throws PortKeyException
+	public <T extends Entity> Result update(T bean) throws QueryExecutionException
 	{
 		logger.debug("Entry,  bean=" + bean);
 		Result result = new Result();
@@ -312,7 +301,23 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 			String shardKey = getShardKey(type, bean);
 			String shardId = shardIdentifier.getShardId(shardKey);
 			PersistenceManager pm = getPersistenceManager(type, shardId);
-			int rowsUpdated = pm.update(bean);
+			int rowsUpdated = 0;
+			try
+			{
+				rowsUpdated = pm.update(bean);
+			}
+			catch (QueryExecutionException e)
+			{
+				logger.info("Caught exception while trying to update bean=" + bean + "\n into data store" + type + "\n"
+				        + e);
+				FailureAction failureAction = writeConfig.getFailureAction();
+				if (failureAction == FailureAction.ABORT)
+				{
+					throw new QueryExecutionException("Exception while updating bean, bean=" + bean
+					        + "\ndatastoretype=" + type, e);
+				}
+				continue;
+			}
 			result.setRowsUpdatedForDataStore(type, rowsUpdated);
 		}
 		result.setEntity(bean);
@@ -339,7 +344,23 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 				String shardKey = (String) criteria.get(shardKeyFieldName);
 				String shardId = shardIdentifier.getShardId(shardKey);
 				PersistenceManager pm = getPersistenceManager(type, shardId);
-				int rowsUpdated = pm.update(clazz, updateValuesMap, criteria);
+				int rowsUpdated = 0;
+				try
+				{
+					rowsUpdated = pm.update(clazz, updateValuesMap, criteria);
+				}
+				catch (QueryExecutionException e)
+				{
+					logger.info("Caught exception while trying to execute update " + updateValuesMap + "\n data store:"
+					        + type + "\n" + e);
+					FailureAction failureAction = writeConfig.getFailureAction();
+					if (failureAction == FailureAction.ABORT)
+					{
+						throw new QueryExecutionException("Exception while trying to execute update " + updateValuesMap
+						        + "\n data store:" + type, e);
+					}
+					continue;
+				}
 				result.setRowsUpdatedForDataStore(type, rowsUpdated);
 			}
 			else
