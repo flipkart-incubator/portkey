@@ -10,7 +10,9 @@ import java.util.Map;
 import com.flipkart.portkey.common.datastore.DataStoreConfig;
 import com.flipkart.portkey.common.metadata.MetaDataCache;
 import com.flipkart.portkey.common.persistence.PersistenceManager;
+import com.flipkart.portkey.common.sharding.ShardIdentifier;
 import com.flipkart.portkey.redis.metadata.RedisMetaDataCache;
+import com.flipkart.portkey.redis.sharding.RedisShardIdentifier;
 
 /**
  * @author santosh.p
@@ -20,6 +22,7 @@ public class RedisDataStore implements DataStoreConfig
 
 	private Map<String, PersistenceManager> shardIdToPersistenceManagerMap;
 	private RedisMetaDataCache metaDataCache;
+	private ShardIdentifier shardIdentifier = new RedisShardIdentifier();
 
 	public RedisDataStore()
 	{
@@ -69,5 +72,15 @@ public class RedisDataStore implements DataStoreConfig
 	public List<String> getShardIds()
 	{
 		return new ArrayList<String>(shardIdToPersistenceManagerMap.keySet());
+	}
+
+	public ShardIdentifier getShardIdentifier()
+	{
+		return shardIdentifier;
+	}
+
+	public void setShardIdentifier(ShardIdentifier shardIdentifier)
+	{
+		this.shardIdentifier = shardIdentifier;
 	}
 }

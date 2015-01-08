@@ -21,7 +21,7 @@ import com.flipkart.portkey.common.entity.persistence.ReadConfig;
 import com.flipkart.portkey.common.entity.persistence.WriteConfig;
 import com.flipkart.portkey.common.enumeration.DataStoreType;
 import com.flipkart.portkey.common.enumeration.FailureAction;
-import com.flipkart.portkey.common.sharding.ShardIdentifierInterface;
+import com.flipkart.portkey.common.sharding.ShardIdentifier;
 import com.flipkart.portkey.common.sharding.ShardLifeCycleManagerInterface;
 import com.flipkart.portkey.persistence.PersistenceLayer;
 
@@ -36,7 +36,7 @@ public class PersistenceLayerTest
 	private EntityPersistencePreference defaultPersistencePreference;
 	private Map<Class<? extends Entity>, EntityPersistencePreference> entityPersistencePreferenceMap;
 	private Map<DataStoreType, DataStoreConfig> dataStoresMap;
-	private ShardIdentifierInterface shardIdentifier;
+	private ShardIdentifier shardIdentifier;
 	private ShardLifeCycleManagerInterface shardLifeCycleManager;
 
 	@Test

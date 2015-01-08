@@ -20,7 +20,6 @@ import redis.clients.jedis.exceptions.JedisConnectionException;
 import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.common.enumeration.ShardStatus;
 import com.flipkart.portkey.common.exception.InvalidAnnotationException;
-import com.flipkart.portkey.common.exception.MethodNotSupportedForDataStoreException;
 import com.flipkart.portkey.common.exception.QueryNotSupportedException;
 import com.flipkart.portkey.common.exception.ShardNotAvailableException;
 import com.flipkart.portkey.common.persistence.PersistenceManager;
@@ -201,9 +200,9 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 	 */
 	@Override
 	public <T extends Entity> int update(Class<T> clazz, Map<String, Object> updateValuesMap,
-	        Map<String, Object> criteria) throws MethodNotSupportedForDataStoreException
+	        Map<String, Object> criteria) throws QueryNotSupportedException
 	{
-		throw new MethodNotSupportedForDataStoreException("Method not supported for redis implementation");
+		throw new QueryNotSupportedException("Method not supported for redis implementation");
 	}
 
 	private <T extends Entity> void deleteAllSecondaryKeys(T bean)
@@ -399,10 +398,10 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 	 */
 	@Override
 	public <T extends Entity> List<T> getBySql(Class<T> clazz, String sql, Map<String, Object> criteria)
-	        throws MethodNotSupportedForDataStoreException
+	        throws QueryNotSupportedException
 
 	{
-		throw new MethodNotSupportedForDataStoreException("Method not supported for redis implementation");
+		throw new QueryNotSupportedException("Method not supported for redis implementation");
 	}
 
 	/*
@@ -412,9 +411,9 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 	 */
 	@Override
 	public <T extends Entity> List<T> getBySql(Class<T> clazz, String sql, Map<String, Object> criteria,
-	        boolean readMaster) throws MethodNotSupportedForDataStoreException
+	        boolean readMaster) throws QueryNotSupportedException
 	{
-		throw new MethodNotSupportedForDataStoreException("Method not supported for redis implementation");
+		throw new QueryNotSupportedException("Method not supported for redis implementation");
 	}
 
 	/*
@@ -423,9 +422,9 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 	 */
 	@Override
 	public List<Map<String, Object>> getBySql(String sql, Map<String, Object> criteria)
-	        throws MethodNotSupportedForDataStoreException
+	        throws QueryNotSupportedException
 	{
-		throw new MethodNotSupportedForDataStoreException("Method not supported for redis implementation");
+		throw new QueryNotSupportedException("Method not supported for redis implementation");
 	}
 
 	/*
@@ -434,8 +433,8 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 	 * boolean)
 	 */
 	public List<Map<String, Object>> getBySql(String sql, Map<String, Object> criteria, boolean readMaster)
-	        throws MethodNotSupportedForDataStoreException
+	        throws QueryNotSupportedException
 	{
-		throw new MethodNotSupportedForDataStoreException("Method not supported for redis implementation");
+		throw new QueryNotSupportedException("Method not supported for redis implementation");
 	}
 }

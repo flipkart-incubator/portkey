@@ -22,19 +22,15 @@ import com.flipkart.portkey.common.entity.persistence.WriteConfig;
 import com.flipkart.portkey.common.enumeration.DataStoreType;
 import com.flipkart.portkey.common.enumeration.FailureAction;
 import com.flipkart.portkey.common.enumeration.ShardStatus;
-import com.flipkart.portkey.common.exception.MethodNotSupportedForDataStoreException;
-import com.flipkart.portkey.common.exception.PortKeyException;
 import com.flipkart.portkey.common.exception.QueryExecutionException;
-import com.flipkart.portkey.common.exception.QueryNotSupportedException;
 import com.flipkart.portkey.common.exception.ShardNotAvailableException;
 import com.flipkart.portkey.common.metadata.MetaDataCache;
 import com.flipkart.portkey.common.persistence.PersistenceLayerInterface;
 import com.flipkart.portkey.common.persistence.PersistenceManager;
 import com.flipkart.portkey.common.persistence.Result;
-import com.flipkart.portkey.common.sharding.ShardIdentifierInterface;
+import com.flipkart.portkey.common.sharding.ShardIdentifier;
 import com.flipkart.portkey.common.sharding.ShardLifeCycleManagerInterface;
 import com.flipkart.portkey.common.util.PortKeyUtils;
-import com.flipkart.portkey.sharding.ShardIdentifier;
 import com.flipkart.portkey.sharding.ShardLifeCycleManager;
 
 /**
@@ -46,7 +42,6 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 	private EntityPersistencePreference defaultPersistencePreference;
 	private Map<Class<? extends Entity>, EntityPersistencePreference> entityPersistencePreferenceMap;
 	private Map<DataStoreType, DataStoreConfig> dataStoreConfigMap;
-	private ShardIdentifierInterface shardIdentifier;
 	private ShardLifeCycleManagerInterface shardLifeCycleManager;
 	private ScheduledExecutorService scheduledThreadPool;
 
@@ -102,9 +97,6 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 
 		logger.info("Assertions passed");
 
-		shardIdentifier = new ShardIdentifier();
-		logger.info("shardIdentifier initialized");
-
 		logger.info("initializing ShardLifeCycleManager");
 		List<DataStoreType> dataStoreTypes = new ArrayList<DataStoreType>(dataStoreConfigMap.keySet());
 		shardLifeCycleManager = new ShardLifeCycleManager(dataStoreTypes);
@@ -125,7 +117,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		scheduledThreadPool = Executors.newScheduledThreadPool(5);
 		HealthCheckScheduler healthCheckScheduler = new HealthCheckScheduler();
 		healthCheckScheduler.run();
-		scheduledThreadPool.scheduleAtFixedRate(healthCheckScheduler, 0, 100, TimeUnit.SECONDS);
+		scheduledThreadPool.scheduleAtFixedRate(healthCheckScheduler, 0, 5, TimeUnit.SECONDS);
 		logger.info("scheduled health checker");
 		logger.info("Initialized Persistence Layer");
 	}
@@ -176,21 +168,27 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		return entityPersistencePreference.getReadConfig();
 	}
 
-	private DataStoreConfig getDataStore(DataStoreType type)
+	private DataStoreConfig getDataStoreConfig(DataStoreType type)
 	{
 		return dataStoreConfigMap.get(type);
 	}
 
 	private PersistenceManager getPersistenceManager(DataStoreType type, String shardId)
 	{
-		DataStoreConfig ds = getDataStore(type);
+		DataStoreConfig ds = getDataStoreConfig(type);
 		return ds.getPersistenceManager(shardId);
 	}
 
 	private MetaDataCache getMetaDataCache(DataStoreType type)
 	{
-		DataStoreConfig dataStore = getDataStore(type);
+		DataStoreConfig dataStore = getDataStoreConfig(type);
 		return dataStore.getMetaDataCache();
+	}
+
+	private ShardIdentifier getShardIdentifier(DataStoreType type)
+	{
+		DataStoreConfig dataStore = getDataStoreConfig(type);
+		return dataStore.getShardIdentifier();
 	}
 
 	private <T extends Entity> int insertIntoDataStore(DataStoreType type, T bean) throws QueryExecutionException
@@ -198,7 +196,9 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		MetaDataCache metaDataCache = getMetaDataCache(type);
 		String shardKeyFieldName = metaDataCache.getShardKey(bean.getClass());
 		String shardKey = PortKeyUtils.toString(PortKeyUtils.getFieldValueFromBean(bean, shardKeyFieldName));
-		String shardId = shardIdentifier.getShardId(shardKey);
+		ShardIdentifier shardIdentifier = getShardIdentifier(type);
+		List<String> liveShards = shardLifeCycleManager.getShardListForStatus(type, ShardStatus.AVAILABLE_FOR_WRITE);
+		String shardId = shardIdentifier.getShardId(shardKey, liveShards);
 		PersistenceManager pm = getPersistenceManager(type, shardId);
 		int rowsUpdated = pm.insert(bean);
 		return rowsUpdated;
@@ -219,8 +219,10 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 	}
 
 	private <T extends Entity> T generateShardIdAndUpdateBean(DataStoreType type, T bean)
+	        throws ShardNotAvailableException
 	{
 		MetaDataCache metaDataCache = getMetaDataCache(type);
+		ShardIdentifier shardIdentifier = getShardIdentifier(type);
 		String shardKeyFieldName = metaDataCache.getShardKey(bean.getClass());
 		String shardKey = PortKeyUtils.toString(PortKeyUtils.getFieldValueFromBean(bean, shardKeyFieldName));
 		ShardLifeCycleManagerInterface shardLifeCycleManager = getShardLifeCycleManager();
@@ -231,23 +233,11 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		return bean;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see
-	 * com.flipkart.portkey.common.persistence.PersistenceLayerInterface#insert(com.flipkart.portkey.common.entity.Entity
-	 * )
-	 */
 	public <T extends Entity> Result insert(T bean) throws QueryExecutionException
 	{
 		return insert(bean, false);
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see
-	 * com.flipkart.portkey.common.persistence.PersistenceLayerInterface#insert(com.flipkart.portkey.common.entity.Entity
-	 * , boolean)
-	 */
 	public <T extends Entity> Result insert(T bean, boolean generateShardId) throws QueryExecutionException
 	{
 		Result result = new Result();
@@ -269,14 +259,13 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 			catch (QueryExecutionException e)
 			{
 				logger.info("Caught exception while trying to insert bean=" + bean + "\n into data store"
-				        + dataStoreType + "\n" + e);
+				        + dataStoreType + "\n", e);
 				FailureAction failureAction = writeConfig.getFailureAction();
 				if (failureAction == FailureAction.ABORT)
 				{
 					throw new QueryExecutionException("Exception while inserting bean into datastore, bean=" + bean
 					        + "\ndatastoretype=" + dataStoreType, e);
 				}
-				continue;
 			}
 			result.setRowsUpdatedForDataStore(dataStoreType, rowsUpdated);
 		}
@@ -284,26 +273,22 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		return result;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see
-	 * com.flipkart.portkey.common.persistence.PersistenceLayerInterface#update(com.flipkart.portkey.common.entity.Entity
-	 * )
-	 */
 	public <T extends Entity> Result update(T bean) throws QueryExecutionException
 	{
-		logger.debug("Entry,  bean=" + bean);
 		Result result = new Result();
 		WriteConfig writeConfig = getWriteConfigForEntity(bean.getClass());
 		List<DataStoreType> writeOrder = writeConfig.getWriteOrder();
 		for (DataStoreType type : writeOrder)
 		{
 			String shardKey = getShardKey(type, bean);
-			String shardId = shardIdentifier.getShardId(shardKey);
-			PersistenceManager pm = getPersistenceManager(type, shardId);
+			ShardIdentifier shardIdentifier = getShardIdentifier(type);
+			List<String> liveShards =
+			        shardLifeCycleManager.getShardListForStatus(type, ShardStatus.AVAILABLE_FOR_WRITE);
 			int rowsUpdated = 0;
 			try
 			{
+				String shardId = shardIdentifier.getShardId(shardKey, liveShards);
+				PersistenceManager pm = getPersistenceManager(type, shardId);
 				rowsUpdated = pm.update(bean);
 			}
 			catch (QueryExecutionException e)
@@ -316,7 +301,6 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 					throw new QueryExecutionException("Exception while updating bean, bean=" + bean
 					        + "\ndatastoretype=" + type, e);
 				}
-				continue;
 			}
 			result.setRowsUpdatedForDataStore(type, rowsUpdated);
 		}
@@ -324,13 +308,8 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		return result;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.common.persistence.PersistenceLayerInterface#update(java.lang.Class, java.util.Map,
-	 * java.util.Map)
-	 */
 	public <T extends Entity> Result update(Class<T> clazz, Map<String, Object> updateValuesMap,
-	        Map<String, Object> criteria) throws PortKeyException
+	        Map<String, Object> criteria) throws QueryExecutionException
 	{
 		Result result = new Result();
 		WriteConfig writeConfig = getWriteConfigForEntity(clazz);
@@ -341,12 +320,15 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 			String shardKeyFieldName = metaDataCache.getShardKey(clazz);
 			if (criteria.containsKey(shardKeyFieldName))
 			{
-				String shardKey = (String) criteria.get(shardKeyFieldName);
-				String shardId = shardIdentifier.getShardId(shardKey);
-				PersistenceManager pm = getPersistenceManager(type, shardId);
+				String shardKey = PortKeyUtils.toString(criteria.get(shardKeyFieldName));
+				ShardIdentifier shardIdentifier = getShardIdentifier(type);
+				List<String> liveShards =
+				        shardLifeCycleManager.getShardListForStatus(type, ShardStatus.AVAILABLE_FOR_WRITE);
 				int rowsUpdated = 0;
 				try
 				{
+					String shardId = shardIdentifier.getShardId(shardKey, liveShards);
+					PersistenceManager pm = getPersistenceManager(type, shardId);
 					rowsUpdated = pm.update(clazz, updateValuesMap, criteria);
 				}
 				catch (QueryExecutionException e)
@@ -359,18 +341,32 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 						throw new QueryExecutionException("Exception while trying to execute update " + updateValuesMap
 						        + "\n data store:" + type, e);
 					}
-					continue;
 				}
 				result.setRowsUpdatedForDataStore(type, rowsUpdated);
 			}
 			else
 			{
-				List<String> shardIds = dataStoreConfigMap.get(type).getShardIds();
+				DataStoreConfig dataStoreConfig = getDataStoreConfig(type);
+				List<String> shardIds = dataStoreConfig.getShardIds();
 				int rowsUpdated = 0;
+				boolean updated = false;
 				for (String shardId : shardIds)
 				{
 					PersistenceManager pm = getPersistenceManager(type, shardId);
-					rowsUpdated += pm.update(clazz, updateValuesMap, criteria);
+					try
+					{
+						rowsUpdated += pm.update(clazz, updateValuesMap, criteria);
+						updated = true;
+					}
+					catch (QueryExecutionException e)
+					{
+						break;
+					}
+				}
+				if (!updated)
+				{
+					result.setRowsUpdatedForDataStore(type, rowsUpdated);
+					continue;
 				}
 				result.setRowsUpdatedForDataStore(type, rowsUpdated);
 			}
@@ -383,7 +379,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 	 * @see com.flipkart.portkey.common.persistence.PersistenceLayerInterface#delete(java.lang.Class, java.util.Map)
 	 */
 	public <T extends Entity> Result delete(Class<T> clazz, Map<String, Object> criteria)
-	        throws ShardNotAvailableException, QueryNotSupportedException
+	        throws QueryExecutionException
 	{
 		Result result = new Result();
 		WriteConfig writeConfig = getWriteConfigForEntity(clazz);
@@ -396,32 +392,23 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 			{
 				int rowsUpdated = 0;
 				String shardKey = (String) criteria.get(shardKeyFieldName);
-				String shardId = shardIdentifier.getShardId(shardKey);
+				ShardIdentifier shardIdentifier = getShardIdentifier(type);
+				List<String> liveShards =
+				        shardLifeCycleManager.getShardListForStatus(type, ShardStatus.AVAILABLE_FOR_WRITE);
 				try
 				{
+					String shardId = shardIdentifier.getShardId(shardKey, liveShards);
 					PersistenceManager pm = getPersistenceManager(type, shardId);
 					rowsUpdated = pm.delete(clazz, criteria);
 					result.setRowsUpdatedForDataStore(type, rowsUpdated);
 				}
-				catch (QueryNotSupportedException e)
+				catch (QueryExecutionException e)
 				{
 					logger.info("Caught exception while trying to delete from data store" + type + "\n" + e);
 					FailureAction failureAction = writeConfig.getFailureAction();
 					if (failureAction == FailureAction.ABORT)
 					{
-						throw new QueryNotSupportedException("Exception while executing delete from datastore, type="
-						        + type, e);
-					}
-					result.setRowsUpdatedForDataStore(type, rowsUpdated);
-					continue;
-				}
-				catch (ShardNotAvailableException e)
-				{
-					logger.info("Caught exception while trying to delete from data store" + type + "\n" + e);
-					FailureAction failureAction = writeConfig.getFailureAction();
-					if (failureAction == FailureAction.ABORT)
-					{
-						throw new QueryNotSupportedException("Exception while executing delete from datastore, type="
+						throw new QueryExecutionException("Exception while executing delete from datastore, type="
 						        + type, e);
 					}
 					result.setRowsUpdatedForDataStore(type, rowsUpdated);
@@ -443,13 +430,8 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		return result;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.common.persistence.PersistenceLayerInterface#getByCriteria(java.lang.Class,
-	 * java.util.Map)
-	 */
 	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, Map<String, Object> criteria)
-	        throws PortKeyException
+	        throws QueryExecutionException
 	{
 		List<T> result = new ArrayList<T>();
 		ReadConfig readConfig = getReadConfigForEntity(clazz);
@@ -461,10 +443,13 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 			if (criteria.containsKey(shardKeyFieldName))
 			{
 				String shardKey = (String) criteria.get(shardKeyFieldName);
-				String shardId = shardIdentifier.getShardId(shardKey);
-				PersistenceManager pm = getPersistenceManager(type, shardId);
+				ShardIdentifier shardIdentifier = getShardIdentifier(type);
+				List<String> liveShards =
+				        shardLifeCycleManager.getShardListForStatus(type, ShardStatus.AVAILABLE_FOR_WRITE);
 				try
 				{
+					String shardId = shardIdentifier.getShardId(shardKey, liveShards);
+					PersistenceManager pm = getPersistenceManager(type, shardId);
 					result = pm.getByCriteria(clazz, criteria);
 				}
 				catch (QueryExecutionException e)
@@ -477,7 +462,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 			}
 			else
 			{
-				boolean encounteredExecption = false;
+				boolean queryExecuted = false;
 				List<String> shardIds = dataStoreConfigMap.get(type).getShardIds();
 				for (String shardId : shardIds)
 				{
@@ -486,70 +471,88 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 					try
 					{
 						intermediateResult = pm.getByCriteria(clazz, criteria);
+						queryExecuted = true;
 					}
 					catch (QueryExecutionException e)
 					{
 						logger.info("Encountered exception while trying to execute query \n DataStoreType=" + type
 						        + "\ncriteria=" + criteria + "\nexception=" + e);
-						encounteredExecption = true;
 						break;
 					}
 					result.addAll(intermediateResult);
 				}
-				if (encounteredExecption)
+				if (!queryExecuted)
 				{
 					continue;
 				}
 				return result;
 			}
 		}
-		return null;
+		throw new QueryExecutionException("Failed to execute query.");
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.common.persistence.PersistenceLayerInterface#getByCriteria(java.lang.Class,
-	 * java.util.List, java.util.Map)
-	 */
 	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, List<String> attributeNames,
-	        Map<String, Object> criteria) throws PortKeyException
+	        Map<String, Object> criteria) throws QueryExecutionException
 	{
 		List<T> result = new ArrayList<T>();
-		WriteConfig writeConfig = getWriteConfigForEntity(clazz);
-		List<DataStoreType> writeOrder = writeConfig.getWriteOrder();
-		for (DataStoreType type : writeOrder)
+		ReadConfig readConfig = getReadConfigForEntity(clazz);
+		List<DataStoreType> readOrder = readConfig.getReadOrder();
+		for (DataStoreType type : readOrder)
 		{
+			boolean queryExecuted = false;
 			MetaDataCache metaDataCache = getMetaDataCache(type);
 			String shardKeyFieldName = metaDataCache.getShardKey(clazz);
 			if (criteria.containsKey(shardKeyFieldName))
 			{
 				String shardKey = (String) criteria.get(shardKeyFieldName);
-				String shardId = shardIdentifier.getShardId(shardKey);
-				PersistenceManager pm = getPersistenceManager(type, shardId);
-				result = pm.getByCriteria(clazz, attributeNames, criteria);
+				ShardIdentifier shardIdentifier = getShardIdentifier(type);
+				List<String> liveShards =
+				        shardLifeCycleManager.getShardListForStatus(type, ShardStatus.AVAILABLE_FOR_READ);
+				String shardId;
+				try
+				{
+					shardId = shardIdentifier.getShardId(shardKey, liveShards);
+					PersistenceManager pm = getPersistenceManager(type, shardId);
+					result = pm.getByCriteria(clazz, attributeNames, criteria);
+					queryExecuted = true;
+				}
+				catch (QueryExecutionException e)
+				{
+					logger.info("Exception while trying to fetch from data store:" + type, e);
+					continue;
+				}
 			}
 			else
 			{
 				List<String> shardIds = dataStoreConfigMap.get(type).getShardIds();
 				for (String shardId : shardIds)
 				{
+					queryExecuted = false;
 					PersistenceManager pm = getPersistenceManager(type, shardId);
-					List<T> intermediateResult = pm.getByCriteria(clazz, attributeNames, criteria);
-					result.addAll(intermediateResult);
+					List<T> intermediateResult = null;
+					try
+					{
+						intermediateResult = pm.getByCriteria(clazz, attributeNames, criteria);
+						result.addAll(intermediateResult);
+						queryExecuted = true;
+					}
+					catch (QueryExecutionException e)
+					{
+						logger.info("Exception while trying to fetch from data store:" + type, e);
+						break;
+					}
 				}
 			}
-			return result;
+			if (queryExecuted)
+			{
+				return result;
+			}
 		}
-		return result;
+		throw new QueryExecutionException("Failed to execute query.");
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.common.persistence.PersistenceLayerInterface#getBySql(java.lang.Class,
-	 * java.lang.String, java.util.Map)
-	 */
 	public <T extends Entity> List<T> getBySql(Class<T> clazz, String sql, Map<String, Object> criteria)
-	        throws PortKeyException
+	        throws QueryExecutionException
 	{
 		ReadConfig readConfig = getReadConfigForEntity(clazz);
 		List<DataStoreType> readOrder = readConfig.getReadOrder();
@@ -567,46 +570,54 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 				}
 				return result;
 			}
-			catch (MethodNotSupportedForDataStoreException e)
+			catch (QueryExecutionException e)
 			{
-				logger.info("Method not supported by datastore" + type);
+				logger.info("Exception while trying to execute sql query" + sql + " on datastore " + type, e);
 				continue;
 			}
 		}
-		return null;
+		throw new QueryExecutionException("Failed to execute query, all related datastore instances are down");
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.common.persistence.PersistenceLayerInterface#getBySql(java.lang.String, java.util.Map)
-	 */
-	public List<Map<String, Object>> getBySql(String sql, Map<String, Object> criteria) throws PortKeyException
+	public List<Map<String, Object>> getBySql(String sql, Map<String, Object> criteria) throws QueryExecutionException
 	{
-		List<Map<String, Object>> result = new ArrayList<Map<String, Object>>();
+		boolean queryExecuted = false;
+		List<Map<String, Object>> result;
 		ReadConfig readConfig = getDefaultReadConfig();
 		List<DataStoreType> readOrder = readConfig.getReadOrder();
 		for (DataStoreType type : readOrder)
 		{
+			result = new ArrayList<Map<String, Object>>();
 			List<String> shardIds = dataStoreConfigMap.get(type).getShardIds();
 			for (String shardId : shardIds)
 			{
+				queryExecuted = false;
 				PersistenceManager pm = getPersistenceManager(type, shardId);
-				List<Map<String, Object>> intermediateResult = pm.getBySql(sql, criteria);
+				List<Map<String, Object>> intermediateResult = null;
+				try
+				{
+					intermediateResult = pm.getBySql(sql, criteria);
+					queryExecuted = true;
+				}
+				catch (QueryExecutionException e)
+				{
+					logger.info("Failed to execute query " + sql + " for datastore " + type, e);
+					break;
+				}
 				result.addAll(intermediateResult);
 			}
-			return result;
+			if (queryExecuted)
+			{
+				return result;
+			}
 		}
-		return result;
+		throw new QueryExecutionException("Failed to execute query " + sql + ".\nAll related data stores are down");
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.common.persistence.PersistenceLayerInterface#getBySql(java.lang.Class, java.util.Map,
-	 * java.util.Map)
-	 */
 	public <T extends Entity> List<T> getBySql(Class<T> clazz, Map<DataStoreType, String> sqlMap,
-	        Map<String, Object> criteria) throws PortKeyException
+	        Map<String, Object> criteria) throws QueryExecutionException
 	{
+		boolean queryExecuted = false;
 		List<T> result = null;
 		ReadConfig readConfig = getReadConfigForEntity(clazz);
 		List<DataStoreType> readOrder = readConfig.getReadOrder();
@@ -617,22 +628,33 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 			List<String> shardIds = dataStoreConfigMap.get(type).getShardIds();
 			for (String shardId : shardIds)
 			{
+				queryExecuted = false;
 				PersistenceManager pm = getPersistenceManager(type, shardId);
-				List<T> intermediateResult = pm.getBySql(clazz, sql, criteria);
+				List<T> intermediateResult;
+				try
+				{
+					intermediateResult = pm.getBySql(clazz, sql, criteria);
+					queryExecuted = true;
+				}
+				catch (QueryExecutionException e)
+				{
+					logger.info("Failed to execute query " + sql + " for datastore" + type, e);
+					break;
+				}
 				result.addAll(intermediateResult);
 			}
-			return result;
+			if (queryExecuted)
+			{
+				return result;
+			}
 		}
-		return result;
+		throw new QueryExecutionException("Failed to execute query.\nAll related data stores are down");
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.common.persistence.PersistenceLayerInterface#getBySql(java.util.Map, java.util.Map)
-	 */
 	public List<Map<String, Object>> getBySql(Map<DataStoreType, String> sqlMap, Map<String, Object> criteria)
-	        throws PortKeyException
+	        throws QueryExecutionException
 	{
+		boolean queryExecuted = false;
 		List<Map<String, Object>> result = null;
 		ReadConfig readConfig = getDefaultReadConfig();
 		List<DataStoreType> readOrder = readConfig.getReadOrder();
@@ -643,13 +665,25 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 			List<String> shardIds = dataStoreConfigMap.get(type).getShardIds();
 			for (String shardId : shardIds)
 			{
+				queryExecuted = false;
 				PersistenceManager pm = getPersistenceManager(type, shardId);
-				List<Map<String, Object>> intermediateResult = pm.getBySql(sql, criteria);
+				List<Map<String, Object>> intermediateResult = null;
+				try
+				{
+					intermediateResult = pm.getBySql(sql, criteria);
+					queryExecuted = true;
+				}
+				catch (QueryExecutionException e)
+				{
+					logger.info("Failed to execute query " + sql + " for datastore" + type, e);
+				}
 				result.addAll(intermediateResult);
 			}
-			return result;
+			if (queryExecuted)
+			{
+				return result;
+			}
 		}
-		return result;
+		throw new QueryExecutionException("Failed to execute query.\nAll related data stores are down");
 	}
-
 }

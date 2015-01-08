@@ -5,6 +5,8 @@ package com.flipkart.portkey.common.util;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.log4j.Logger;
 import org.codehaus.jackson.JsonGenerationException;
@@ -135,5 +137,18 @@ public class PortKeyUtils
 			logger.info("Exception while trying to deserialize, string=" + str + ", class=" + clazz, e);
 		}
 		return null;
+	}
+
+	public static <T1, T2> Map<T1, T2> mergeMaps(Map<T1, T2> map1, Map<T1, T2> map2)
+	{
+		Map<T1, T2> result = new HashMap<T1, T2>();
+		result.putAll(map1);
+		result.putAll(map2);
+		return result;
+	}
+
+	public static String enumToString(Enum<?> e)
+	{
+		return e == null ? null : e.name();
 	}
 }

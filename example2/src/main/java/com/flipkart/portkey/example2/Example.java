@@ -37,8 +37,8 @@ public class Example
 		ApplicationContext context =
 		        new FileSystemXmlApplicationContext("src/main/resources/external/portkey-application-context.xml");
 		pl = context.getBean(PersistenceLayer.class, "persistenceLayer");
-		// insert();
-		// sc.next();
+		insert();
+		sc.next();
 		// generateAndInsert();
 		// sc.next();
 		// getByCriteriaUsingPk();
@@ -47,8 +47,8 @@ public class Example
 		// sc.next();
 		// getByCriteriaUsingSecondaryKey();
 		// sc.next();
-		updateByCriteria();
-		sc.next();
+		// updateByCriteria();
+		// sc.next();
 		// getBySqlUsingPk();
 		// sc.next();
 		// getBySqlUsingNonPk();

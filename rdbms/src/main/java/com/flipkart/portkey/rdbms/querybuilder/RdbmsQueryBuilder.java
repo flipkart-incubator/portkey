@@ -5,9 +5,9 @@ package com.flipkart.portkey.rdbms.querybuilder;
 
 import java.lang.reflect.Field;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.ibatis.jdbc.SqlBuilder;
+import org.apache.log4j.Logger;
 
 import com.flipkart.portkey.rdbms.metadata.RdbmsTableMetaData;
 import com.flipkart.portkey.rdbms.metadata.annotation.RdbmsField;
@@ -17,6 +17,7 @@ import com.flipkart.portkey.rdbms.metadata.annotation.RdbmsField;
  */
 public class RdbmsQueryBuilder
 {
+	private static Logger logger = Logger.getLogger(RdbmsQueryBuilder.class);
 	private static RdbmsQueryBuilder instance;
 
 	public static RdbmsQueryBuilder getInstance()
@@ -46,7 +47,7 @@ public class RdbmsQueryBuilder
 				if (rdbmsField != null)
 				{
 					insertQryStrBuilder.append(rdbmsField.columnName() + ",");
-					valuesQryStrBuilder.append(":" + field.getName() + ",");
+					valuesQryStrBuilder.append(":" + rdbmsField.columnName() + ",");
 				}
 
 			}
@@ -57,6 +58,7 @@ public class RdbmsQueryBuilder
 			insertQuery = SqlBuilder.SQL();
 			tableMetaData.setInsertQuery(insertQuery);
 		}
+		logger.debug(insertQuery);
 		return insertQuery;
 	}
 
@@ -81,11 +83,11 @@ public class RdbmsQueryBuilder
 				{
 					if (!rdbmsField.isPrimaryKey())
 					{
-						SqlBuilder.SET(rdbmsField.columnName() + "=:" + field.getName());
+						SqlBuilder.SET(rdbmsField.columnName() + "=:" + rdbmsField.columnName());
 					}
 					else
 					{
-						SqlBuilder.WHERE(rdbmsField.columnName() + "=:" + field.getName());
+						SqlBuilder.WHERE(rdbmsField.columnName() + "=:" + rdbmsField.columnName());
 					}
 				}
 			}
@@ -93,30 +95,41 @@ public class RdbmsQueryBuilder
 			updateQuery = SqlBuilder.SQL();
 			tableMetaData.setUpdateByPkQuery(updateQuery);
 		}
+		logger.debug(updateQuery);
 		return updateQuery;
 	}
 
-	/**
-	 * @param updateAttributesToValuesMap
-	 * @param criteria
-	 * @return
-	 */
-	public String getUpdateByCriteriaQuery(RdbmsTableMetaData tableMetaData,
-	        Map<String, Object> updateAttributesToValuesMap, Map<String, Object> criteriaMap)
+	public String getUpdateByCriteriaQuery(String tableName, List<String> updateAttributes,
+	        List<String> criteriaAttributes)
 	{
 		SqlBuilder.BEGIN();
-		SqlBuilder.UPDATE(tableMetaData.getTableName());
-		for (String attribute : updateAttributesToValuesMap.keySet())
+		SqlBuilder.UPDATE(tableName);
+		for (String attribute : updateAttributes)
 		{
-			SqlBuilder.SET(attribute + "=" + updateAttributesToValuesMap.get(attribute));
+			SqlBuilder.SET(attribute + "=:" + attribute);
 		}
-		for (String criteria : criteriaMap.keySet())
+		for (String criteria : criteriaAttributes)
 		{
 
-			SqlBuilder.WHERE(criteria + "=" + "'" + criteriaMap.get(criteria) + "'");
+			SqlBuilder.WHERE(criteria + "=:" + criteria);
 		}
 
 		String updateQuery = SqlBuilder.SQL();
+		logger.debug(updateQuery);
+		return updateQuery;
+	}
+
+	public String getDeleteByCriteriaQuery(String tableName, List<String> criteriaAttributes)
+	{
+		SqlBuilder.BEGIN();
+		SqlBuilder.DELETE_FROM(tableName);
+		for (String attribute : criteriaAttributes)
+		{
+			SqlBuilder.WHERE(attribute + "=:" + attribute);
+		}
+
+		String updateQuery = SqlBuilder.SQL();
+		logger.debug(updateQuery);
 		return updateQuery;
 	}
 
@@ -125,57 +138,40 @@ public class RdbmsQueryBuilder
 	 * @param criteria
 	 * @return
 	 */
-	public String getDeleteByCriteriaQuery(RdbmsTableMetaData tableMetaData, Map<String, Object> criteria)
-	{
-		SqlBuilder.BEGIN();
-		SqlBuilder.DELETE_FROM(tableMetaData.getTableName());
-		for (String attribute : criteria.keySet())
-		{
-			SqlBuilder.WHERE(attribute + "=" + "'" + criteria.get(attribute) + "'");
-		}
-
-		String updateQuery = SqlBuilder.SQL();
-		return updateQuery;
-	}
-
-	/**
-	 * @param tableMetaData
-	 * @param criteria
-	 * @return
-	 */
-	public String getGetByCriteriaQuery(RdbmsTableMetaData tableMetaData, Map<String, Object> criteria)
+	public String getGetByCriteriaQuery(String tableName, List<String> criteriaAttributes)
 	{
 		SqlBuilder.BEGIN();
 		SqlBuilder.SELECT("*");
-		SqlBuilder.FROM(tableMetaData.getTableName());
-		for (String attribute : criteria.keySet())
+		SqlBuilder.FROM(tableName);
+		for (String attribute : criteriaAttributes)
 		{
-			SqlBuilder.WHERE(attribute + "=" + "'" + criteria.get(attribute) + "'");
+			SqlBuilder.WHERE(attribute + "=:" + attribute);
 		}
 		String getQuery = SqlBuilder.SQL();
+		logger.debug(getQuery);
 		return getQuery;
 	}
 
 	/**
 	 * @param tableMetaData
-	 * @param attributeNames
+	 * @param selectAttributes
 	 * @param criteria
 	 * @return
 	 */
-	public String getGetByCriteriaQuery(RdbmsTableMetaData tableMetaData, List<String> attributeNames,
-	        Map<String, Object> criteria)
+	public String getGetByCriteriaQuery(String tableName, List<String> selectAttributes, List<String> criteriaAttributes)
 	{
 		SqlBuilder.BEGIN();
-		for (String attributeName : attributeNames)
+		for (String attribute : selectAttributes)
 		{
-			SqlBuilder.SELECT(attributeName);
+			SqlBuilder.SELECT(attribute);
 		}
-		SqlBuilder.FROM(tableMetaData.getTableName());
-		for (String attribute : criteria.keySet())
+		SqlBuilder.FROM(tableName);
+		for (String attribute : criteriaAttributes)
 		{
-			SqlBuilder.WHERE(attribute + "=" + "'" + criteria.get(attribute) + "'");
+			SqlBuilder.WHERE(attribute + "=:" + attribute);
 		}
 		String getQuery = SqlBuilder.SQL();
+		logger.debug(getQuery);
 		return getQuery;
 	}
 }

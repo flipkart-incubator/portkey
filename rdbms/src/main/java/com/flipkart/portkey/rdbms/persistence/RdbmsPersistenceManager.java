@@ -4,6 +4,7 @@
 package com.flipkart.portkey.rdbms.persistence;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,8 +19,10 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.common.enumeration.ShardStatus;
 import com.flipkart.portkey.common.exception.InvalidAnnotationException;
+import com.flipkart.portkey.common.exception.QueryExecutionException;
 import com.flipkart.portkey.common.exception.ShardNotAvailableException;
 import com.flipkart.portkey.common.persistence.PersistenceManager;
+import com.flipkart.portkey.common.util.PortKeyUtils;
 import com.flipkart.portkey.rdbms.mapper.RdbmsMapper;
 import com.flipkart.portkey.rdbms.metadata.RdbmsMetaDataCache;
 import com.flipkart.portkey.rdbms.metadata.RdbmsTableMetaData;
@@ -101,85 +104,132 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	 * @param metaData
 	 * @return
 	 */
-	private Map<String, Object> generateAttributeToValueMap(Entity obj, RdbmsTableMetaData tableMetaData)
+	private Map<String, Object> generateRdbmsColumnToValueMap(Entity obj, RdbmsTableMetaData tableMetaData)
 	{
 		List<Field> fieldList = tableMetaData.getFieldList();
 		Map<String, Object> mapValues = new HashMap<String, Object>();
 		for (Field field : fieldList)
 		{
 			RdbmsField rdbmsField = field.getAnnotation(RdbmsField.class);
-			// TODO: write this mapper according to the guidelines given by Ashish
 			if (rdbmsField != null)
 			{
 				Object value;
 				value = RdbmsMapper.get(obj, field.getName());
-				mapValues.put(field.getName(), value);
+				if (value instanceof Enum)
+				{
+					String enumStr = PortKeyUtils.enumToString((Enum) value);
+					mapValues.put(rdbmsField.columnName(), enumStr);
+				}
+				else
+				{
+					mapValues.put(rdbmsField.columnName(), value);
+				}
 			}
 		}
 		return mapValues;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#insert(com.flipkart.portkey.common.entity.Entity)
+	/**
+	 * @param updateAttributesToValuesMap
+	 * @param tableMetaData
+	 * @return
 	 */
-	public <T extends Entity> int insert(T bean) throws ShardNotAvailableException
+	private Map<String, Object> generateRdbmsColumnToValueMap(Map<String, Object> fieldNamesToValuesMap,
+	        RdbmsTableMetaData tableMetaData)
+	{
+		Map<String, Object> mapValues = new HashMap<String, Object>();
+		for (String fieldName : fieldNamesToValuesMap.keySet())
+		{
+			String rdbmsColumn = tableMetaData.getRdbmsColumnFromFieldName(fieldName);
+			Object value = fieldNamesToValuesMap.get(fieldName);
+			if (value instanceof Enum)
+			{
+				String enumStr = PortKeyUtils.enumToString((Enum) value);
+				mapValues.put(rdbmsColumn, enumStr);
+			}
+			else
+			{
+				mapValues.put(rdbmsColumn, value);
+			}
+		}
+		return mapValues;
+	}
+
+	private Map<String, Object> getRdbmsFieldsMap(Map<String, Object> attributesMap, RdbmsTableMetaData tableMetaData)
+	{
+		Map<String, Object> rdbmsFieldsMap = new HashMap<String, Object>();
+		for (String key : attributesMap.keySet())
+		{
+			String columnName = tableMetaData.getRdbmsColumnFromFieldName(key);
+			Object value = attributesMap.get(key);
+			if (value instanceof Enum)
+			{
+				String enumStr = PortKeyUtils.enumToString((Enum) value);
+				rdbmsFieldsMap.put(columnName, enumStr);
+			}
+			else
+			{
+				rdbmsFieldsMap.put(columnName, attributesMap.get(key));
+			}
+		}
+		return rdbmsFieldsMap;
+	}
+
+	public <T extends Entity> int insert(T bean) throws QueryExecutionException
 	{
 		RdbmsTableMetaData metaData = RdbmsMetaDataCache.getInstance().getMetaData(bean.getClass());
 		String insertQuery = RdbmsQueryBuilder.getInstance().getInsertQuery(metaData);
-		Map<String, Object> attributeToValueMap = generateAttributeToValueMap(bean, metaData);
+		Map<String, Object> rdbmsColumnToValueMap = generateRdbmsColumnToValueMap(bean, metaData);
 		NamedParameterJdbcTemplate temp = new NamedParameterJdbcTemplate(master);
 		try
 		{
-			return temp.update(insertQuery, attributeToValueMap);
+			return temp.update(insertQuery, rdbmsColumnToValueMap);
 		}
 		catch (DataAccessException e)
 		{
-			throw new ShardNotAvailableException("Exception while trying to update bean:" + bean + "\n" + e);
+			logger.info("Exception while trying to update bean:" + bean, e);
+			throw new QueryExecutionException("Exception while trying to update bean:" + bean, e);
 		}
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#update(com.flipkart.portkey.common.entity.Entity)
-	 */
-	public <T extends Entity> int update(T bean) throws ShardNotAvailableException
+	public <T extends Entity> int update(T bean) throws QueryExecutionException
 	{
 		RdbmsTableMetaData metaData = RdbmsMetaDataCache.getInstance().getMetaData(bean.getClass());
 		String updateQuery = RdbmsQueryBuilder.getInstance().getUpdateByPkQuery(metaData);
-		Map<String, Object> attributeToValueMap = generateAttributeToValueMap(bean, metaData);
+		Map<String, Object> rdbmsColumnToValueMap = generateRdbmsColumnToValueMap(bean, metaData);
 		NamedParameterJdbcTemplate temp = new NamedParameterJdbcTemplate(master);
 		try
 		{
-			return temp.update(updateQuery, attributeToValueMap);
+			return temp.update(updateQuery, rdbmsColumnToValueMap);
 		}
 		catch (DataAccessException e)
 		{
-			throw new ShardNotAvailableException("Exception while trying to update bean:" + bean + "\n" + e);
+			logger.info("Exception while executing update on bean" + bean, e);
+			throw new QueryExecutionException("Exception while trying to update bean:" + bean, e);
 		}
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#update(java.lang.Class, java.util.Map,
-	 * java.util.Map)
-	 */
 	public <T extends Entity> int update(Class<T> clazz, Map<String, Object> updateAttributesToValuesMap,
-	        Map<String, Object> criteria) throws ShardNotAvailableException
+	        Map<String, Object> criteria) throws QueryExecutionException
 	{
 		RdbmsTableMetaData tableMetaData = RdbmsMetaDataCache.getInstance().getMetaData(clazz);
+		Map<String, Object> rdbmsColumnToValueMap =
+		        generateRdbmsColumnToValueMap(updateAttributesToValuesMap, tableMetaData);
+		Map<String, Object> rdbmsCriteria = generateRdbmsColumnToValueMap(criteria, tableMetaData);
+		String tableName = tableMetaData.getTableName();
+		List<String> rdbmsColumns = new ArrayList<String>(rdbmsColumnToValueMap.keySet());
+		List<String> criteriaAttributes = new ArrayList<String>(rdbmsCriteria.keySet());
 		String updateQuery =
-		        RdbmsQueryBuilder.getInstance().getUpdateByCriteriaQuery(tableMetaData, updateAttributesToValuesMap,
-		                criteria);
-		JdbcTemplate temp = new JdbcTemplate(master);
+		        RdbmsQueryBuilder.getInstance().getUpdateByCriteriaQuery(tableName, rdbmsColumns, criteriaAttributes);
+		Map<String, Object> namedParameter = PortKeyUtils.mergeMaps(rdbmsColumnToValueMap, rdbmsCriteria);
+		NamedParameterJdbcTemplate temp = new NamedParameterJdbcTemplate(master);
 		try
 		{
-			return temp.update(updateQuery);
+			return temp.update(updateQuery, namedParameter);
 		}
 		catch (DataAccessException e)
 		{
-			throw new ShardNotAvailableException("Exception while trying to execute update query:" + updateQuery + "\n"
-			        + e);
+			throw new QueryExecutionException("Exception while trying to execute update query:" + updateQuery, e);
 		}
 	}
 
@@ -191,11 +241,14 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	        throws ShardNotAvailableException
 	{
 		RdbmsTableMetaData tableMetaData = RdbmsMetaDataCache.getInstance().getMetaData(clazz);
-		String deleteQuery = RdbmsQueryBuilder.getInstance().getDeleteByCriteriaQuery(tableMetaData, criteria);
-		JdbcTemplate temp = new JdbcTemplate(master);
+		String tableName = tableMetaData.getTableName();
+		Map<String, Object> rdbmsCriteria = generateRdbmsColumnToValueMap(criteria, tableMetaData);
+		List<String> criteriaAttributes = new ArrayList<String>(rdbmsCriteria.keySet());
+		String deleteQuery = RdbmsQueryBuilder.getInstance().getDeleteByCriteriaQuery(tableName, criteriaAttributes);
+		NamedParameterJdbcTemplate temp = new NamedParameterJdbcTemplate(master);
 		try
 		{
-			return temp.update(deleteQuery);
+			return temp.update(deleteQuery, rdbmsCriteria);
 		}
 		catch (DataAccessException e)
 		{
@@ -203,17 +256,6 @@ public class RdbmsPersistenceManager implements PersistenceManager
 			throw new ShardNotAvailableException("Exception while trying to execute delete query:" + deleteQuery + "\n"
 			        + e);
 		}
-	}
-
-	private Map<String, Object> getRdbmsCriteria(Map<String, Object> criteria, RdbmsTableMetaData tableMetaData)
-	{
-		Map<String, Object> rdbmsCriteria = new HashMap<String, Object>();
-		for (String key : criteria.keySet())
-		{
-			String columnName = tableMetaData.getRdbmsColumnFromFieldName(key);
-			rdbmsCriteria.put(columnName, criteria.get(key));
-		}
-		return rdbmsCriteria;
 	}
 
 	/*
@@ -224,17 +266,19 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	        throws ShardNotAvailableException
 	{
 		RdbmsTableMetaData tableMetaData = RdbmsMetaDataCache.getInstance().getMetaData(clazz);
-		Map<String, Object> rdbmsCriteria = getRdbmsCriteria(criteria, tableMetaData);
-		String updateQuery = RdbmsQueryBuilder.getInstance().getGetByCriteriaQuery(tableMetaData, rdbmsCriteria);
+		String tableName = tableMetaData.getTableName();
+		Map<String, Object> rdbmsCriteria = getRdbmsFieldsMap(criteria, tableMetaData);
+		List<String> criteriaAttributes = new ArrayList<String>(rdbmsCriteria.keySet());
+		String updateQuery = RdbmsQueryBuilder.getInstance().getGetByCriteriaQuery(tableName, criteriaAttributes);
 		RdbmsMapper<T> mapper = RdbmsMapper.getInstance(clazz);
-		JdbcTemplate temp;
+		NamedParameterJdbcTemplate temp;
 		List<T> result;
 		if (readMaster)
 		{
-			temp = new JdbcTemplate(master);
+			temp = new NamedParameterJdbcTemplate(master);
 			try
 			{
-				result = temp.query(updateQuery, mapper);
+				result = temp.query(updateQuery, rdbmsCriteria, mapper);
 				return result;
 			}
 			catch (DataAccessException e)
@@ -249,10 +293,10 @@ public class RdbmsPersistenceManager implements PersistenceManager
 		{
 			for (DataSource slave : slaves)
 			{
-				temp = new JdbcTemplate(slave);
+				temp = new NamedParameterJdbcTemplate(slave);
 				try
 				{
-					result = temp.query(updateQuery, mapper);
+					result = temp.query(updateQuery, rdbmsCriteria, mapper);
 					return result;
 				}
 				catch (DataAccessException e)
@@ -262,10 +306,10 @@ public class RdbmsPersistenceManager implements PersistenceManager
 					continue;
 				}
 			}
-			temp = new JdbcTemplate(master);
+			temp = new NamedParameterJdbcTemplate(master);
 			try
 			{
-				result = temp.query(updateQuery, mapper);
+				result = temp.query(updateQuery, rdbmsCriteria, mapper);
 				return result;
 			}
 			catch (DataAccessException e)
@@ -298,17 +342,20 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	        Map<String, Object> criteria, boolean readMaster) throws ShardNotAvailableException
 	{
 		RdbmsTableMetaData tableMetaData = RdbmsMetaDataCache.getInstance().getMetaData(clazz);
+		String tableName = tableMetaData.getTableName();
+		Map<String, Object> rdbmsCriteria = getRdbmsFieldsMap(criteria, tableMetaData);
+		List<String> criteriaAttributes = new ArrayList<String>(rdbmsCriteria.keySet());
 		String getQuery =
-		        RdbmsQueryBuilder.getInstance().getGetByCriteriaQuery(tableMetaData, attributeNames, criteria);
+		        RdbmsQueryBuilder.getInstance().getGetByCriteriaQuery(tableName, attributeNames, criteriaAttributes);
 		RdbmsMapper<T> mapper = RdbmsMapper.getInstance(clazz);
-		JdbcTemplate temp;
+		NamedParameterJdbcTemplate temp;
 		List<T> result;
 		if (readMaster)
 		{
-			temp = new JdbcTemplate(master);
+			temp = new NamedParameterJdbcTemplate(master);
 			try
 			{
-				result = temp.query(getQuery, mapper);
+				result = temp.query(getQuery, rdbmsCriteria, mapper);
 			}
 			catch (DataAccessException e)
 			{
@@ -321,40 +368,33 @@ public class RdbmsPersistenceManager implements PersistenceManager
 		{
 			for (DataSource slave : slaves)
 			{
-				temp = new JdbcTemplate(slave);
+				temp = new NamedParameterJdbcTemplate(slave);
 				try
 				{
-					result = temp.query(getQuery, mapper);
+					result = temp.query(getQuery, rdbmsCriteria, mapper);
 				}
 				catch (Exception e)
 				{
-					logger.info("Exception while trying to execute get query:" + getQuery + " on slave:" + slave + "\n"
-					        + e);
+					logger.info("Exception while trying to execute get query:" + getQuery + " on slave:" + slave, e);
 					continue;
 				}
 				return result;
 			}
-			temp = new JdbcTemplate(master);
+			temp = new NamedParameterJdbcTemplate(master);
 			try
 			{
-				result = temp.query(getQuery, mapper);
+				result = temp.query(getQuery, rdbmsCriteria, mapper);
 			}
 			catch (Exception e)
 			{
-				logger.info("Exception while trying to execute get query:" + getQuery + " on master:" + master + "\n"
-				        + e);
-				throw new ShardNotAvailableException("Exception while executing query:" + getQuery
-				        + "\nShard is down\n" + e);
+				logger.info("Exception while trying to execute get query:" + getQuery + " on master:" + master, e);
+				throw new ShardNotAvailableException("Exception while executing query:" + getQuery + "\nShard is down",
+				        e);
 			}
 			return result;
 		}
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#getByCriteria(java.lang.Class, java.util.List,
-	 * java.util.Map, boolean)
-	 */
 	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, List<String> attributeNames,
 	        Map<String, Object> criteria) throws ShardNotAvailableException, InvalidAnnotationException
 	{
@@ -397,7 +437,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 				}
 				catch (Exception e)
 				{
-					logger.info("Exception while trying to execute sql:" + sql + " on slave:" + slave + "\n" + e);
+					logger.info("Exception while trying to execute sql:" + sql + " on slave:" + slave, e);
 					continue;
 				}
 				return result;
@@ -409,29 +449,20 @@ public class RdbmsPersistenceManager implements PersistenceManager
 			}
 			catch (Exception e)
 			{
-				logger.info("Exception while trying to execute sql:" + sql + " on master:" + master + "\n" + e);
+				logger.info("Exception while trying to execute sql:" + sql + " on master:" + master, e);
 				throw new ShardNotAvailableException("Exception while trying to execute sql:" + sql + " on master:"
-				        + master + "\n" + e);
+				        + master, e);
 			}
 			return result;
 		}
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#getBySql(java.lang.Class, java.lang.String,
-	 * java.util.Map, boolean)
-	 */
 	public <T extends Entity> List<T> getBySql(Class<T> clazz, String sql, Map<String, Object> criteria)
 	        throws ShardNotAvailableException
 	{
 		return getBySql(clazz, sql, criteria, false);
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#getBySql(java.lang.String, java.util.Map)
-	 */
 	public List<Map<String, Object>> getBySql(String sql, Map<String, Object> criteria, boolean readMaster)
 	        throws ShardNotAvailableException
 	{
@@ -447,7 +478,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 			catch (Exception e)
 			{
 				throw new ShardNotAvailableException("Exception while trying to execute sql:" + sql + " on master:"
-				        + master + "\n" + e);
+				        + master, e);
 			}
 			return result;
 		}
@@ -462,7 +493,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 				}
 				catch (Exception e)
 				{
-					logger.info("Exception while trying to execute sql:" + sql + " on slave:" + slave + "\n" + e);
+					logger.info("Exception while trying to execute sql:" + sql + " on slave:" + slave, e);
 					continue;
 				}
 				return result;
@@ -474,19 +505,14 @@ public class RdbmsPersistenceManager implements PersistenceManager
 			}
 			catch (Exception e)
 			{
-				logger.info("Exception while trying to execute sql:" + sql + " on master:" + master + "\n" + e);
+				logger.info("Exception while trying to execute sql:" + sql + " on master:" + master, e);
 				throw new ShardNotAvailableException("Exception while trying to execute sql:" + sql + " on master:"
-				        + master + "\n" + e);
+				        + master, e);
 			}
 			return result;
 		}
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#getBySql(java.lang.String, java.util.Map,
-	 * boolean)
-	 */
 	public List<Map<String, Object>> getBySql(String sql, Map<String, Object> criteria)
 	        throws ShardNotAvailableException
 	{
