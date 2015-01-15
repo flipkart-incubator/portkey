@@ -4,6 +4,7 @@
 package com.flipkart.portkey.persistence;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -44,6 +45,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 	private Map<DataStoreType, DataStoreConfig> dataStoreConfigMap;
 	private ShardLifeCycleManagerInterface shardLifeCycleManager;
 	private ScheduledExecutorService scheduledThreadPool;
+	private Map<DataStoreType, Map<String, ShardStatus>> shardStatusMap;
 
 	class HealthCheckScheduler implements Runnable
 	{
@@ -66,6 +68,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 					if (!previousStatus.equals(currentStatus))
 					{
 						shardLifeCycleManager.setShardStatus(type, shardId, currentStatus);
+						shardStatusMap.get(type).put(shardId, currentStatus);
 					}
 				}
 			}
@@ -99,6 +102,11 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 
 		logger.info("initializing ShardLifeCycleManager");
 		List<DataStoreType> dataStoreTypes = new ArrayList<DataStoreType>(dataStoreConfigMap.keySet());
+		shardStatusMap = new HashMap<DataStoreType, Map<String, ShardStatus>>();
+		for (DataStoreType type : dataStoreTypes)
+		{
+			shardStatusMap.put(type, new HashMap<String, ShardStatus>());
+		}
 		shardLifeCycleManager = new ShardLifeCycleManager(dataStoreTypes);
 		logger.info("number of data stores to be registered=" + dataStoreTypes.size());
 		logger.info("datastores=" + dataStoreTypes);
@@ -117,9 +125,14 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		scheduledThreadPool = Executors.newScheduledThreadPool(5);
 		HealthCheckScheduler healthCheckScheduler = new HealthCheckScheduler();
 		healthCheckScheduler.run();
-		scheduledThreadPool.scheduleAtFixedRate(healthCheckScheduler, 0, 5, TimeUnit.SECONDS);
+		scheduledThreadPool.scheduleAtFixedRate(healthCheckScheduler, 0, 30, TimeUnit.SECONDS);
 		logger.info("scheduled health checker");
 		logger.info("Initialized Persistence Layer");
+	}
+
+	public void shutdown()
+	{
+		scheduledThreadPool.shutdown();
 	}
 
 	private EntityPersistencePreference getDefaultPersistencePreference()
@@ -197,7 +210,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		String shardKeyFieldName = metaDataCache.getShardKey(bean.getClass());
 		String shardKey = PortKeyUtils.toString(PortKeyUtils.getFieldValueFromBean(bean, shardKeyFieldName));
 		ShardIdentifier shardIdentifier = getShardIdentifier(type);
-		List<String> liveShards = shardLifeCycleManager.getShardListForStatus(type, ShardStatus.AVAILABLE_FOR_WRITE);
+		List<String> liveShards = shardLifeCycleManager.getShardListForStatus(type, ShardStatus.getDefaultStatus());
 		String shardId = shardIdentifier.getShardId(shardKey, liveShards);
 		PersistenceManager pm = getPersistenceManager(type, shardId);
 		int rowsUpdated = pm.insert(bean);
@@ -374,10 +387,6 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		return result;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.common.persistence.PersistenceLayerInterface#delete(java.lang.Class, java.util.Map)
-	 */
 	public <T extends Entity> Result delete(Class<T> clazz, Map<String, Object> criteria)
 	        throws QueryExecutionException
 	{

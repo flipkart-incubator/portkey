@@ -54,10 +54,7 @@ public class PortKeyUtils
 		field = getFieldFromBean(bean, fieldName);
 		try
 		{
-			if (!field.isAccessible())
-			{
-				field.setAccessible(true);
-			}
+			field.setAccessible(true);
 			value = field.get(bean);
 		}
 		catch (IllegalArgumentException e)
@@ -80,10 +77,7 @@ public class PortKeyUtils
 		field = getFieldFromBean(bean, fieldName);
 		try
 		{
-			if (!field.isAccessible())
-			{
-				field.setAccessible(true);
-			}
+			field.setAccessible(true);
 			field.set(bean, value);
 		}
 		catch (IllegalArgumentException e)

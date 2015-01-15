@@ -47,12 +47,6 @@ public class ShardLifeCycleManager implements ShardLifeCycleManagerInterface
 		initialize();
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see
-	 * com.flipkart.portkey.common.sharding.ShardLifeCycleManagerInterface#setShardStatus(com.flipkart.portkey.common
-	 * .enumeration.DataStoreType, java.lang.String, com.flipkart.portkey.common.enumeration.ShardStatus)
-	 */
 	public void setShardStatus(DataStoreType dataStoreType, String shardId, ShardStatus shardStatus)
 	{
 		logger.info("setting shard status datastoretype=" + dataStoreType + " shardId=" + shardId + " shardStatus="
@@ -64,12 +58,6 @@ public class ShardLifeCycleManager implements ShardLifeCycleManagerInterface
 		logger.info("value set=" + shardStatusMap.get(dataStoreType).get(shardId));
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see
-	 * com.flipkart.portkey.common.sharding.ShardLifeCycleManagerInterface#getShardListForStatus(com.flipkart.portkey
-	 * .common.enumeration.DataStoreType, com.flipkart.portkey.common.enumeration.ShardStatus)
-	 */
 	public List<String> getShardListForStatus(DataStoreType dataStoreType, ShardStatus shardStatus)
 	{
 		logger.info("generating shard list with status=" + shardStatus + " for datastoretype=" + dataStoreType);
@@ -93,34 +81,18 @@ public class ShardLifeCycleManager implements ShardLifeCycleManagerInterface
 		return shardList.size() > 0 ? shardList : null;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see
-	 * com.flipkart.portkey.common.sharding.ShardLifeCycleManagerInterface#getShardStatus(com.flipkart.portkey.common
-	 * .enumeration.DataStoreType, java.lang.String)
-	 */
 	public ShardStatus getShardStatus(DataStoreType dataStoreType, String shardId)
 	{
 		// TODO: handle NullPointerException
 		return shardStatusMap.get(dataStoreType).get(shardId);
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see
-	 * com.flipkart.portkey.common.sharding.ShardLifeCycleManagerInterface#getStatusForDataStore(com.flipkart.portkey
-	 * .common.enumeration.DataStoreType)
-	 */
 	public Map<String, ShardStatus> getStatusMapForDataStore(DataStoreType dataStoreType)
 	{
 		Map<String, ShardStatus> statusMap = new HashMap<String, ShardStatus>(shardStatusMap.get(dataStoreType));
 		return statusMap;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.common.sharding.ShardLifeCycleManagerInterface#getStatus()
-	 */
 	public Map<DataStoreType, Map<String, ShardStatus>> getStatus()
 	{
 		Map<DataStoreType, Map<String, ShardStatus>> statusMap =

@@ -1,7 +1,7 @@
 /**
  * 
  */
-package com.flipkart.portkey.example2.dao;
+package com.flipkart.portkey.example.dao;
 
 import java.util.Date;
 import java.util.List;

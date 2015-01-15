@@ -64,13 +64,20 @@ public class RdbmsMapper<V extends Entity> implements RowMapper<V>
 			{
 				return value;
 			}
-			if (field.getType().isEnum())
+			// TODO: return value instead of toString
+			else if (field.getType().isEnum())
 			{
 				return value.toString();
 			}
-			if (field.getType().equals(Date.class))
+			else if (field.getType().equals(Date.class))
 			{
 				return value;
+			}
+			else if (field.getType().equals(Timestamp.class))
+			{
+				Timestamp ts = (Timestamp) value;
+				Date date = new Date(ts.getTime());
+				return date;
 			}
 			return mapper.writeValueAsString(value);
 		}
@@ -100,7 +107,6 @@ public class RdbmsMapper<V extends Entity> implements RowMapper<V>
 			if (value != null && value != "")
 			{
 				Field field = PortKeyUtils.getFieldFromBean(bean, fieldName);
-				field.setAccessible(true);
 				if (field.getType().isPrimitive() || field.getType().equals(String.class))
 				{
 					field.set(bean, value);
