@@ -9,8 +9,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.flipkart.portkey.redis.metadata.annotation.RedisField;
-
 /**
  * @author santosh.p
  */
@@ -23,7 +21,6 @@ public class RedisMetaData
 	private String multiLevelDataStructure = "HASH";
 	private List<String> secondaryKeyPatterns = new ArrayList<String>();
 	private List<List<String>> secondaryKeyAttributesList = new ArrayList<List<String>>();
-	private List<RedisField> redisFields = new ArrayList<RedisField>();
 	private List<Field> fields = new ArrayList<Field>();
 	private List<String> jsonFields = new ArrayList<String>();
 	private List<String> jsonListFields = new ArrayList<String>();
@@ -31,7 +28,6 @@ public class RedisMetaData
 	private Map<String, String> fieldNameToAttributeMap = new HashMap<String, String>();
 	private Map<String, String> attributeToFieldNameMap = new HashMap<String, String>();
 	private Map<String, Field> fieldNameToFieldMap = new HashMap<String, Field>();
-	private Map<String, RedisField> fieldNameToRedisFieldMap = new HashMap<String, RedisField>();
 
 	public int getDatabase()
 	{
@@ -137,21 +133,6 @@ public class RedisMetaData
 		this.secondaryKeyPatternToAttributeList.put(keyPattern, attributeList);
 	}
 
-	public List<RedisField> getRedisFields()
-	{
-		return redisFields;
-	}
-
-	public void setRedisFields(List<RedisField> redisFields)
-	{
-		this.redisFields = redisFields;
-	}
-
-	public void addToRedisFieldList(RedisField redisField)
-	{
-		this.redisFields.add(redisField);
-	}
-
 	public List<Field> getFields()
 	{
 		return fields;
@@ -255,25 +236,5 @@ public class RedisMetaData
 	public void addToFieldNameToFieldMap(String fieldName, Field field)
 	{
 		this.fieldNameToFieldMap.put(fieldName, field);
-	}
-
-	public Map<String, RedisField> getFieldNameToRedisFieldMap()
-	{
-		return fieldNameToRedisFieldMap;
-	}
-
-	public RedisField getRedisFieldFromFieldName(String fieldName)
-	{
-		return fieldNameToRedisFieldMap.get(fieldName);
-	}
-
-	public void setFieldNameToRedisFieldMap(Map<String, RedisField> fieldNameToRedisFieldMap)
-	{
-		this.fieldNameToRedisFieldMap = fieldNameToRedisFieldMap;
-	}
-
-	public void addToFieldNameToRedisFieldMap(String fieldName, RedisField redisField)
-	{
-		this.fieldNameToRedisFieldMap.put(fieldName, redisField);
 	}
 }

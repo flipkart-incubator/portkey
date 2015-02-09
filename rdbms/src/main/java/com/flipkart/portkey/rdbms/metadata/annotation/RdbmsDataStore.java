@@ -13,9 +13,11 @@ import java.lang.annotation.Target;
  */
 @Retention (RetentionPolicy.RUNTIME)
 @Target (ElementType.TYPE)
-public @interface RdbmsTable
+public @interface RdbmsDataStore
 {
 	public String tableName();
 
-	public String databaseName() default "";
+	public String databaseName();
+
+	public String shardKeyField();
 }

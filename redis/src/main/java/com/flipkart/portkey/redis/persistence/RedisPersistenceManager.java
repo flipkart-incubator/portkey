@@ -20,6 +20,7 @@ import redis.clients.jedis.exceptions.JedisConnectionException;
 import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.common.enumeration.ShardStatus;
 import com.flipkart.portkey.common.exception.InvalidAnnotationException;
+import com.flipkart.portkey.common.exception.QueryExecutionException;
 import com.flipkart.portkey.common.exception.QueryNotSupportedException;
 import com.flipkart.portkey.common.exception.ShardNotAvailableException;
 import com.flipkart.portkey.common.persistence.PersistenceManager;
@@ -180,6 +181,12 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 			conn.set(secondaryKey, primaryKey);
 		}
 		return 1;
+	}
+
+	@Override
+	public <T extends Entity> int upsert(T bean, List<String> updateFields) throws QueryNotSupportedException
+	{
+		throw new QueryNotSupportedException("Method not supported for redis implementation");
 	}
 
 	/*
@@ -434,6 +441,13 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 	 */
 	public List<Map<String, Object>> getBySql(String sql, Map<String, Object> criteria, boolean readMaster)
 	        throws QueryNotSupportedException
+	{
+		throw new QueryNotSupportedException("Method not supported for redis implementation");
+	}
+
+	@Override
+	// TODO:SANTOSH: implement this
+	public <T extends Entity> int upsert(T bean) throws QueryExecutionException
 	{
 		throw new QueryNotSupportedException("Method not supported for redis implementation");
 	}

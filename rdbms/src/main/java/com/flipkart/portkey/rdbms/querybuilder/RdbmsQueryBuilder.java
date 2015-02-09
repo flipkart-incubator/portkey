@@ -62,6 +62,40 @@ public class RdbmsQueryBuilder
 		return insertQuery;
 	}
 
+	public String getUpsertQuery(RdbmsTableMetaData tableMetaData)
+	{
+		String insertQuery = getInsertQuery(tableMetaData);
+		StringBuilder onDuplicateQueryStrBuilder = new StringBuilder();
+		onDuplicateQueryStrBuilder.append(" ON DUPLICATE KEY UPDATE ");
+		List<String> primaryKeys = tableMetaData.getPrimaryKeys();
+		for (String fieldName : tableMetaData.getFieldNameToRdbmsColumnMap().keySet())
+		{
+			if (primaryKeys.contains(fieldName))
+			{
+				continue;
+			}
+			String column = tableMetaData.getRdbmsColumnFromFieldName(fieldName);
+			onDuplicateQueryStrBuilder.append(column + "=:" + column + ",");
+		}
+		String upsertQuery =
+		        insertQuery + onDuplicateQueryStrBuilder.substring(0, onDuplicateQueryStrBuilder.length() - 1);
+		return upsertQuery;
+	}
+
+	public String getUpsertQuery(RdbmsTableMetaData tableMetaData, List<String> columnsToBeUpdatedOnDuplicate)
+	{
+		String insertQuery = getInsertQuery(tableMetaData);
+		StringBuilder onDuplicateQueryStrBuilder = new StringBuilder();
+		onDuplicateQueryStrBuilder.append(" ON DUPLICATE KEY UPDATE ");
+		for (String column : columnsToBeUpdatedOnDuplicate)
+		{
+			onDuplicateQueryStrBuilder.append(column + "=:" + column + ",");
+		}
+		String upsertQuery =
+		        insertQuery + onDuplicateQueryStrBuilder.substring(0, onDuplicateQueryStrBuilder.length() - 1);
+		return upsertQuery;
+	}
+
 	/**
 	 * @param metaData
 	 * @return

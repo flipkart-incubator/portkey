@@ -12,19 +12,22 @@
 	</bean>
 
 	<bean id="rdbmsDataStore" class="com.flipkart.portkey.rdbms.datastore.RdbmsDataStore">
+		<property name="shardIdentifier" ref="rdbmsShardIdentifierForSingleShard"/>
 		<property name="shardIdToPersistenceManagerMap" ref="rdbmsPersistenceManagerMap" />
 		<property name="metaDataCache" ref="rdbmsMetaDataCache" />
 	</bean>
-
+	
+	<bean id="rdbmsShardIdentifierForSingleShard" class="com.flipkart.portkey.rdbms.sharding.RdbmsShardIdentifierForSingleShard"/>
+	
 	<util:map id="rdbmsPersistenceManagerMap"
 		value-type="com.flipkart.portkey.common.persistence.PersistenceManager">
-		<entry key="01" value-ref="rdbmsShard1" />
+		<entry key="" value-ref="rdbmsShard" />
 	</util:map>
 
 	<bean id="rdbmsMetaDataCache" class="com.flipkart.portkey.rdbms.metadata.RdbmsMetaDataCache"
 		factory-method="getInstance" />
 
-	<bean id="rdbmsShard1"
+	<bean id="rdbmsShard"
 		class="com.flipkart.portkey.rdbms.persistence.RdbmsPersistenceManager">
 		<constructor-arg ref="rdbmsShard1Config" />
 	</bean>

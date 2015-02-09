@@ -3,7 +3,7 @@
  */
 package com.flipkart.portkey.rdbms.mapper;
 
-import java.io.IOException;
+import java.beans.PropertyDescriptor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.sql.ResultSet;
@@ -15,9 +15,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.commons.beanutils.BeanUtils;
+import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.log4j.Logger;
-import org.codehaus.jackson.JsonGenerationException;
-import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.springframework.jdbc.core.RowMapper;
 
@@ -56,52 +55,77 @@ public class RdbmsMapper<V extends Entity> implements RowMapper<V>
 
 	public static <T extends Entity> Object get(T bean, String fieldName)
 	{
+
 		try
 		{
-			Field field = PortKeyUtils.getFieldFromBean(bean, fieldName);
-			Object value = PortKeyUtils.getFieldValueFromBean(bean, fieldName);
-			if (value == null || field.getType().isPrimitive() || field.getType().equals(String.class))
-			{
-				return value;
-			}
-			// TODO: return value instead of toString
-			else if (field.getType().isEnum())
+			PropertyDescriptor javaField = PropertyUtils.getPropertyDescriptor(bean, fieldName);
+			Object value = javaField.getReadMethod().invoke(bean);
+
+			if (value != null && value.getClass().getName().contains("JSON"))
 			{
 				return value.toString();
 			}
-			else if (field.getType().equals(Date.class))
-			{
-				return value;
-			}
-			else if (field.getType().equals(Timestamp.class))
-			{
-				Timestamp ts = (Timestamp) value;
-				Date date = new Date(ts.getTime());
-				return date;
-			}
-			return mapper.writeValueAsString(value);
+			return value;
 		}
-		catch (JsonGenerationException e)
+		catch (IllegalAccessException e)
 		{
-			logger.info("Exception while fetching field value from bean, bean=" + bean + ", fieldName=" + fieldName, e);
+			e.printStackTrace();
 		}
-		catch (JsonMappingException e)
+		catch (InvocationTargetException e)
 		{
-			logger.info("Exception while fetching field value from bean, bean=" + bean + ", fieldName=" + fieldName, e);
+			e.printStackTrace();
 		}
-		catch (IOException e)
+		catch (NoSuchMethodException e)
 		{
-			logger.info("Exception while fetching field value from bean, bean=" + bean + ", fieldName=" + fieldName, e);
-		}
-		catch (SecurityException e)
-		{
-			logger.info("Exception while fetching field value from bean, bean=" + bean + ", fieldName=" + fieldName, e);
+			e.printStackTrace();
 		}
 		return null;
 	}
 
 	public static <T extends Entity> void put(T bean, String fieldName, Object value)
 	{
+
+		try
+		{
+			if (null != value && "" != value)
+			{
+				PropertyDescriptor javaField = PropertyUtils.getPropertyDescriptor(bean, fieldName);
+
+				if (javaField == null)
+				{
+					return;
+				}
+				else if (javaField.getPropertyType().isEnum())
+				{
+					javaField.getWriteMethod().invoke(bean, mapper.convertValue(value, javaField.getPropertyType()));
+				}
+				else
+				{
+					BeanUtils.setProperty(bean, fieldName, value);
+				}
+			}
+		}
+		catch (IllegalAccessException e)
+		{
+			logger.debug(e);
+			e.printStackTrace();
+		}
+		catch (InvocationTargetException e)
+		{
+			logger.debug(e);
+			e.printStackTrace();
+		}
+		catch (NoSuchMethodException e)
+		{
+			logger.debug(e);
+			e.printStackTrace();
+		}
+		catch (IllegalArgumentException e)
+		{
+			logger.debug(e);
+			e.printStackTrace();
+		}
+
 		try
 		{
 			if (value != null && value != "")

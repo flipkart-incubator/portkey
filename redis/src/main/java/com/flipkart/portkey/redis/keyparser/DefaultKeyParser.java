@@ -18,7 +18,6 @@ import com.flipkart.portkey.common.exception.InvalidAnnotationException;
 import com.flipkart.portkey.common.exception.PortKeyException;
 import com.flipkart.portkey.common.helper.PortKeyHelper;
 import com.flipkart.portkey.redis.metadata.RedisMetaData;
-import com.flipkart.portkey.redis.metadata.annotation.RedisField;
 
 /**
  * @author santosh.p
@@ -42,7 +41,6 @@ public class DefaultKeyParser implements KeyParserInterface
 		for (String fieldName : fieldNames)
 		{
 			Field field = metaData.getFieldFromFieldName(fieldName);
-			RedisField redisField = metaData.getRedisFieldFromFieldName(fieldName);
 			if (field == null)
 			{
 				throw new InvalidAnnotationException("Exception while trying to parse key, key field is null");
@@ -77,10 +75,6 @@ public class DefaultKeyParser implements KeyParserInterface
 			else if (value.getClass().isEnum())
 			{
 				fieldVal = value.toString();
-			}
-			else if (redisField.isJson() || redisField.isJsonList())
-			{
-				fieldVal = PortKeyHelper.toJsonString(value);
 			}
 			else
 			{

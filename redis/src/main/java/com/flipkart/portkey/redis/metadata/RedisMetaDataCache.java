@@ -121,40 +121,21 @@ public class RedisMetaDataCache implements MetaDataCache
 			redisMetaData.addToSecondaryKeyAttributesList(secondaryKeyAttributes);
 			redisMetaData.addToSecondaryKeyPatternToAttributeList(parsedPattern, secondaryKeyAttributes);
 		}
+
 		Field[] fields = clazz.getDeclaredFields();
-		boolean shardKeyPresent = false;
 		for (Field field : fields)
 		{
 			RedisField redisField = field.getAnnotation(RedisField.class);
 			if (redisField != null)
 			{
-				String attributeName = redisField.attributeName();
 				String fieldName = field.getName();
-				redisMetaData.addToFieldNameToAttributeMap(fieldName, attributeName);
-				redisMetaData.addToAttributeToFieldNameMap(attributeName, fieldName);
 				redisMetaData.addToFieldNameToFieldMap(fieldName, field);
-				redisMetaData.addToFieldNameToRedisFieldMap(fieldName, redisField);
 				redisMetaData.addToFields(field);
-				redisMetaData.addToRedisFieldList(redisField);
-				if (redisField.isJson())
-				{
-					redisMetaData.addToJsonFields(fieldName);
-				}
-				if (redisField.isShardKey())
-				{
-					shardKeyPresent = true;
-					redisMetaData.setShardKey(fieldName);
-				}
-				if (redisField.isJsonList())
-				{
-					redisMetaData.addToJsonListFields(fieldName);
-				}
 			}
 		}
-		if (!shardKeyPresent)
-		{
-			throw new InvalidAnnotationException("Shard key is not set for class" + clazz);
-		}
+
+		String shardKeyField = redisDataStore.shardKeyField();
+		redisMetaData.setShardKey(shardKeyField);
 		entityToMetaDataMap.put(clazz, redisMetaData);
 	}
 

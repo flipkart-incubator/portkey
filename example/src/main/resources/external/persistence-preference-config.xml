@@ -12,7 +12,7 @@
 	</bean>
 	<util:map id="entityPersistencePreferenceMap" key-type="java.lang.Class"
 		value-type="com.flipkart.portkey.common.entity.persistence.EntityPersistencePreference">
-		<entry key="com.flipkart.portkey.example2.dao.Employee" value-ref="essentialConfig" />
+		<entry key="com.flipkart.portkey.example.dao.Employee" value-ref="essentialConfig" />
 	</util:map>
 
 

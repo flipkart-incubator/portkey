@@ -20,8 +20,6 @@ public @interface RdbmsField
 {
 	public String columnName();
 
-	public boolean isShardKey() default false;
-
 	public boolean isPrimaryKey() default false;
 
 	public boolean isUnique() default false;

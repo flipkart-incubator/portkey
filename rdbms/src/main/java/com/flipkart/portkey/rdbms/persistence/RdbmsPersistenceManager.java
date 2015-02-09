@@ -188,7 +188,44 @@ public class RdbmsPersistenceManager implements PersistenceManager
 		catch (DataAccessException e)
 		{
 			logger.info("Exception while trying to update bean:" + bean, e);
-			throw new QueryExecutionException("Exception while trying to update bean:" + bean, e);
+			throw new QueryExecutionException("Exception while trying to insert bean:" + bean, e);
+		}
+	}
+
+	@Override
+	public <T extends Entity> int upsert(T bean) throws QueryExecutionException
+	{
+		RdbmsTableMetaData metaData = RdbmsMetaDataCache.getInstance().getMetaData(bean.getClass());
+		String insertQuery = RdbmsQueryBuilder.getInstance().getUpsertQuery(metaData);
+		Map<String, Object> rdbmsColumnToValueMap = generateRdbmsColumnToValueMap(bean, metaData);
+		NamedParameterJdbcTemplate temp = new NamedParameterJdbcTemplate(master);
+		try
+		{
+			return temp.update(insertQuery, rdbmsColumnToValueMap);
+		}
+		catch (DataAccessException e)
+		{
+			logger.info("Exception while trying to update bean:" + bean, e);
+			throw new QueryExecutionException("Exception while trying to upsert bean:" + bean, e);
+		}
+	}
+
+	@Override
+	public <T extends Entity> int upsert(T bean, List<String> columnsToBeUpdatedOnDuplicate)
+	        throws QueryExecutionException
+	{
+		RdbmsTableMetaData metaData = RdbmsMetaDataCache.getInstance().getMetaData(bean.getClass());
+		String insertQuery = RdbmsQueryBuilder.getInstance().getUpsertQuery(metaData, columnsToBeUpdatedOnDuplicate);
+		Map<String, Object> rdbmsColumnToValueMap = generateRdbmsColumnToValueMap(bean, metaData);
+		NamedParameterJdbcTemplate temp = new NamedParameterJdbcTemplate(master);
+		try
+		{
+			return temp.update(insertQuery, rdbmsColumnToValueMap);
+		}
+		catch (DataAccessException e)
+		{
+			logger.info("Exception while trying to update bean:" + bean, e);
+			throw new QueryExecutionException("Exception while trying to upsert bean:" + bean, e);
 		}
 	}
 

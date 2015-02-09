@@ -210,10 +210,37 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		String shardKeyFieldName = metaDataCache.getShardKey(bean.getClass());
 		String shardKey = PortKeyUtils.toString(PortKeyUtils.getFieldValueFromBean(bean, shardKeyFieldName));
 		ShardIdentifier shardIdentifier = getShardIdentifier(type);
-		List<String> liveShards = shardLifeCycleManager.getShardListForStatus(type, ShardStatus.getDefaultStatus());
+		List<String> liveShards = shardLifeCycleManager.getShardListForStatus(type, ShardStatus.AVAILABLE_FOR_WRITE);
 		String shardId = shardIdentifier.getShardId(shardKey, liveShards);
 		PersistenceManager pm = getPersistenceManager(type, shardId);
 		int rowsUpdated = pm.insert(bean);
+		return rowsUpdated;
+	}
+
+	private <T extends Entity> int upsertIntoDataStore(DataStoreType type, T bean,
+	        List<String> columnsToBeUpdatedOnDuplicate) throws QueryExecutionException
+	{
+		MetaDataCache metaDataCache = getMetaDataCache(type);
+		String shardKeyFieldName = metaDataCache.getShardKey(bean.getClass());
+		String shardKey = PortKeyUtils.toString(PortKeyUtils.getFieldValueFromBean(bean, shardKeyFieldName));
+		ShardIdentifier shardIdentifier = getShardIdentifier(type);
+		List<String> liveShards = shardLifeCycleManager.getShardListForStatus(type, ShardStatus.AVAILABLE_FOR_WRITE);
+		String shardId = shardIdentifier.getShardId(shardKey, liveShards);
+		PersistenceManager pm = getPersistenceManager(type, shardId);
+		int rowsUpdated = pm.upsert(bean, columnsToBeUpdatedOnDuplicate);
+		return rowsUpdated;
+	}
+
+	private <T extends Entity> int upsertIntoDataStore(DataStoreType type, T bean) throws QueryExecutionException
+	{
+		MetaDataCache metaDataCache = getMetaDataCache(type);
+		String shardKeyFieldName = metaDataCache.getShardKey(bean.getClass());
+		String shardKey = PortKeyUtils.toString(PortKeyUtils.getFieldValueFromBean(bean, shardKeyFieldName));
+		ShardIdentifier shardIdentifier = getShardIdentifier(type);
+		List<String> liveShards = shardLifeCycleManager.getShardListForStatus(type, ShardStatus.AVAILABLE_FOR_WRITE);
+		String shardId = shardIdentifier.getShardId(shardKey, liveShards);
+		PersistenceManager pm = getPersistenceManager(type, shardId);
+		int rowsUpdated = pm.upsert(bean);
 		return rowsUpdated;
 	}
 
@@ -268,6 +295,68 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 			try
 			{
 				rowsUpdated = insertIntoDataStore(dataStoreType, bean);
+			}
+			catch (QueryExecutionException e)
+			{
+				logger.info("Caught exception while trying to insert bean=" + bean + "\n into data store"
+				        + dataStoreType + "\n", e);
+				FailureAction failureAction = writeConfig.getFailureAction();
+				if (failureAction == FailureAction.ABORT)
+				{
+					throw new QueryExecutionException("Exception while inserting bean into datastore, bean=" + bean
+					        + "\ndatastoretype=" + dataStoreType, e);
+				}
+			}
+			result.setRowsUpdatedForDataStore(dataStoreType, rowsUpdated);
+		}
+		result.setEntity(bean);
+		return result;
+	}
+
+	public <T extends Entity> Result upsert(T bean) throws QueryExecutionException
+	{
+		Result result = new Result();
+		WriteConfig writeConfig = getWriteConfigForEntity(bean.getClass());
+		List<DataStoreType> writeOrder = writeConfig.getWriteOrder();
+
+		for (DataStoreType dataStoreType : writeOrder)
+		{
+			int rowsUpdated = 0;
+			try
+			{
+				rowsUpdated = upsertIntoDataStore(dataStoreType, bean);
+			}
+			catch (QueryExecutionException e)
+			{
+				logger.info("Caught exception while trying to insert bean=" + bean + "\n into data store"
+				        + dataStoreType + "\n", e);
+				FailureAction failureAction = writeConfig.getFailureAction();
+				if (failureAction == FailureAction.ABORT)
+				{
+					throw new QueryExecutionException("Exception while inserting bean into datastore, bean=" + bean
+					        + "\ndatastoretype=" + dataStoreType, e);
+				}
+			}
+			result.setRowsUpdatedForDataStore(dataStoreType, rowsUpdated);
+		}
+		result.setEntity(bean);
+		return result;
+	}
+
+	@Override
+	public <T extends Entity> Result upsert(T bean, List<String> columnsToBeUpdatedOnDuplicate)
+	        throws QueryExecutionException
+	{
+		Result result = new Result();
+		WriteConfig writeConfig = getWriteConfigForEntity(bean.getClass());
+		List<DataStoreType> writeOrder = writeConfig.getWriteOrder();
+
+		for (DataStoreType dataStoreType : writeOrder)
+		{
+			int rowsUpdated = 0;
+			try
+			{
+				rowsUpdated = upsertIntoDataStore(dataStoreType, bean, columnsToBeUpdatedOnDuplicate);
 			}
 			catch (QueryExecutionException e)
 			{

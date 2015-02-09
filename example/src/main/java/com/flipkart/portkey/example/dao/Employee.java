@@ -7,52 +7,42 @@ import java.util.Date;
 import java.util.List;
 
 import com.flipkart.portkey.common.entity.Entity;
+import com.flipkart.portkey.rdbms.metadata.annotation.RdbmsDataStore;
 import com.flipkart.portkey.rdbms.metadata.annotation.RdbmsField;
-import com.flipkart.portkey.rdbms.metadata.annotation.RdbmsTable;
 import com.flipkart.portkey.redis.metadata.annotation.RedisDataStore;
-import com.flipkart.portkey.redis.metadata.annotation.RedisField;
 
 /**
  * @author santosh.p
  */
-@RdbmsTable (tableName = "Employee")
-@RedisDataStore (primaryKeyPattern = "[CLASS]:{empId}:{aadharCardNumber}", secondaryKeyPatterns = "PAN:{panCardNumber}")
+@RdbmsDataStore (tableName = "Employee", databaseName = "", shardKeyField = "empId")
+@RedisDataStore (primaryKeyPattern = "[CLASS]:{empId}:{aadharCardNumber}", secondaryKeyPatterns = "PAN:{panCardNumber}", shardKeyField = "empId")
 public class Employee implements Entity
 {
-	@RdbmsField (columnName = "emp_id", isPrimaryKey = true, isShardKey = true)
-	@RedisField (attributeName = "emp_id", isShardKey = true)
+	@RdbmsField (columnName = "emp_id", isPrimaryKey = true)
 	private String empId;
 
 	@RdbmsField (columnName = "aadhar_card_number", isPrimaryKey = true)
-	@RedisField (attributeName = "aadhar_card_number")
 	private String aadharCardNumber;
 
 	@RdbmsField (columnName = "name")
-	@RedisField (attributeName = "name")
 	private String name;
 
 	@RdbmsField (columnName = "dob")
-	@RedisField (attributeName = "dob")
 	private Date dob;
 
 	@RdbmsField (columnName = "pan_card_number")
-	@RedisField (attributeName = "pan_card_number")
 	private String panCardNumber;
 
 	@RdbmsField (columnName = "address")
-	@RedisField (attributeName = "address", isJson = true)
 	private Address address;
 
 	@RdbmsField (columnName = "gender")
-	@RedisField (attributeName = "gender")
 	private Gender gender;
 
 	@RdbmsField (columnName = "annual_salary")
-	@RedisField (attributeName = "annual_salary")
 	private int annualSalary;
 
 	@RdbmsField (columnName = "past_employers")
-	@RedisField (attributeName = "past_employers", isJsonList = true)
 	private List<String> pastEmployers;
 
 	public String getEmpId()

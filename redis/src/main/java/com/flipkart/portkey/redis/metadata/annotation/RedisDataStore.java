@@ -20,5 +20,7 @@ public @interface RedisDataStore
 	public String primaryKeyPattern();
 
 	public String[] secondaryKeyPatterns() default {};
+	
+	public String shardKeyField();
 
 }

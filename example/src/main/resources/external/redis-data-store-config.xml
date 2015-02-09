@@ -12,10 +12,13 @@
 	</bean>
 
 	<bean id="redisDataStore" class="com.flipkart.portkey.redis.datastore.RedisDataStore">
+		<property name="shardIdentifier" ref="redisShardIdentifierForSingleShard"/>
 		<property name="shardIdToPersistenceManagerMap" ref="shardIdToPersistenceManagerMap" />
 		<property name="metaDataCache" ref="redisMetaDataCache" />
 	</bean>
-
+	
+	<bean id="redisShardIdentifierForSingleShard" class="com.flipkart.portkey.redis.sharding.RedisShardIdentifierForSingleShard"/>
+		
 	<util:map id="shardIdToPersistenceManagerMap"
 		value-type="com.flipkart.portkey.common.persistence.PersistenceManager">
 		<entry key="01" value-ref="redisShard1" />

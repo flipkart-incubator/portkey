@@ -9,6 +9,7 @@ import java.util.Map;
 
 import com.flipkart.portkey.common.datastore.DataStoreConfig;
 import com.flipkart.portkey.common.persistence.PersistenceManager;
+import com.flipkart.portkey.common.sharding.ShardIdentifier;
 import com.flipkart.portkey.rdbms.metadata.RdbmsMetaDataCache;
 import com.flipkart.portkey.rdbms.sharding.RdbmsShardIdentifier;
 
@@ -20,7 +21,7 @@ public class RdbmsDataStore implements DataStoreConfig
 
 	private Map<String, PersistenceManager> shardIdToPersistenceManagerMap;
 	private RdbmsMetaDataCache metaDataCache;
-	private RdbmsShardIdentifier shardIdentifier = new RdbmsShardIdentifier();
+	private ShardIdentifier shardIdentifier;
 
 	public void setMetaDataCache(RdbmsMetaDataCache metaDataCache)
 	{
@@ -59,7 +60,7 @@ public class RdbmsDataStore implements DataStoreConfig
 		return new ArrayList<String>(shardIdToPersistenceManagerMap.keySet());
 	}
 
-	public RdbmsShardIdentifier getShardIdentifier()
+	public ShardIdentifier getShardIdentifier()
 	{
 		return shardIdentifier;
 	}

@@ -20,6 +20,8 @@ public interface PersistenceLayerInterface
 
 	public <T extends Entity> Result insert(T bean, boolean generateShardId) throws PortKeyException;
 
+	public <T extends Entity> Result upsert(T bean, List<String> updateFields) throws PortKeyException;
+
 	public <T extends Entity> Result update(T bean) throws PortKeyException;
 
 	public <T extends Entity> Result update(Class<T> clazz, Map<String, Object> updateValuesMap,

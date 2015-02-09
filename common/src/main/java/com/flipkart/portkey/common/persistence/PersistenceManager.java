@@ -19,6 +19,11 @@ public interface PersistenceManager
 
 	public <T extends Entity> int insert(T bean) throws QueryExecutionException;
 
+	public <T extends Entity> int upsert(T bean) throws QueryExecutionException;
+
+	public <T extends Entity> int upsert(T bean, List<String> columnsToBeUpdatedOnDuplicate)
+	        throws QueryExecutionException;
+
 	public <T extends Entity> int update(T bean) throws QueryExecutionException;
 
 	public <T extends Entity> int update(Class<T> clazz, Map<String, Object> updateValuesMap,

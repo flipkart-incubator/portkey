@@ -13,8 +13,8 @@ import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.common.exception.InvalidAnnotationException;
 import com.flipkart.portkey.common.metadata.MetaDataCache;
 import com.flipkart.portkey.common.serializer.Serializer;
+import com.flipkart.portkey.rdbms.metadata.annotation.RdbmsDataStore;
 import com.flipkart.portkey.rdbms.metadata.annotation.RdbmsField;
-import com.flipkart.portkey.rdbms.metadata.annotation.RdbmsTable;
 
 /**
  * @author santosh.p
@@ -60,9 +60,9 @@ public class RdbmsMetaDataCache implements MetaDataCache
 		// metadata specific to rdbms
 		RdbmsTableMetaData rdbmsTableMetaData = new RdbmsTableMetaData();
 
-		RdbmsTable rdbmsTable = clazz.getAnnotation(RdbmsTable.class);
-		rdbmsTableMetaData.setTableName(rdbmsTable.tableName());
-		rdbmsTableMetaData.setDatabaseName(rdbmsTable.databaseName());
+		RdbmsDataStore rdbmsDataStore = clazz.getAnnotation(RdbmsDataStore.class);
+		rdbmsTableMetaData.setTableName(rdbmsDataStore.tableName());
+		rdbmsTableMetaData.setDatabaseName(rdbmsDataStore.databaseName());
 
 		Field[] fields = clazz.getDeclaredFields();
 		boolean shardKeyPresent = false;
@@ -99,22 +99,14 @@ public class RdbmsMetaDataCache implements MetaDataCache
 					primaryKeyPresent = true;
 					rdbmsTableMetaData.addToPrimaryKeys(fieldName);
 				}
-				if (rdbmsField.isShardKey())
-				{
-					shardKeyPresent = true;
-					rdbmsTableMetaData.setShardKey(fieldName);
-				}
-
 			}
 		}
 		if (!primaryKeyPresent)
 		{
 			throw new InvalidAnnotationException("Primary key is not set for class" + clazz);
 		}
-		if (!shardKeyPresent)
-		{
-			throw new InvalidAnnotationException("Shard key is not set for class" + clazz);
-		}
+		String shardKeyField = rdbmsDataStore.shardKeyField();
+		rdbmsTableMetaData.setShardKey(shardKeyField);
 		entityToMetaDataMap.put(clazz, rdbmsTableMetaData);
 	}
 

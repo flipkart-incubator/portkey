@@ -15,11 +15,4 @@ import java.lang.annotation.Target;
 @Target (ElementType.FIELD)
 public @interface RedisField
 {
-	public String attributeName();
-
-	public boolean isShardKey() default false;
-
-	public boolean isJson() default false;
-
-	public boolean isJsonList() default false;
 }
