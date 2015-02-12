@@ -21,7 +21,7 @@
 		
 	<util:map id="shardIdToPersistenceManagerMap"
 		value-type="com.flipkart.portkey.common.persistence.PersistenceManager">
-		<entry key="01" value-ref="redisShard1" />
+		<entry key="" value-ref="redisShard1" />
 	</util:map>
 	<bean id="redisMetaDataCache" class="com.flipkart.portkey.redis.metadata.RedisMetaDataCache"
 		factory-method="getInstance" />

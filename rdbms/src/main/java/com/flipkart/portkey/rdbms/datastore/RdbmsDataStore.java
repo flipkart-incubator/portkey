@@ -65,7 +65,7 @@ public class RdbmsDataStore implements DataStoreConfig
 		return shardIdentifier;
 	}
 
-	public void setShardIdentifier(RdbmsShardIdentifier shardIdentifier)
+	public void setShardIdentifier(ShardIdentifier shardIdentifier)
 	{
 		this.shardIdentifier = shardIdentifier;
 	}

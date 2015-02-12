@@ -120,6 +120,11 @@ public class RdbmsPersistenceManager implements PersistenceManager
 					String enumStr = PortKeyUtils.enumToString((Enum) value);
 					mapValues.put(rdbmsField.columnName(), enumStr);
 				}
+				else if (value instanceof List)
+				{
+					String listStr = PortKeyUtils.listToString((List) value);
+					mapValues.put(rdbmsField.columnName(), listStr);
+				}
 				else
 				{
 					mapValues.put(rdbmsField.columnName(), value);

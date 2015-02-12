@@ -10,6 +10,7 @@ import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.rdbms.metadata.annotation.RdbmsDataStore;
 import com.flipkart.portkey.rdbms.metadata.annotation.RdbmsField;
 import com.flipkart.portkey.redis.metadata.annotation.RedisDataStore;
+import com.flipkart.portkey.redis.metadata.annotation.RedisField;
 
 /**
  * @author santosh.p
@@ -19,30 +20,39 @@ import com.flipkart.portkey.redis.metadata.annotation.RedisDataStore;
 public class Employee implements Entity
 {
 	@RdbmsField (columnName = "emp_id", isPrimaryKey = true)
+	@RedisField ()
 	private String empId;
 
 	@RdbmsField (columnName = "aadhar_card_number", isPrimaryKey = true)
+	@RedisField ()
 	private String aadharCardNumber;
 
 	@RdbmsField (columnName = "name")
+	@RedisField ()
 	private String name;
 
 	@RdbmsField (columnName = "dob")
+	@RedisField ()
 	private Date dob;
 
 	@RdbmsField (columnName = "pan_card_number")
+	@RedisField ()
 	private String panCardNumber;
 
 	@RdbmsField (columnName = "address")
+	@RedisField ()
 	private Address address;
 
 	@RdbmsField (columnName = "gender")
+	@RedisField ()
 	private Gender gender;
 
 	@RdbmsField (columnName = "annual_salary")
+	@RedisField ()
 	private int annualSalary;
 
 	@RdbmsField (columnName = "past_employers")
+	@RedisField ()
 	private List<String> pastEmployers;
 
 	public String getEmpId()

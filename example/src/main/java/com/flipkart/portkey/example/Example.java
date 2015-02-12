@@ -4,7 +4,6 @@
 package com.flipkart.portkey.example;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,9 +35,7 @@ public class Example
 		ApplicationContext context =
 		        new FileSystemXmlApplicationContext("src/main/resources/external/portkey-application-context.xml");
 		pl = context.getBean(PersistenceLayer.class, "persistenceLayer");
-		insert();
-		// sc.next();
-		// generateAndInsert();
+		// insert();
 		// sc.next();
 		// getByCriteriaUsingPk();
 		// sc.next();
@@ -52,6 +49,7 @@ public class Example
 		// sc.next();
 		// getBySqlUsingNonPk();
 		// sc.next();
+		upsert();
 		sc.close();
 	}
 
@@ -85,7 +83,7 @@ public class Example
 		Employee emp = new Employee();
 		emp.setEmpId("EE74859601");
 		emp.setName("Some Name");
-		emp.setDob(new Date());
+		// emp.setDob(new Date());
 		emp.setAnnualSalary(1234560);
 		emp.setPanCardNumber("ABBPP738P");
 		emp.setAadharCardNumber("3948ADH38A");
@@ -105,6 +103,21 @@ public class Example
 		try
 		{
 			Result r = pl.insert(employee);
+			employee = (Employee) r.getEntity();
+			logger.info("Successfully inserted the bean, inserted bean is" + employee);
+		}
+		catch (PortKeyException e)
+		{
+			logger.info("Exception while trying to insert bean" + e);
+		}
+	}
+
+	private static void upsert()
+	{
+		try
+		{
+			employee.setName("UpsertName");
+			Result r = pl.upsert(employee);
 			employee = (Employee) r.getEntity();
 			logger.info("Successfully inserted the bean, inserted bean is" + employee);
 		}

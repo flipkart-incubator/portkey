@@ -78,17 +78,20 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 
 	public void setDefaultPersistencePreference(EntityPersistencePreference defaultPersistencePreference)
 	{
+		System.out.println("Setting default persistence preference");
 		this.defaultPersistencePreference = defaultPersistencePreference;
 	}
 
 	public void setEntityPersistencePreferenceMap(
 	        Map<Class<? extends Entity>, EntityPersistencePreference> entityPersistencePreferenceMap)
 	{
+		System.out.println("Setting entity persistence preference map");
 		this.entityPersistencePreferenceMap = entityPersistencePreferenceMap;
 	}
 
 	public void setDataStoresMap(Map<DataStoreType, DataStoreConfig> dataStoresMap)
 	{
+		System.out.println("Setting data store config map");
 		this.dataStoreConfigMap = dataStoresMap;
 	}
 

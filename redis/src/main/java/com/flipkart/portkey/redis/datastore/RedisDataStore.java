@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 
 import com.flipkart.portkey.common.datastore.DataStoreConfig;
-import com.flipkart.portkey.common.metadata.MetaDataCache;
 import com.flipkart.portkey.common.persistence.PersistenceManager;
 import com.flipkart.portkey.common.sharding.ShardIdentifier;
 import com.flipkart.portkey.redis.metadata.RedisMetaDataCache;
@@ -36,21 +35,6 @@ public class RedisDataStore implements DataStoreConfig
 		this.metaDataCache = metaDataCache;
 	}
 
-	public void setMetaDataCache(RedisMetaDataCache metaDataCache)
-	{
-		this.metaDataCache = metaDataCache;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.common.datastore.DataStore#getMetaDataCache()
-	 */
-	@Override
-	public MetaDataCache getMetaDataCache()
-	{
-		return metaDataCache;
-	}
-
 	public void setShardIdToPersistenceManagerMap(Map<String, PersistenceManager> shardIdToPersistenceManagerMap)
 	{
 		this.shardIdToPersistenceManagerMap = shardIdToPersistenceManagerMap;
@@ -63,6 +47,11 @@ public class RedisDataStore implements DataStoreConfig
 	public PersistenceManager getPersistenceManager(String shardId)
 	{
 		return shardIdToPersistenceManagerMap.get(shardId);
+	}
+
+	public RedisMetaDataCache getMetaDataCache()
+	{
+		return metaDataCache;
 	}
 
 	/*
@@ -82,5 +71,10 @@ public class RedisDataStore implements DataStoreConfig
 	public void setShardIdentifier(ShardIdentifier shardIdentifier)
 	{
 		this.shardIdentifier = shardIdentifier;
+	}
+
+	public void setMetaDataCache(RedisMetaDataCache metaDataCache)
+	{
+		this.metaDataCache = metaDataCache;
 	}
 }

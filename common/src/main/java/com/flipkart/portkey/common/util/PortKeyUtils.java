@@ -6,6 +6,7 @@ package com.flipkart.portkey.common.util;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
@@ -144,5 +145,10 @@ public class PortKeyUtils
 	public static String enumToString(Enum<?> e)
 	{
 		return e == null ? null : e.name();
+	}
+
+	public static String listToString(List l)
+	{
+		return l == null ? null : l.toString();
 	}
 }
