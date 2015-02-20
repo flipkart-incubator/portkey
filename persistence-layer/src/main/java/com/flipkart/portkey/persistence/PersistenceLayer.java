@@ -32,7 +32,7 @@ import com.flipkart.portkey.common.persistence.Result;
 import com.flipkart.portkey.common.sharding.ShardIdentifier;
 import com.flipkart.portkey.common.sharding.ShardLifeCycleManagerInterface;
 import com.flipkart.portkey.common.util.PortKeyUtils;
-import com.flipkart.portkey.sharding.ShardLifeCycleManager;
+import com.flipkart.portkey.sharding.SimpleShardLifeCycleManager;
 
 /**
  * @author santosh.p
@@ -52,7 +52,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		@Override
 		public void run()
 		{
-			logger.info("running healthckecker");
+			logger.info("Running healthckecker");
 			// TODO: try fetching a snapshot of shard statuses, instead of individual fetches from shardLifeCycleManager
 			for (DataStoreType type : dataStoreConfigMap.keySet())
 			{
@@ -72,7 +72,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 					}
 				}
 			}
-			logger.info("healthcheck complete");
+			logger.info("Health check complete");
 		}
 	}
 
@@ -103,14 +103,14 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 
 		logger.info("Assertions passed");
 
-		logger.info("initializing ShardLifeCycleManager");
+		logger.info("Initializing Shard Life Cycle Manager");
 		List<DataStoreType> dataStoreTypes = new ArrayList<DataStoreType>(dataStoreConfigMap.keySet());
 		shardStatusMap = new HashMap<DataStoreType, Map<String, ShardStatus>>();
 		for (DataStoreType type : dataStoreTypes)
 		{
 			shardStatusMap.put(type, new HashMap<String, ShardStatus>());
 		}
-		shardLifeCycleManager = new ShardLifeCycleManager(dataStoreTypes);
+		shardLifeCycleManager = new SimpleShardLifeCycleManager(dataStoreTypes);
 		logger.info("number of data stores to be registered=" + dataStoreTypes.size());
 		logger.info("datastores=" + dataStoreTypes);
 		for (DataStoreType type : dataStoreTypes)
@@ -128,7 +128,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		scheduledThreadPool = Executors.newScheduledThreadPool(5);
 		HealthCheckScheduler healthCheckScheduler = new HealthCheckScheduler();
 		healthCheckScheduler.run();
-		scheduledThreadPool.scheduleAtFixedRate(healthCheckScheduler, 0, 30, TimeUnit.SECONDS);
+		scheduledThreadPool.scheduleAtFixedRate(healthCheckScheduler, 0, 15, TimeUnit.SECONDS);
 		logger.info("scheduled health checker");
 		logger.info("Initialized Persistence Layer");
 	}

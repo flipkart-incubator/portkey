@@ -17,7 +17,7 @@ public class RedisShardIdentifierForSingleShard implements ShardIdentifier
 		{
 			throw new ShardNotAvailableException("No live shards available");
 		}
-		return "";
+		return "01";
 	}
 
 	/*
@@ -34,7 +34,7 @@ public class RedisShardIdentifierForSingleShard implements ShardIdentifier
 		{
 			throw new ShardNotAvailableException("No live shards available");
 		}
-		return "";
+		return "01";
 	}
 
 	/*

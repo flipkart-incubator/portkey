@@ -46,7 +46,7 @@ public class RdbmsQueryBuilder
 
 				if (rdbmsField != null)
 				{
-					insertQryStrBuilder.append(rdbmsField.columnName() + ",");
+					insertQryStrBuilder.append("`" + rdbmsField.columnName() + "`" + ",");
 					valuesQryStrBuilder.append(":" + rdbmsField.columnName() + ",");
 				}
 
@@ -75,7 +75,7 @@ public class RdbmsQueryBuilder
 				continue;
 			}
 			String column = tableMetaData.getRdbmsColumnFromFieldName(fieldName);
-			onDuplicateQueryStrBuilder.append(column + "=:" + column + ",");
+			onDuplicateQueryStrBuilder.append("`" + column + "`" + "=:" + column + ",");
 		}
 		String upsertQuery =
 		        insertQuery + onDuplicateQueryStrBuilder.substring(0, onDuplicateQueryStrBuilder.length() - 1);
@@ -89,7 +89,7 @@ public class RdbmsQueryBuilder
 		onDuplicateQueryStrBuilder.append(" ON DUPLICATE KEY UPDATE ");
 		for (String column : columnsToBeUpdatedOnDuplicate)
 		{
-			onDuplicateQueryStrBuilder.append(column + "=:" + column + ",");
+			onDuplicateQueryStrBuilder.append("`" + column + "`" + "=:" + column + ",");
 		}
 		String upsertQuery =
 		        insertQuery + onDuplicateQueryStrBuilder.substring(0, onDuplicateQueryStrBuilder.length() - 1);
@@ -117,11 +117,11 @@ public class RdbmsQueryBuilder
 				{
 					if (!rdbmsField.isPrimaryKey())
 					{
-						SqlBuilder.SET(rdbmsField.columnName() + "=:" + rdbmsField.columnName());
+						SqlBuilder.SET("`" + rdbmsField.columnName() + "`" + "=:" + rdbmsField.columnName());
 					}
 					else
 					{
-						SqlBuilder.WHERE(rdbmsField.columnName() + "=:" + rdbmsField.columnName());
+						SqlBuilder.WHERE("`" + rdbmsField.columnName() + "`" + "=:" + rdbmsField.columnName());
 					}
 				}
 			}
@@ -140,12 +140,12 @@ public class RdbmsQueryBuilder
 		SqlBuilder.UPDATE(tableName);
 		for (String attribute : updateAttributes)
 		{
-			SqlBuilder.SET(attribute + "=:" + attribute);
+			SqlBuilder.SET("`" + attribute + "`" + "=:" + attribute);
 		}
 		for (String criteria : criteriaAttributes)
 		{
 
-			SqlBuilder.WHERE(criteria + "=:" + criteria);
+			SqlBuilder.WHERE("`" + criteria + "`" + "=:" + criteria);
 		}
 
 		String updateQuery = SqlBuilder.SQL();
@@ -159,7 +159,7 @@ public class RdbmsQueryBuilder
 		SqlBuilder.DELETE_FROM(tableName);
 		for (String attribute : criteriaAttributes)
 		{
-			SqlBuilder.WHERE(attribute + "=:" + attribute);
+			SqlBuilder.WHERE("`" + attribute + "`" + "=:" + attribute);
 		}
 
 		String updateQuery = SqlBuilder.SQL();
@@ -179,7 +179,7 @@ public class RdbmsQueryBuilder
 		SqlBuilder.FROM(tableName);
 		for (String attribute : criteriaAttributes)
 		{
-			SqlBuilder.WHERE(attribute + "=:" + attribute);
+			SqlBuilder.WHERE("`" + attribute + "`" + "=:" + attribute);
 		}
 		String getQuery = SqlBuilder.SQL();
 		logger.debug(getQuery);
@@ -202,7 +202,7 @@ public class RdbmsQueryBuilder
 		SqlBuilder.FROM(tableName);
 		for (String attribute : criteriaAttributes)
 		{
-			SqlBuilder.WHERE(attribute + "=:" + attribute);
+			SqlBuilder.WHERE("`" + attribute + "`" + "=:" + attribute);
 		}
 		String getQuery = SqlBuilder.SQL();
 		logger.debug(getQuery);

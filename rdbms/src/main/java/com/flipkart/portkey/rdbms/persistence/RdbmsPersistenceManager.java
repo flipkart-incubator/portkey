@@ -36,8 +36,8 @@ import com.flipkart.portkey.rdbms.querybuilder.RdbmsQueryBuilder;
 public class RdbmsPersistenceManager implements PersistenceManager
 {
 	private static final Logger logger = Logger.getLogger(RdbmsPersistenceManager.class);
-	DataSource master;
-	List<DataSource> slaves;
+	private final DataSource master;
+	private final List<DataSource> slaves;
 
 	public RdbmsPersistenceManager(RdbmsPersistenceManagerConfig config)
 	{
@@ -47,7 +47,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 
 	public ShardStatus healthCheck()
 	{
-		logger.info("health checking for rdbms shard master=" + master);
+		// logger.info("health checking for rdbms shard master=" + master);
 		if (isAvailableForWrite())
 			return ShardStatus.AVAILABLE_FOR_WRITE;
 		else if (isAvailableForRead())
@@ -61,15 +61,24 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	 */
 	private boolean isAvailableForWrite()
 	{
-		logger.info("checking if master is available for write");
 		try
 		{
+			logger.info("checking if master is available for write");
+			// System.out.println("master:" + master.hashCode());
 			new JdbcTemplate(master).execute("SELECT 1 FROM DUAL");
 		}
 		catch (DataAccessException e)
 		{
 			logger.info("exception while trying to execute query on master" + master);
 			return false;
+		}
+		catch (Exception ex)
+		{
+			logger.info("Invocation ex:" + ex + "\nCause:" + ex.getCause());
+		}
+		catch (Throwable ex)
+		{
+			logger.info("Invocation ex:" + ex + "\nCause:" + ex.getCause());
 		}
 		logger.info("master is available for write");
 		return true;
@@ -134,11 +143,6 @@ public class RdbmsPersistenceManager implements PersistenceManager
 		return mapValues;
 	}
 
-	/**
-	 * @param updateAttributesToValuesMap
-	 * @param tableMetaData
-	 * @return
-	 */
 	private Map<String, Object> generateRdbmsColumnToValueMap(Map<String, Object> fieldNamesToValuesMap,
 	        RdbmsTableMetaData tableMetaData)
 	{
@@ -192,7 +196,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 		}
 		catch (DataAccessException e)
 		{
-			logger.info("Exception while trying to update bean:" + bean, e);
+			logger.error("Exception while trying to update bean:" + bean + "\nnamed parameter jdbc template:" + temp, e);
 			throw new QueryExecutionException("Exception while trying to insert bean:" + bean, e);
 		}
 	}

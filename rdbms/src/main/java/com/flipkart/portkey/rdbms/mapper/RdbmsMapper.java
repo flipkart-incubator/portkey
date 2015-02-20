@@ -4,13 +4,10 @@
 package com.flipkart.portkey.rdbms.mapper;
 
 import java.beans.PropertyDescriptor;
-import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.sql.Timestamp;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -22,7 +19,6 @@ import org.springframework.jdbc.core.RowMapper;
 
 import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.common.serializer.Serializer;
-import com.flipkart.portkey.common.util.PortKeyUtils;
 import com.flipkart.portkey.rdbms.metadata.RdbmsMetaDataCache;
 import com.flipkart.portkey.rdbms.metadata.RdbmsTableMetaData;
 
@@ -55,7 +51,6 @@ public class RdbmsMapper<V extends Entity> implements RowMapper<V>
 
 	public static <T extends Entity> Object get(T bean, String fieldName)
 	{
-
 		try
 		{
 			PropertyDescriptor javaField = PropertyUtils.getPropertyDescriptor(bean, fieldName);
@@ -101,7 +96,12 @@ public class RdbmsMapper<V extends Entity> implements RowMapper<V>
 				}
 				else
 				{
-					BeanUtils.setProperty(bean, fieldName, value);
+
+					RdbmsMetaDataCache metaDataCache = RdbmsMetaDataCache.getInstance();
+					RdbmsTableMetaData tableMetaData = metaDataCache.getMetaData(bean.getClass());
+					Serializer serializer = tableMetaData.getSerializer(fieldName);
+					Object deserialized = serializer.deserialize(value.toString(), javaField.getPropertyType());
+					BeanUtils.setProperty(bean, fieldName, deserialized);
 				}
 			}
 		}
@@ -126,50 +126,50 @@ public class RdbmsMapper<V extends Entity> implements RowMapper<V>
 			e.printStackTrace();
 		}
 
-		try
-		{
-			if (value != null && value != "")
-			{
-				Field field = PortKeyUtils.getFieldFromBean(bean, fieldName);
-				if (field.getType().isPrimitive() || field.getType().equals(String.class))
-				{
-					field.set(bean, value);
-				}
-				else if (field.getType().isEnum())
-				{
-					field.set(bean, Enum.valueOf((Class<Enum>) field.getType(), value.toString()));
-				}
-				else if (field.getType().equals(Date.class))
-				{
-					Timestamp ts = (Timestamp) value;
-					Date date = ts;
-					field.set(bean, date);
-				}
-				else
-				{
-					RdbmsMetaDataCache metaDataCache = RdbmsMetaDataCache.getInstance();
-					RdbmsTableMetaData tableMetaData = metaDataCache.getMetaData(bean.getClass());
-					Serializer serializer = tableMetaData.getSerializer(fieldName);
-					Object deserialized = serializer.deserialize(value.toString(), field.getType());
-					BeanUtils.setProperty(bean, fieldName, deserialized);
-				}
-			}
-		}
-		catch (IllegalAccessException e)
-		{
-			logger.debug(e);
-			e.printStackTrace();
-		}
-		catch (InvocationTargetException e)
-		{
-			logger.debug(e);
-			e.printStackTrace();
-		}
-		catch (IllegalArgumentException e)
-		{
-			logger.debug(e);
-			e.printStackTrace();
-		}
+		// try
+		// {
+		// if (value != null && value != "")
+		// {
+		// Field field = PortKeyUtils.getFieldFromBean(bean, fieldName);
+		// if (field.getType().isPrimitive() || field.getType().equals(String.class))
+		// {
+		// field.set(bean, value);
+		// }
+		// else if (field.getType().isEnum())
+		// {
+		// field.set(bean, Enum.valueOf((Class<Enum>) field.getType(), value.toString()));
+		// }
+		// else if (field.getType().equals(Date.class))
+		// {
+		// Timestamp ts = (Timestamp) value;
+		// Date date = ts;
+		// field.set(bean, date);
+		// }
+		// else
+		// {
+		// RdbmsMetaDataCache metaDataCache = RdbmsMetaDataCache.getInstance();
+		// RdbmsTableMetaData tableMetaData = metaDataCache.getMetaData(bean.getClass());
+		// Serializer serializer = tableMetaData.getSerializer(fieldName);
+		// Object deserialized = serializer.deserialize(value.toString(), field.getType());
+		// BeanUtils.setProperty(bean, fieldName, deserialized);
+		// }
+		// }
+		// }
+		// catch (IllegalAccessException e)
+		// {
+		// logger.debug(e);
+		// e.printStackTrace();
+		// }
+		// catch (InvocationTargetException e)
+		// {
+		// logger.debug(e);
+		// e.printStackTrace();
+		// }
+		// catch (IllegalArgumentException e)
+		// {
+		// logger.debug(e);
+		// e.printStackTrace();
+		// }
 	}
 
 	/*

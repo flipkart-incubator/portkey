@@ -7,18 +7,22 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.log4j.Logger;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.util.Assert;
+
 import com.flipkart.portkey.common.datastore.DataStoreConfig;
 import com.flipkart.portkey.common.persistence.PersistenceManager;
 import com.flipkart.portkey.common.sharding.ShardIdentifier;
 import com.flipkart.portkey.rdbms.metadata.RdbmsMetaDataCache;
-import com.flipkart.portkey.rdbms.sharding.RdbmsShardIdentifier;
+import com.flipkart.portkey.rdbms.sharding.RdbmsShardIdentifierForSingleShard;
 
 /**
  * @author santosh.p
  */
-public class RdbmsDataStore implements DataStoreConfig
+public class RdbmsDataStore implements DataStoreConfig, InitializingBean
 {
-
+	private static final Logger logger = Logger.getLogger(RdbmsDataStore.class);
 	private Map<String, PersistenceManager> shardIdToPersistenceManagerMap;
 	private RdbmsMetaDataCache metaDataCache;
 	private ShardIdentifier shardIdentifier;
@@ -29,7 +33,7 @@ public class RdbmsDataStore implements DataStoreConfig
 	}
 
 	/*
-	 * (non-Javadoc)
+	 * (non-Javadoc
 	 * @see com.flipkart.portkey.common.datastore.DataStore#getMetaDataCache(com.flipkart.portkey.common.entity.Entity)
 	 */
 	public RdbmsMetaDataCache getMetaDataCache()
@@ -68,5 +72,18 @@ public class RdbmsDataStore implements DataStoreConfig
 	public void setShardIdentifier(ShardIdentifier shardIdentifier)
 	{
 		this.shardIdentifier = shardIdentifier;
+	}
+
+	@Override
+	public void afterPropertiesSet() throws Exception
+	{
+		Assert.notNull(shardIdToPersistenceManagerMap);
+		Assert.notNull(metaDataCache);
+		if (shardIdentifier == null)
+		{
+			logger.warn("No shard identifier provided, using RdbmsShardIdentifierForSingleShard");
+			shardIdentifier = new RdbmsShardIdentifierForSingleShard();
+		}
+		logger.info("Successfully initialized RdbmsDataStore");
 	}
 }

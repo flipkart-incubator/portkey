@@ -18,7 +18,7 @@ public class RdbmsShardIdentifierForSingleShard implements ShardIdentifier
 		{
 			throw new ShardNotAvailableException("No live shard is available");
 		}
-		return "";
+		return "01";
 	}
 
 	/*
@@ -31,7 +31,7 @@ public class RdbmsShardIdentifierForSingleShard implements ShardIdentifier
 		{
 			throw new ShardNotAvailableException("Shard key provided is null");
 		}
-		return "";
+		return "01";
 	}
 
 	/*

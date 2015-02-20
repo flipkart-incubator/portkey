@@ -65,7 +65,6 @@ public class RdbmsMetaDataCache implements MetaDataCache
 		rdbmsTableMetaData.setDatabaseName(rdbmsDataStore.databaseName());
 
 		Field[] fields = clazz.getDeclaredFields();
-		boolean shardKeyPresent = false;
 		boolean primaryKeyPresent = false;
 		for (Field field : fields)
 		{

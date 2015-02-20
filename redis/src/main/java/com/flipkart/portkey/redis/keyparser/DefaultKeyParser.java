@@ -30,7 +30,8 @@ public class DefaultKeyParser implements KeyParserInterface
 	{
 		if (keyPattern == null)
 		{
-			throw new InvalidAnnotationException("Exception while trying to parse key, key pattern is null");
+			throw new InvalidAnnotationException("Exception while trying to parse key, key pattern is null, bean:"
+			        + bean);
 		}
 		Matcher fieldNameMatcher = Pattern.compile("\\{(.*?)\\}").matcher(keyPattern);
 		List<String> fieldNames = new ArrayList<String>();
@@ -43,7 +44,8 @@ public class DefaultKeyParser implements KeyParserInterface
 			Field field = metaData.getFieldFromFieldName(fieldName);
 			if (field == null)
 			{
-				throw new InvalidAnnotationException("Exception while trying to parse key, key field is null");
+				throw new InvalidAnnotationException("Exception while trying to parse key, key field is null, bean:"
+				        + bean);
 			}
 			Object value;
 			try
@@ -56,11 +58,13 @@ public class DefaultKeyParser implements KeyParserInterface
 			}
 			catch (IllegalArgumentException e)
 			{
-				throw new InvalidAnnotationException("Exception while trying to fetch key value from bean" + e);
+				throw new InvalidAnnotationException("Exception while trying to fetch key value from bean, bean:"
+				        + bean + "\nexception:" + e);
 			}
 			catch (IllegalAccessException e)
 			{
-				throw new InvalidAnnotationException("Exception while trying to fetch key value from bean:" + e);
+				throw new InvalidAnnotationException("Exception while trying to fetch key value from bean, bean:"
+				        + bean + "\nexception:" + e);
 			}
 			catch (NullPointerException e)
 			{
