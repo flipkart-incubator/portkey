@@ -156,6 +156,11 @@ public class RdbmsPersistenceManager implements PersistenceManager
 				String enumStr = PortKeyUtils.enumToString((Enum) value);
 				mapValues.put(rdbmsColumn, enumStr);
 			}
+			else if (value instanceof List)
+			{
+				String listStr = PortKeyUtils.listToString((List) value);
+				mapValues.put(rdbmsColumn, listStr);
+			}
 			else
 			{
 				mapValues.put(rdbmsColumn, value);
@@ -175,6 +180,11 @@ public class RdbmsPersistenceManager implements PersistenceManager
 			{
 				String enumStr = PortKeyUtils.enumToString((Enum) value);
 				rdbmsFieldsMap.put(columnName, enumStr);
+			}
+			else if (value instanceof List)
+			{
+				String listStr = PortKeyUtils.listToString((List) value);
+				rdbmsFieldsMap.put(columnName, listStr);
 			}
 			else
 			{
@@ -197,7 +207,8 @@ public class RdbmsPersistenceManager implements PersistenceManager
 		catch (DataAccessException e)
 		{
 			logger.error("Exception while trying to update bean:" + bean + "\nnamed parameter jdbc template:" + temp, e);
-			throw new QueryExecutionException("Exception while trying to insert bean:" + bean, e);
+			throw new QueryExecutionException("Exception while trying to insert bean:" + bean + ", exception:"
+			        + e.toString());
 		}
 	}
 
@@ -214,8 +225,9 @@ public class RdbmsPersistenceManager implements PersistenceManager
 		}
 		catch (DataAccessException e)
 		{
-			logger.info("Exception while trying to update bean:" + bean, e);
-			throw new QueryExecutionException("Exception while trying to upsert bean:" + bean, e);
+			logger.info("Exception while trying to update bean:" + bean + ", exception:" + e.toString());
+			throw new QueryExecutionException("Exception while trying to upsert bean:" + bean + ", exception:"
+			        + e.toString());
 		}
 	}
 
@@ -233,8 +245,9 @@ public class RdbmsPersistenceManager implements PersistenceManager
 		}
 		catch (DataAccessException e)
 		{
-			logger.info("Exception while trying to update bean:" + bean, e);
-			throw new QueryExecutionException("Exception while trying to upsert bean:" + bean, e);
+			logger.info("Exception while trying to update bean:" + bean + ", exception:" + e.toString());
+			throw new QueryExecutionException("Exception while trying to upsert bean:" + bean + ", exception:"
+			        + e.toString());
 		}
 	}
 
@@ -250,8 +263,9 @@ public class RdbmsPersistenceManager implements PersistenceManager
 		}
 		catch (DataAccessException e)
 		{
-			logger.info("Exception while executing update on bean" + bean, e);
-			throw new QueryExecutionException("Exception while trying to update bean:" + bean, e);
+			logger.info("Exception while executing update on bean" + bean + ", exception:" + e.toString());
+			throw new QueryExecutionException("Exception while trying to update bean:" + bean + ", exception:"
+			        + e.toString());
 		}
 	}
 
@@ -275,7 +289,8 @@ public class RdbmsPersistenceManager implements PersistenceManager
 		}
 		catch (DataAccessException e)
 		{
-			throw new QueryExecutionException("Exception while trying to execute update query:" + updateQuery, e);
+			throw new QueryExecutionException("Exception while trying to execute update query:" + updateQuery
+			        + ", exception:" + e.toString());
 		}
 	}
 
@@ -298,9 +313,9 @@ public class RdbmsPersistenceManager implements PersistenceManager
 		}
 		catch (DataAccessException e)
 		{
-			logger.info("Exception while trying to execute delete query:" + deleteQuery + "\n" + e);
-			throw new ShardNotAvailableException("Exception while trying to execute delete query:" + deleteQuery + "\n"
-			        + e);
+			logger.info("Exception while trying to execute delete query:" + deleteQuery + ", exception:" + e.toString());
+			throw new ShardNotAvailableException("Exception while trying to execute delete query:" + deleteQuery
+			        + ", exception:" + e.toString());
 		}
 	}
 
@@ -330,9 +345,9 @@ public class RdbmsPersistenceManager implements PersistenceManager
 			catch (DataAccessException e)
 			{
 				logger.info("Exception while trying to execute get query:" + updateQuery + " on master:" + master
-				        + "\n" + e);
+				        + ", exception:" + e.toString());
 				throw new ShardNotAvailableException("Exception while trying to execute get query:" + updateQuery
-				        + " on master:" + master + "\n" + e);
+				        + " on master:" + master + ", exception:" + e.toString());
 			}
 		}
 		else
@@ -348,7 +363,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 				catch (DataAccessException e)
 				{
 					logger.info("Exception while trying to execute get query:" + updateQuery + " on slave:" + slave
-					        + "\n" + e);
+					        + ", exception:" + e.toString());
 					continue;
 				}
 			}
@@ -361,9 +376,9 @@ public class RdbmsPersistenceManager implements PersistenceManager
 			catch (DataAccessException e)
 			{
 				logger.info("Exception while trying to execute get query:" + updateQuery + " on master:" + master
-				        + "\n" + e);
+				        + ", exception:" + e.toString());
 				throw new ShardNotAvailableException("Exception while trying to execute get query:" + updateQuery
-				        + " on master:" + master + "\n" + e);
+				        + " on master:" + master + ", exception:" + e.toString());
 			}
 		}
 	}
