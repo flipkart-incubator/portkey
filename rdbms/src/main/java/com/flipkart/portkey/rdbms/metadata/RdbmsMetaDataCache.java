@@ -84,12 +84,12 @@ public class RdbmsMetaDataCache implements MetaDataCache
 				}
 				catch (InstantiationException e)
 				{
-					logger.info("Exception while fetching serializer for class:" + clazz);
+					logger.warn("Exception while fetching serializer for class:" + clazz);
 					throw new InvalidAnnotationException("Exception while fetching serializer for class:" + clazz, e);
 				}
 				catch (IllegalAccessException e)
 				{
-					logger.info("Exception while fetching serializer for class:" + clazz);
+					logger.warn("Exception while fetching serializer for class:" + clazz);
 					throw new InvalidAnnotationException("Exception while fetching serializer for class:" + clazz, e);
 				}
 				rdbmsTableMetaData.setSerializer(fieldName, serializer);

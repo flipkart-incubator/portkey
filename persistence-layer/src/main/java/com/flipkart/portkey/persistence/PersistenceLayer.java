@@ -52,7 +52,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		@Override
 		public void run()
 		{
-			logger.info("Running healthckecker");
+			logger.debug("Running healthckecker");
 			// TODO: try fetching a snapshot of shard statuses, instead of individual fetches from shardLifeCycleManager
 			for (DataStoreType type : dataStoreConfigMap.keySet())
 			{
@@ -63,7 +63,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 					PersistenceManager pm = ds.getPersistenceManager(shardId);
 					ShardStatus currentStatus = pm.healthCheck();
 					ShardStatus previousStatus = shardLifeCycleManager.getShardStatus(type, shardId);
-					logger.info("datastoretype=" + type + " shardId=" + shardId + " current status=" + currentStatus
+					logger.debug("datastoretype=" + type + " shardId=" + shardId + " current status=" + currentStatus
 					        + " previous status=" + previousStatus);
 					if (!previousStatus.equals(currentStatus))
 					{
@@ -72,26 +72,23 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 					}
 				}
 			}
-			logger.info("Health check complete");
+			logger.debug("Health check complete");
 		}
 	}
 
 	public void setDefaultPersistencePreference(EntityPersistencePreference defaultPersistencePreference)
 	{
-		System.out.println("Setting default persistence preference");
 		this.defaultPersistencePreference = defaultPersistencePreference;
 	}
 
 	public void setEntityPersistencePreferenceMap(
 	        Map<Class<? extends Entity>, EntityPersistencePreference> entityPersistencePreferenceMap)
 	{
-		System.out.println("Setting entity persistence preference map");
 		this.entityPersistencePreferenceMap = entityPersistencePreferenceMap;
 	}
 
 	public void setDataStoresMap(Map<DataStoreType, DataStoreConfig> dataStoresMap)
 	{
-		System.out.println("Setting data store config map");
 		this.dataStoreConfigMap = dataStoresMap;
 	}
 
@@ -101,7 +98,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		Assert.notNull(defaultPersistencePreference);
 		Assert.notNull(dataStoreConfigMap);
 
-		logger.info("Assertions passed");
+		logger.debug("Assertions passed");
 
 		logger.info("Initializing Shard Life Cycle Manager");
 		List<DataStoreType> dataStoreTypes = new ArrayList<DataStoreType>(dataStoreConfigMap.keySet());
@@ -301,7 +298,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 			}
 			catch (QueryExecutionException e)
 			{
-				logger.info("Caught exception while trying to insert bean=" + bean + "\n into data store"
+				logger.warn("Caught exception while trying to insert bean=" + bean + "\n into data store"
 				        + dataStoreType + "\n", e);
 				FailureAction failureAction = writeConfig.getFailureAction();
 				if (failureAction == FailureAction.ABORT)
@@ -331,7 +328,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 			}
 			catch (QueryExecutionException e)
 			{
-				logger.info("Caught exception while trying to insert bean=" + bean + "\n into data store"
+				logger.warn("Caught exception while trying to insert bean=" + bean + "\n into data store"
 				        + dataStoreType + "\n", e);
 				FailureAction failureAction = writeConfig.getFailureAction();
 				if (failureAction == FailureAction.ABORT)
@@ -363,7 +360,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 			}
 			catch (QueryExecutionException e)
 			{
-				logger.info("Caught exception while trying to insert bean=" + bean + "\n into data store"
+				logger.warn("Caught exception while trying to insert bean=" + bean + "\n into data store"
 				        + dataStoreType + "\n", e);
 				FailureAction failureAction = writeConfig.getFailureAction();
 				if (failureAction == FailureAction.ABORT)
@@ -398,7 +395,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 			}
 			catch (QueryExecutionException e)
 			{
-				logger.info("Caught exception while trying to update bean=" + bean + "\n into data store" + type + "\n"
+				logger.warn("Caught exception while trying to update bean=" + bean + "\n into data store" + type + "\n"
 				        + e);
 				FailureAction failureAction = writeConfig.getFailureAction();
 				if (failureAction == FailureAction.ABORT)
@@ -438,7 +435,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 				}
 				catch (QueryExecutionException e)
 				{
-					logger.info("Caught exception while trying to execute update " + updateValuesMap + "\n data store:"
+					logger.warn("Caught exception while trying to execute update " + updateValuesMap + "\n data store:"
 					        + type + "\n" + e);
 					FailureAction failureAction = writeConfig.getFailureAction();
 					if (failureAction == FailureAction.ABORT)
@@ -505,7 +502,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 				}
 				catch (QueryExecutionException e)
 				{
-					logger.info("Caught exception while trying to delete from data store" + type + "\n" + e);
+					logger.warn("Caught exception while trying to delete from data store" + type + "\n" + e);
 					FailureAction failureAction = writeConfig.getFailureAction();
 					if (failureAction == FailureAction.ABORT)
 					{
@@ -555,7 +552,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 				}
 				catch (QueryExecutionException e)
 				{
-					logger.info("Encountered exception while trying to execute query \n DataStoreType=" + type
+					logger.warn("Encountered exception while trying to execute query \n DataStoreType=" + type
 					        + "\ncriteria=" + criteria + "\nexception=" + e);
 					continue;
 				}
@@ -576,7 +573,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 					}
 					catch (QueryExecutionException e)
 					{
-						logger.info("Encountered exception while trying to execute query \n DataStoreType=" + type
+						logger.warn("Encountered exception while trying to execute query \n DataStoreType=" + type
 						        + "\ncriteria=" + criteria + "\nexception=" + e);
 						break;
 					}
@@ -619,7 +616,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 				}
 				catch (QueryExecutionException e)
 				{
-					logger.info("Exception while trying to fetch from data store:" + type, e);
+					logger.warn("Exception while trying to fetch from data store:" + type, e);
 					continue;
 				}
 			}
@@ -639,7 +636,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 					}
 					catch (QueryExecutionException e)
 					{
-						logger.info("Exception while trying to fetch from data store:" + type, e);
+						logger.warn("Exception while trying to fetch from data store:" + type, e);
 						break;
 					}
 				}
@@ -673,7 +670,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 			}
 			catch (QueryExecutionException e)
 			{
-				logger.info("Exception while trying to execute sql query" + sql + " on datastore " + type, e);
+				logger.warn("Exception while trying to execute sql query" + sql + " on datastore " + type, e);
 				continue;
 			}
 		}
@@ -702,7 +699,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 				}
 				catch (QueryExecutionException e)
 				{
-					logger.info("Failed to execute query " + sql + " for datastore " + type, e);
+					logger.warn("Failed to execute query " + sql + " for datastore " + type, e);
 					break;
 				}
 				result.addAll(intermediateResult);
@@ -739,7 +736,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 				}
 				catch (QueryExecutionException e)
 				{
-					logger.info("Failed to execute query " + sql + " for datastore" + type, e);
+					logger.warn("Failed to execute query " + sql + " for datastore" + type, e);
 					break;
 				}
 				result.addAll(intermediateResult);
@@ -776,7 +773,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 				}
 				catch (QueryExecutionException e)
 				{
-					logger.info("Failed to execute query " + sql + " for datastore" + type, e);
+					logger.warn("Failed to execute query " + sql + " for datastore" + type, e);
 				}
 				result.addAll(intermediateResult);
 			}

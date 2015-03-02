@@ -60,15 +60,14 @@ public class ShardLifeCycleManager implements ShardLifeCycleManagerInterface
 
 	public List<String> getShardListForStatus(DataStoreType dataStoreType, ShardStatus shardStatus)
 	{
-		logger.info("generating shard list with status=" + shardStatus + " for datastoretype=" + dataStoreType);
+		logger.debug("generating shard list with status=" + shardStatus + " for datastoretype=" + dataStoreType);
 		Map<String, ShardStatus> statusMapForDS = shardStatusMap.get(dataStoreType);
 		if (statusMapForDS == null)
 		{
-			logger.info("no shards are registered for datastore type=" + dataStoreType);
-			logger.info("returning null");
+			logger.debug("no shards are registered for datastore type=" + dataStoreType);
 			return null;
 		}
-		logger.info("number of shards registered for " + dataStoreType + "=" + statusMapForDS.size());
+		logger.debug("number of shards registered for " + dataStoreType + "=" + statusMapForDS.size());
 		List<String> shardList = new ArrayList<String>();
 		for (String shardId : statusMapForDS.keySet())
 		{
@@ -77,7 +76,7 @@ public class ShardLifeCycleManager implements ShardLifeCycleManagerInterface
 				shardList.add(shardId);
 			}
 		}
-		logger.info("shard list=" + shardList);
+		logger.debug("shard list=" + shardList);
 		return shardList.size() > 0 ? shardList : null;
 	}
 

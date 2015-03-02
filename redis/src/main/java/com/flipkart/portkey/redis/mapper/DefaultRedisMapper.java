@@ -34,17 +34,17 @@ public class DefaultRedisMapper implements RedisMapper
 		}
 		catch (JsonGenerationException e)
 		{
-			logger.info("Exception while trying to serialize " + obj + "\n" + e);
+			logger.warn("Exception while trying to serialize " + obj + "\n" + e);
 			throw new BeanSerializationException(e);
 		}
 		catch (JsonMappingException e)
 		{
-			logger.info("Exception while trying to serialize " + obj + "\n" + e);
+			logger.warn("Exception while trying to serialize " + obj + "\n" + e);
 			throw new BeanSerializationException(e);
 		}
 		catch (IOException e)
 		{
-			logger.info("Exception while trying to serialize " + obj + "\n" + e);
+			logger.warn("Exception while trying to serialize " + obj + "\n" + e);
 			throw new BeanSerializationException(e);
 		}
 
@@ -62,17 +62,17 @@ public class DefaultRedisMapper implements RedisMapper
 		}
 		catch (JsonParseException e)
 		{
-			logger.info("Exception while trying to deserialize String" + str + "\n" + e);
+			logger.warn("Exception while trying to deserialize String" + str + "\n" + e);
 			throw new BeanSerializationException(e);
 		}
 		catch (JsonMappingException e)
 		{
-			logger.info("Exception while trying to deserialize String" + str + "\n" + e);
+			logger.warn("Exception while trying to deserialize String" + str + "\n" + e);
 			throw new BeanSerializationException(e);
 		}
 		catch (IOException e)
 		{
-			logger.info("Exception while trying to deserialize String" + str + "\n" + e);
+			logger.warn("Exception while trying to deserialize String" + str + "\n" + e);
 			throw new BeanSerializationException(e);
 		}
 	}

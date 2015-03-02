@@ -47,7 +47,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 
 	public ShardStatus healthCheck()
 	{
-		// logger.info("health checking for rdbms shard master=" + master);
+		logger.debug("health checking for rdbms shard master=" + master);
 		if (isAvailableForWrite())
 			return ShardStatus.AVAILABLE_FOR_WRITE;
 		else if (isAvailableForRead())
@@ -63,8 +63,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	{
 		try
 		{
-			logger.info("checking if master is available for write");
-			// System.out.println("master:" + master.hashCode());
+			logger.debug("checking if master is available for write");
 			new JdbcTemplate(master).execute("SELECT 1 FROM DUAL");
 		}
 		catch (DataAccessException e)
@@ -72,15 +71,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 			logger.info("exception while trying to execute query on master" + master);
 			return false;
 		}
-		catch (Exception ex)
-		{
-			logger.info("Invocation ex:" + ex + "\nCause:" + ex.getCause());
-		}
-		catch (Throwable ex)
-		{
-			logger.info("Invocation ex:" + ex + "\nCause:" + ex.getCause());
-		}
-		logger.info("master is available for write");
+		logger.debug("master is available for write");
 		return true;
 	}
 
@@ -89,7 +80,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	 */
 	private boolean isAvailableForRead()
 	{
-		logger.info("checking if any slave is available");
+		logger.debug("checking if any slave is available");
 		for (DataSource slave : slaves)
 		{
 			try
@@ -101,10 +92,10 @@ public class RdbmsPersistenceManager implements PersistenceManager
 				logger.info("exception while trying to execute query on slave" + slave);
 				continue;
 			}
-			logger.info("slave is up" + slave);
+			logger.debug("slave is up" + slave);
 			return true;
 		}
-		logger.info("no slave is up");
+		logger.debug("no slave is up");
 		return false;
 	}
 
@@ -225,7 +216,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 		}
 		catch (DataAccessException e)
 		{
-			logger.info("Exception while trying to update bean:" + bean + ", exception:" + e.toString());
+			logger.warn("Exception while trying to update bean:" + bean + ", exception:" + e.toString());
 			throw new QueryExecutionException("Exception while trying to upsert bean:" + bean + ", exception:"
 			        + e.toString());
 		}
@@ -245,7 +236,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 		}
 		catch (DataAccessException e)
 		{
-			logger.info("Exception while trying to update bean:" + bean + ", exception:" + e.toString());
+			logger.warn("Exception while trying to update bean:" + bean + ", exception:" + e.toString());
 			throw new QueryExecutionException("Exception while trying to upsert bean:" + bean + ", exception:"
 			        + e.toString());
 		}
@@ -263,7 +254,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 		}
 		catch (DataAccessException e)
 		{
-			logger.info("Exception while executing update on bean" + bean + ", exception:" + e.toString());
+			logger.warn("Exception while executing update on bean" + bean + ", exception:" + e.toString());
 			throw new QueryExecutionException("Exception while trying to update bean:" + bean + ", exception:"
 			        + e.toString());
 		}
@@ -313,7 +304,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 		}
 		catch (DataAccessException e)
 		{
-			logger.info("Exception while trying to execute delete query:" + deleteQuery + ", exception:" + e.toString());
+			logger.warn("Exception while trying to execute delete query:" + deleteQuery + ", exception:" + e.toString());
 			throw new ShardNotAvailableException("Exception while trying to execute delete query:" + deleteQuery
 			        + ", exception:" + e.toString());
 		}
@@ -344,7 +335,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 			}
 			catch (DataAccessException e)
 			{
-				logger.info("Exception while trying to execute get query:" + updateQuery + " on master:" + master
+				logger.warn("Exception while trying to execute get query:" + updateQuery + " on master:" + master
 				        + ", exception:" + e.toString());
 				throw new ShardNotAvailableException("Exception while trying to execute get query:" + updateQuery
 				        + " on master:" + master + ", exception:" + e.toString());
@@ -362,7 +353,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 				}
 				catch (DataAccessException e)
 				{
-					logger.info("Exception while trying to execute get query:" + updateQuery + " on slave:" + slave
+					logger.warn("Exception while trying to execute get query:" + updateQuery + " on slave:" + slave
 					        + ", exception:" + e.toString());
 					continue;
 				}
@@ -375,7 +366,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 			}
 			catch (DataAccessException e)
 			{
-				logger.info("Exception while trying to execute get query:" + updateQuery + " on master:" + master
+				logger.warn("Exception while trying to execute get query:" + updateQuery + " on master:" + master
 				        + ", exception:" + e.toString());
 				throw new ShardNotAvailableException("Exception while trying to execute get query:" + updateQuery
 				        + " on master:" + master + ", exception:" + e.toString());
@@ -436,7 +427,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 				}
 				catch (Exception e)
 				{
-					logger.info("Exception while trying to execute get query:" + getQuery + " on slave:" + slave, e);
+					logger.warn("Exception while trying to execute get query:" + getQuery + " on slave:" + slave, e);
 					continue;
 				}
 				return result;
@@ -448,7 +439,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 			}
 			catch (Exception e)
 			{
-				logger.info("Exception while trying to execute get query:" + getQuery + " on master:" + master, e);
+				logger.warn("Exception while trying to execute get query:" + getQuery + " on master:" + master, e);
 				throw new ShardNotAvailableException("Exception while executing query:" + getQuery + "\nShard is down",
 				        e);
 			}
@@ -498,7 +489,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 				}
 				catch (Exception e)
 				{
-					logger.info("Exception while trying to execute sql:" + sql + " on slave:" + slave, e);
+					logger.warn("Exception while trying to execute sql:" + sql + " on slave:" + slave, e);
 					continue;
 				}
 				return result;
@@ -510,7 +501,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 			}
 			catch (Exception e)
 			{
-				logger.info("Exception while trying to execute sql:" + sql + " on master:" + master, e);
+				logger.warn("Exception while trying to execute sql:" + sql + " on master:" + master, e);
 				throw new ShardNotAvailableException("Exception while trying to execute sql:" + sql + " on master:"
 				        + master, e);
 			}
@@ -554,7 +545,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 				}
 				catch (Exception e)
 				{
-					logger.info("Exception while trying to execute sql:" + sql + " on slave:" + slave, e);
+					logger.warn("Exception while trying to execute sql:" + sql + " on slave:" + slave, e);
 					continue;
 				}
 				return result;
@@ -566,7 +557,7 @@ public class RdbmsPersistenceManager implements PersistenceManager
 			}
 			catch (Exception e)
 			{
-				logger.info("Exception while trying to execute sql:" + sql + " on master:" + master, e);
+				logger.warn("Exception while trying to execute sql:" + sql + " on master:" + master, e);
 				throw new ShardNotAvailableException("Exception while trying to execute sql:" + sql + " on master:"
 				        + master, e);
 			}

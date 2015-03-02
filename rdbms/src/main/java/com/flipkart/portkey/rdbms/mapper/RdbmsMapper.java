@@ -190,12 +190,12 @@ public class RdbmsMapper<V extends Entity> implements RowMapper<V>
 		}
 		catch (InstantiationException e)
 		{
-			logger.info("Exception in creating class instance:" + e);
+			logger.warn("Exception in creating class instance:" + e);
 			return null;
 		}
 		catch (IllegalAccessException e)
 		{
-			logger.info("Exception in creating class instance:" + e);
+			logger.warn("Exception in creating class instance:" + e);
 			return null;
 		}
 

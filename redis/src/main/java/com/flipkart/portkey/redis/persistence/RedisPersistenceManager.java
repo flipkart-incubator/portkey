@@ -115,7 +115,6 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 			return ShardStatus.UNAVAILABLE;
 		}
 		logger.debug("acquired redis connection, checking for response");
-		logger.debug(conn.ping());
 		if (conn.ping().equals("PONG"))
 		{
 			logger.debug("instance is available");
@@ -167,7 +166,7 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 			primaryKey = key + ":" + field;
 			if (retVal == 0)
 			{
-				logger.info("Key already exists in redis: Outer key:" + key + "Inner key:" + field);
+				logger.debug("Key already exists in redis: Outer key:" + key + "Inner key:" + field);
 			}
 		}
 		else
