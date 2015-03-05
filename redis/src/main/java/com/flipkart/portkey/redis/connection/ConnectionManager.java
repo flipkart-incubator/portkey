@@ -254,12 +254,12 @@ public class ConnectionManager
 
 	public Jedis getConnection()
 	{
-		logger.info("inside connectionmanager.getConnection");
+		logger.debug("inside connectionmanager.getConnection");
 		String key = getJedisPoolMapKey();
 		JedisPool pool = jedisPoolMap.get(key);
 		if (pool != null)
 		{
-			logger.info("returning a resource from jedis pool");
+			logger.debug("returning a resource from jedis pool");
 			try
 			{
 				return pool.getResource();
@@ -269,7 +269,7 @@ public class ConnectionManager
 				return null;
 			}
 		}
-		logger.info("no jedis pool available, returning null");
+		logger.debug("no jedis pool available, returning null");
 		return null;
 	}
 

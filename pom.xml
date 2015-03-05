@@ -16,10 +16,16 @@
 	</repositories>
 	<distributionManagement>
 		<repository>
-			<id>clojars</id>
-			<name>Clojars repository</name>
-			<url>https://clojars.org/repo</url>
+			<id>ops-build-2</id>
+			<name>ops-build-2-releases</name>
+			<url>http://artifactory.nm.flipkart.com:8081/artifactory/libs-release-local</url>
 		</repository>
+		<!-- Publish the versioned releases here -->
+		<snapshotRepository>
+			<id>ops-build-2</id>
+			<name>ops-build-2-snapshots</name>
+			<url>http://artifactory.nm.flipkart.com:8081/artifactory/libs-snapshot-local</url>
+		</snapshotRepository>
 	</distributionManagement>
 	<modules>
 		<module>common</module>
