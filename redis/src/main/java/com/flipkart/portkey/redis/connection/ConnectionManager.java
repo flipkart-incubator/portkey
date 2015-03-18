@@ -273,10 +273,17 @@ public class ConnectionManager
 		return null;
 	}
 
-	public void returnConnection(Jedis connection)
+	public void returnConnection(Jedis connection, boolean error)
 	{
 		String key = getJedisPoolMapKey();
 		JedisPool pool = jedisPoolMap.get(key);
-		pool.returnResource(connection);
+		if (error)
+		{
+			pool.returnBrokenResource(connection);
+		}
+		else
+		{
+			pool.returnResource(connection);
+		}
 	}
 }

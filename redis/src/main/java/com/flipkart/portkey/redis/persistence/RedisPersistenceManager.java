@@ -101,29 +101,35 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 	public ShardStatus healthCheck()
 	{
 		logger.debug("health checking for redis, host=" + host + " port=" + port);
-		Jedis conn;
+		Jedis conn = null;
+		boolean error = true;
 		try
 		{
 			conn = cm.getConnection();
+			error = false;
+			if (conn == null)
+			{
+				return ShardStatus.UNAVAILABLE;
+			}
+			logger.debug("acquired redis connection, checking for response");
+			if (conn.ping().equals("PONG"))
+			{
+				logger.debug("instance is available");
+				return ShardStatus.AVAILABLE_FOR_WRITE;
+			}
+			else
+			{
+				logger.debug("instance is unavailable");
+				return ShardStatus.UNAVAILABLE;
+			}
 		}
 		catch (JedisConnectionException e)
 		{
 			return ShardStatus.UNAVAILABLE;
 		}
-		if (conn == null)
+		finally
 		{
-			return ShardStatus.UNAVAILABLE;
-		}
-		logger.debug("acquired redis connection, checking for response");
-		if (conn.ping().equals("PONG"))
-		{
-			logger.debug("instance is available");
-			return ShardStatus.AVAILABLE_FOR_WRITE;
-		}
-		else
-		{
-			logger.debug("instance is unavailable");
-			return ShardStatus.UNAVAILABLE;
+			cm.returnConnection(conn, error);
 		}
 	}
 
@@ -132,48 +138,58 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 		return RedisMetaDataCache.getInstance().getMetaData(clazz);
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#insert(com.flipkart.portkey.common.entity.Entity)
-	 */
 	@Override
 	public <T extends Entity> int insert(T bean) throws ShardNotAvailableException
 	{
 		RedisMetaData metaData = getMetaData(bean.getClass());
 		List<String> keys = keyParser.parsePrimaryKeyPattern(bean, metaData);
 		String primaryKey = null;
-
-		Jedis conn = cm.getConnection();
-		if (conn == null)
+		Jedis conn = null;
+		boolean error = true;
+		try
 		{
-			throw new ShardNotAvailableException("Failed to acquire redis connection, bean=" + bean);
-		}
-		if (keys.size() == 1)
-		{
-			String key = keys.get(0);
-			String serialized = null;
-			serialized = mapper.serialize(bean);
-			conn.set(key, serialized);
-			primaryKey = key;
-		}
-		else if (keys.size() == 2)
-		{
-			String key = keys.get(0);
-			String field = keys.get(1);
-			String serialized = null;
-			serialized = mapper.serialize(bean);
-			Long retVal = conn.hset(key, field, serialized);
-			primaryKey = key + ":" + field;
-			if (retVal == 0)
+			conn = cm.getConnection();
+			if (conn == null)
 			{
-				logger.debug("Key already exists in redis: Outer key:" + key + "Inner key:" + field);
+				throw new ShardNotAvailableException("Failed to acquire redis connection, bean=" + bean);
+			}
+			if (keys.size() == 1)
+			{
+				String key = keys.get(0);
+				String serialized = null;
+				serialized = mapper.serialize(bean);
+				conn.set(key, serialized);
+				primaryKey = key;
+			}
+			else if (keys.size() == 2)
+			{
+				String key = keys.get(0);
+				String field = keys.get(1);
+				String serialized = null;
+				serialized = mapper.serialize(bean);
+				Long retVal = conn.hset(key, field, serialized);
+				primaryKey = key + ":" + field;
+				if (retVal == 0)
+				{
+					logger.debug("Key already exists in redis: Outer key:" + key + "Inner key:" + field);
+				}
+			}
+			else
+			{
+				throw new InvalidAnnotationException("Exception while trying to parse keys:" + keys
+				        + "\nKey consists of more than 2 parts.");
 			}
 		}
-		else
+		catch (JedisConnectionException e)
 		{
-			throw new InvalidAnnotationException("Exception while trying to parse keys:" + keys
-			        + "\nKey consists of more than 2 parts.");
+			throw new ShardNotAvailableException("Failed to acquire redis connection while trying to insert bean:"
+			        + bean);
 		}
+		finally
+		{
+			cm.returnConnection(conn, error);
+		}
+
 		List<String> secondaryKeys = keyParser.parseSecondaryKeyPatterns(bean, metaData);
 		for (String secondaryKey : secondaryKeys)
 		{
@@ -211,33 +227,63 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 		throw new QueryNotSupportedException("Method not supported for redis implementation");
 	}
 
-	private <T extends Entity> void deleteAllSecondaryKeys(T bean)
+	private <T extends Entity> void deleteAllSecondaryKeys(T bean) throws ShardNotAvailableException
 	{
 		RedisMetaData metaData = getMetaData(bean.getClass());
 		List<String> secondaryKeys = keyParser.parseSecondaryKeyPatterns(bean, metaData);
-		Jedis conn = cm.getConnection();
-		for (String key : secondaryKeys)
+		Jedis conn = null;
+		boolean error = true;
+		try
 		{
-			conn.del(key);
+			conn = cm.getConnection();
+			error = false;
+			for (String key : secondaryKeys)
+			{
+				conn.del(key);
+			}
+		}
+		catch (JedisConnectionException e)
+		{
+			throw new ShardNotAvailableException(
+			        "Failed to acquire redis connection while trying delete secondary keys for bean:" + bean);
+		}
+		finally
+		{
+			cm.returnConnection(conn, error);
 		}
 	}
 
 	// TODO: make sure the hashset gets deleted when last pojo in it gets deleted
-	private <T extends Entity> void deletePrimaryKey(T bean)
+	private <T extends Entity> void deletePrimaryKey(T bean) throws ShardNotAvailableException
 	{
 		RedisMetaData metaData = getMetaData(bean.getClass());
 		List<String> primaryKeys = keyParser.parsePrimaryKeyPattern(bean, metaData);
-		Jedis conn = cm.getConnection();
-		if (primaryKeys.size() == 1)
+		Jedis conn = null;
+		boolean error = true;
+		try
 		{
-			String key = primaryKeys.get(0);
-			conn.del(key);
+			conn = cm.getConnection();
+			error = false;
+			if (primaryKeys.size() == 1)
+			{
+				String key = primaryKeys.get(0);
+				conn.del(key);
+			}
+			else if (primaryKeys.size() == 2)
+			{
+				String key = primaryKeys.get(0);
+				String field = primaryKeys.get(1);
+				conn.hdel(key, field);
+			}
 		}
-		else if (primaryKeys.size() == 2)
+		catch (JedisConnectionException e)
 		{
-			String key = primaryKeys.get(0);
-			String field = primaryKeys.get(1);
-			conn.hdel(key, field);
+			throw new ShardNotAvailableException(
+			        "Failed to acquire redis connection while trying to delete primary key of bean:" + bean);
+		}
+		finally
+		{
+			cm.returnConnection(conn, error);
 		}
 	}
 
@@ -276,29 +322,44 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 	        RedisMetaData metaData) throws ShardNotAvailableException
 	{
 		T bean;
-		List<String> keys;
+		List<String> keys = null;
 		String value;
-		Jedis conn = cm.getConnection();
-		if (conn == null)
+		Jedis conn = null;
+		boolean error = true;
+		try
 		{
-			throw new ShardNotAvailableException("Failed to acquire redis connection");
+			conn = cm.getConnection();
+			error = false;
+			if (conn == null)
+			{
+				throw new ShardNotAvailableException("Failed to acquire redis connection");
+			}
+			keys = keyParser.parsePrimaryKeyPattern(criteria, metaData);
+			if (keys.size() == 1)
+			{
+				String key = keys.get(0);
+				value = conn.get(key);
+			}
+			else if (keys.size() == 2)
+			{
+				String key = keys.get(0);
+				String field = keys.get(1);
+				value = conn.hget(key, field);
+			}
+			else
+			{
+				throw new InvalidAnnotationException("Exception while trying to parse keys:" + keys
+				        + "\nKey size more than 2 is not supported.");
+			}
 		}
-		keys = keyParser.parsePrimaryKeyPattern(criteria, metaData);
-		if (keys.size() == 1)
+		catch (JedisConnectionException e)
 		{
-			String key = keys.get(0);
-			value = conn.get(key);
+			throw new ShardNotAvailableException(
+			        "Failed to acquire redis connection while trying to read bean from key" + keys);
 		}
-		else if (keys.size() == 2)
+		finally
 		{
-			String key = keys.get(0);
-			String field = keys.get(1);
-			value = conn.hget(key, field);
-		}
-		else
-		{
-			throw new InvalidAnnotationException("Exception while trying to parse keys:" + keys
-			        + "\nKey size more than 2 is not supported.");
+			cm.returnConnection(conn, error);
 		}
 		bean = mapper.deserialize(value, clazz);
 		return bean;
@@ -308,30 +369,45 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 	        RedisMetaData metaData) throws ShardNotAvailableException
 	{
 		T bean;
-		String key;
+		String key = null;
 		String primaryKey;
 		String value;
-		Jedis conn = cm.getConnection();
-		if (conn == null)
+		Jedis conn = null;
+		boolean error = true;
+		try
 		{
-			throw new ShardNotAvailableException("Redis is down");
-		}
-		key = keyParser.parseSecondaryKeyPattern(criteria, metaData);
+			conn = cm.getConnection();
+			error = false;
+			if (conn == null)
+			{
+				throw new ShardNotAvailableException("Redis is down");
+			}
+			key = keyParser.parseSecondaryKeyPattern(criteria, metaData);
 
-		primaryKey = conn.get(key);
-		List<String> primaryKeys = Arrays.asList(primaryKey.split("->"));
-		if (primaryKeys.size() == 1)
-		{
-			value = conn.get(primaryKeys.get(0));
+			primaryKey = conn.get(key);
+			List<String> primaryKeys = Arrays.asList(primaryKey.split("->"));
+			if (primaryKeys.size() == 1)
+			{
+				value = conn.get(primaryKeys.get(0));
+			}
+			else if (primaryKeys.size() == 2)
+			{
+				value = conn.hget(primaryKeys.get(0), primaryKeys.get(1));
+			}
+			else
+			{
+				throw new InvalidAnnotationException("Exception while trying to parse keys:" + primaryKeys
+				        + "\nKey size more than 2 is not supported.");
+			}
 		}
-		else if (primaryKeys.size() == 2)
+		catch (JedisConnectionException e)
 		{
-			value = conn.hget(primaryKeys.get(0), primaryKeys.get(1));
+			throw new ShardNotAvailableException(
+			        "Failed to acquire redis connection while trying to read bean from key" + key);
 		}
-		else
+		finally
 		{
-			throw new InvalidAnnotationException("Exception while trying to parse keys:" + primaryKeys
-			        + "\nKey size more than 2 is not supported.");
+			cm.returnConnection(conn, error);
 		}
 		bean = mapper.deserialize(value, clazz);
 		return bean;
