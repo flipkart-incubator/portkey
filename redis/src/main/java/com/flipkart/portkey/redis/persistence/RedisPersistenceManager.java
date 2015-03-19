@@ -102,11 +102,9 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 	{
 		logger.debug("health checking for redis, host=" + host + " port=" + port);
 		Jedis conn = null;
-		boolean error = true;
 		try
 		{
 			conn = cm.getConnection();
-			error = false;
 			if (conn == null)
 			{
 				return ShardStatus.UNAVAILABLE;
@@ -129,7 +127,7 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 		}
 		finally
 		{
-			cm.returnConnection(conn, error);
+			cm.returnConnection(conn);
 		}
 	}
 
@@ -145,7 +143,6 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 		List<String> keys = keyParser.parsePrimaryKeyPattern(bean, metaData);
 		String primaryKey = null;
 		Jedis conn = null;
-		boolean error = true;
 		try
 		{
 			conn = cm.getConnection();
@@ -187,7 +184,7 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 		}
 		finally
 		{
-			cm.returnConnection(conn, error);
+			cm.returnConnection(conn);
 		}
 
 		List<String> secondaryKeys = keyParser.parseSecondaryKeyPatterns(bean, metaData);
@@ -232,11 +229,9 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 		RedisMetaData metaData = getMetaData(bean.getClass());
 		List<String> secondaryKeys = keyParser.parseSecondaryKeyPatterns(bean, metaData);
 		Jedis conn = null;
-		boolean error = true;
 		try
 		{
 			conn = cm.getConnection();
-			error = false;
 			for (String key : secondaryKeys)
 			{
 				conn.del(key);
@@ -249,7 +244,7 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 		}
 		finally
 		{
-			cm.returnConnection(conn, error);
+			cm.returnConnection(conn);
 		}
 	}
 
@@ -259,11 +254,9 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 		RedisMetaData metaData = getMetaData(bean.getClass());
 		List<String> primaryKeys = keyParser.parsePrimaryKeyPattern(bean, metaData);
 		Jedis conn = null;
-		boolean error = true;
 		try
 		{
 			conn = cm.getConnection();
-			error = false;
 			if (primaryKeys.size() == 1)
 			{
 				String key = primaryKeys.get(0);
@@ -283,7 +276,7 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 		}
 		finally
 		{
-			cm.returnConnection(conn, error);
+			cm.returnConnection(conn);
 		}
 	}
 
@@ -325,11 +318,9 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 		List<String> keys = null;
 		String value;
 		Jedis conn = null;
-		boolean error = true;
 		try
 		{
 			conn = cm.getConnection();
-			error = false;
 			if (conn == null)
 			{
 				throw new ShardNotAvailableException("Failed to acquire redis connection");
@@ -359,7 +350,7 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 		}
 		finally
 		{
-			cm.returnConnection(conn, error);
+			cm.returnConnection(conn);
 		}
 		bean = mapper.deserialize(value, clazz);
 		return bean;
@@ -373,11 +364,9 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 		String primaryKey;
 		String value;
 		Jedis conn = null;
-		boolean error = true;
 		try
 		{
 			conn = cm.getConnection();
-			error = false;
 			if (conn == null)
 			{
 				throw new ShardNotAvailableException("Redis is down");
@@ -407,7 +396,7 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 		}
 		finally
 		{
-			cm.returnConnection(conn, error);
+			cm.returnConnection(conn);
 		}
 		bean = mapper.deserialize(value, clazz);
 		return bean;
