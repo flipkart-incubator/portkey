@@ -23,6 +23,7 @@ public class PortKeyUtilTest
 	}
 
 	@Test
+	@Ignore
 	public void testGetFieldFromBean()
 	{
 		Person p = new Person();
@@ -46,6 +47,7 @@ public class PortKeyUtilTest
 	}
 
 	@Test
+	@Ignore
 	public void testGetFieldValueFromBean()
 	{
 		Person p = new Person();

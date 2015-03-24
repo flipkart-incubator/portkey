@@ -16,7 +16,7 @@ import java.util.regex.Pattern;
 import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.common.exception.InvalidAnnotationException;
 import com.flipkart.portkey.common.exception.PortKeyException;
-import com.flipkart.portkey.common.util.PortKeyUtilTest;
+import com.flipkart.portkey.common.util.PortKeyUtils;
 import com.flipkart.portkey.redis.metadata.RedisMetaData;
 
 /**
@@ -82,7 +82,7 @@ public class DefaultKeyParser implements KeyParserInterface
 			}
 			else
 			{
-				fieldVal = PortKeyUtilTest.toString(value);
+				fieldVal = PortKeyUtils.toString(value);
 			}
 			keyPattern = keyPattern.replace("{" + fieldName + "}", fieldVal);
 		}
@@ -159,7 +159,7 @@ public class DefaultKeyParser implements KeyParserInterface
 			}
 			else
 			{
-				fieldVal = PortKeyUtilTest.toString(value);
+				fieldVal = PortKeyUtils.toString(value);
 			}
 			keyPattern = keyPattern.replace("{" + attribute + "}", fieldVal);
 		}
