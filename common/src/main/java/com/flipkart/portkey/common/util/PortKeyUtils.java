@@ -94,12 +94,29 @@ public class PortKeyUtils
 	}
 
 	/**
-	 * @param fieldValueFromBean
-	 * @return
+	 * @param obj
+	 * @return string representation of object if obj is not null, null otherwise.
 	 */
 	public static String toString(Object obj)
 	{
 		return obj == null ? null : obj.toString();
+	}
+
+	/**
+	 * @param objectToBeEncoded
+	 * @return Json representation of passed object, an empty string in case of conversion failure.
+	 */
+	public static String toJsonString(Object objectToBeEncoded)
+	{
+		try
+		{
+			ObjectMapper mapper = new ObjectMapper();
+			return mapper.writeValueAsString(objectToBeEncoded);
+		}
+		catch (Exception ignored)
+		{
+			return "";
+		}
 	}
 
 	public static String serialize(Object obj) throws JsonGenerationException, JsonMappingException, IOException
