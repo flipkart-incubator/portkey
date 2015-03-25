@@ -10,7 +10,8 @@ import com.flipkart.portkey.common.enumeration.FailureAction;
 
 /**
  * Configuration for writing an entity into data stores. It includes the list of data stores to which the entity to be
- * written, the order for writes and the action to be executed on write failure.
+ * written, the order for writes and the action to be executed(whether continue writing into other data stores or abort)
+ * on write failure.
  * @author santosh.p
  */
 public class WriteConfig

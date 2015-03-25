@@ -4,9 +4,9 @@
 package com.flipkart.portkey.common.entity.persistence;
 
 /**
- * The class stores persistence configurations for an Entity. Configuration includes the list of data stores to and from
- * which the entity is written into and read from. It also stores the order in which data stores are accessed for read
- * and write of Entity.
+ * The class stores persistence configurations for Entities. Configuration includes the list of data stores to and from
+ * which the entity is written into and read from. It also stores the order in which data stores should be hit for
+ * reading and writing Entities.
  * @author santosh.p
  */
 public class EntityPersistencePreference

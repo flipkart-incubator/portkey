@@ -10,8 +10,7 @@ import com.flipkart.portkey.common.persistence.PersistenceManager;
 import com.flipkart.portkey.common.sharding.ShardIdentifier;
 
 /**
- * An instance of DataStore represents a data store repository. e.g MySQL, Redis. One DataStore instance contains one or
- * more shards of same data store type.
+ * Represents configuration for single data store repository.
  * @author santosh.p
  */
 public interface DataStoreConfig
