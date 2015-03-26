@@ -18,7 +18,7 @@
 		<repository>
 			<id>ops-build-2</id>
 			<name>ops-build-2-releases</name>
-			<url>http://artifactory.nm.flipkart.com:8081/artifactory/libs-release-local</url>
+			<url>http:/artifactory.nm.flipkart.com:8081/artifactory/libs-release-local</url>
 		</repository>
 		<!-- Publish the versioned releases here -->
 		<snapshotRepository>
