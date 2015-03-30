@@ -9,6 +9,7 @@ import java.util.Map;
 import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.common.enumeration.DataStoreType;
 import com.flipkart.portkey.common.exception.PortKeyException;
+import com.flipkart.portkey.common.persistence.query.UpdateQuery;
 
 /**
  * @author santosh.p
@@ -26,6 +27,8 @@ public interface PersistenceLayerInterface
 
 	public <T extends Entity> Result update(Class<T> clazz, Map<String, Object> updateValuesMap,
 	        Map<String, Object> criteria) throws PortKeyException;
+
+	public <T extends Entity> void update(List<UpdateQuery> updates) throws PortKeyException;
 
 	public <T extends Entity> Result delete(Class<T> clazz, Map<String, Object> criteria) throws PortKeyException;
 

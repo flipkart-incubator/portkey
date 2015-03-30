@@ -16,6 +16,7 @@ import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import com.flipkart.portkey.common.entity.Entity;
+import com.flipkart.portkey.common.enumeration.DataStoreType;
 import com.flipkart.portkey.common.exception.InvalidAnnotationException;
 
 /**
@@ -167,5 +168,13 @@ public class PortKeyUtils
 	public static String listToString(List l)
 	{
 		return l == null ? null : l.toString();
+	}
+
+	public static boolean isTransactionSupported(DataStoreType ds)
+	{
+		if (ds.equals(DataStoreType.RDBMS))
+			return true;
+		else
+			return false;
 	}
 }
