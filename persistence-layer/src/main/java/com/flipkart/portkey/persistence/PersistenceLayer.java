@@ -489,7 +489,6 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 	@Override
 	public <T extends Entity> void update(List<UpdateQuery> updates) throws PortKeyException
 	{
-
 		for (UpdateQuery update : updates)
 		{
 			WriteConfig writeConfig = getWriteConfigForEntity(update.getClazz());
@@ -500,22 +499,22 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 				MetaDataCache metaDataCache = getMetaDataCache(type);
 				String shardKeyFieldName = metaDataCache.getShardKey(update.getClazz());
 				Map<String, Object> criteria = update.getCriteria();
-				Map<String, List<UpdateQuery>> shardIdToUpdatesMap = new HashMap<String, List<UpdateQuery>>();
+				Map<String, List<UpdateQuery>> shardIdToUpdateListMap = new HashMap<String, List<UpdateQuery>>();
 				if (criteria.containsKey(shardKeyFieldName))
 				{
 					String shardId = getShardId(PortKeyUtils.toString(criteria.get(shardKeyFieldName)), type);
-					if (!shardIdToUpdatesMap.containsKey(shardId))
-						shardIdToUpdatesMap.put(shardId, new ArrayList<UpdateQuery>());
-					shardIdToUpdatesMap.get(shardId).add(update);
+					if (!shardIdToUpdateListMap.containsKey(shardId))
+						shardIdToUpdateListMap.put(shardId, new ArrayList<UpdateQuery>());
+					shardIdToUpdateListMap.get(shardId).add(update);
 				}
 				else
 				{
 					throw new PortKeyException("No shard key field is specified in query");
 				}
-				for (String shardId : shardIdToUpdatesMap.keySet())
+				for (String shardId : shardIdToUpdateListMap.keySet())
 				{
 					PersistenceManager pm = getPersistenceManager(type, shardId);
-					pm.update(shardIdToUpdatesMap.get(shardId));
+					pm.update(shardIdToUpdateListMap.get(shardId));
 				}
 			}
 		}
