@@ -89,7 +89,8 @@ public class RdbmsQueryBuilder
 		onDuplicateQueryStrBuilder.append(" ON DUPLICATE KEY UPDATE ");
 		for (String column : columnsToBeUpdatedOnDuplicate)
 		{
-			onDuplicateQueryStrBuilder.append("`" + column + "`" + "=:" + column + ",");
+			onDuplicateQueryStrBuilder.append("`" + tableMetaData.getRdbmsColumnFromFieldName(column) + "`" + "=:"
+			        + tableMetaData.getRdbmsColumnFromFieldName(column) + ",");
 		}
 		String upsertQuery =
 		        insertQuery + onDuplicateQueryStrBuilder.substring(0, onDuplicateQueryStrBuilder.length() - 1);
