@@ -54,4 +54,6 @@ public interface PersistenceManager
 	public List<Map<String, Object>> getBySql(String sql, Map<String, Object> criteria, boolean readMaster)
 	        throws QueryExecutionException;
 
+	public int updateBySql(String sql, Map<String, Object> criteria) throws QueryExecutionException;
+
 }

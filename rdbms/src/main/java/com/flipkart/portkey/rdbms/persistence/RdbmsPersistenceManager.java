@@ -570,4 +570,20 @@ public class RdbmsPersistenceManager implements PersistenceManager
 	{
 		return getBySql(sql, criteria, false);
 	}
+
+	@Override
+	public int updateBySql(String sql, Map<String, Object> criteria) throws QueryExecutionException
+	{
+		NamedParameterJdbcTemplate temp;
+		temp = new NamedParameterJdbcTemplate(master);
+		try
+		{
+			return temp.update(sql, criteria);
+		}
+		catch (Exception e)
+		{
+			throw new QueryExecutionException("Exception while trying to execute sql:" + sql + " on master:" + master,
+			        e);
+		}
+	}
 }

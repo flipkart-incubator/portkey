@@ -515,4 +515,10 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 	{
 		throw new QueryNotSupportedException("Method not supported for redis implementation");
 	}
+
+	@Override
+	public int updateBySql(String sql, Map<String, Object> criteria) throws QueryExecutionException
+	{
+		throw new QueryNotSupportedException("Method not supported for redis implementation");
+	}
 }

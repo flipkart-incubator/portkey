@@ -23,6 +23,7 @@ import com.flipkart.portkey.common.entity.persistence.WriteConfig;
 import com.flipkart.portkey.common.enumeration.DataStoreType;
 import com.flipkart.portkey.common.enumeration.FailureAction;
 import com.flipkart.portkey.common.enumeration.ShardStatus;
+import com.flipkart.portkey.common.exception.PortKeyException;
 import com.flipkart.portkey.common.exception.QueryExecutionException;
 import com.flipkart.portkey.common.exception.ShardNotAvailableException;
 import com.flipkart.portkey.common.metadata.MetaDataCache;
@@ -783,5 +784,39 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 			}
 		}
 		throw new QueryExecutionException("Failed to execute query.\nAll related data stores are down");
+	}
+
+	@Override
+	public Result updateBySql(String sql, Map<String, Object> criteria) throws PortKeyException
+	{
+		boolean updateExecuted = false;
+		Result result = new Result();
+		WriteConfig writeConfig = getDefaultWriteConfig();
+		List<DataStoreType> writeOrder = writeConfig.getWriteOrder();
+		for (DataStoreType type : writeOrder)
+		{
+			List<String> shardIds = dataStoreConfigMap.get(type).getShardIds();
+			for (String shardId : shardIds)
+			{
+				try
+				{
+					updateExecuted = false;
+					PersistenceManager pm = getPersistenceManager(type, shardId);
+					int rowsUpdated = pm.updateBySql(sql, criteria);
+					result.setRowsUpdatedForDataStore(type, rowsUpdated);
+					updateExecuted = true;
+				}
+				catch (QueryExecutionException e)
+				{
+					logger.warn("Failed to execute update query " + sql + " for datastore " + type, e);
+					break;
+				}
+			}
+		}
+		if (updateExecuted)
+		{
+			return result;
+		}
+		throw new QueryExecutionException("Failed to execute query " + sql + ".\nAll related data stores are down");
 	}
 }
