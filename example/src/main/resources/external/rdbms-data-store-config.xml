@@ -21,7 +21,7 @@
 	
 	<util:map id="rdbmsPersistenceManagerMap"
 		value-type="com.flipkart.portkey.common.persistence.PersistenceManager">
-		<entry key="" value-ref="rdbmsShard" />
+		<entry key="01" value-ref="rdbmsShard" />
 	</util:map>
 
 	<bean id="rdbmsMetaDataCache" class="com.flipkart.portkey.rdbms.metadata.RdbmsMetaDataCache"

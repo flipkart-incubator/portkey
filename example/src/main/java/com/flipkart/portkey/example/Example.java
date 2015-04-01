@@ -31,15 +31,15 @@ public class Example
 	{
 
 		insert();
-		insertWithGenerateId();
-		upsert();
-		updateBean();
-		updateByCriteria();
-		delete();
-		getByCriteria();
-		getAllAttributesByCriteria();
-		getBeansBySql();
-		getRsMapBySql();
+		// insertWithGenerateId();
+		// upsert();
+		// updateBean();
+		// updateByCriteria();
+		// delete();
+		// getByCriteria();
+		// getAllAttributesByCriteria();
+		// getBeansBySql();
+		// getRsMapBySql();
 	}
 
 	private static Employee insertAndReturnBean()
@@ -88,7 +88,7 @@ public class Example
 		PersistenceLayer pl = getPersistenceLayer();
 		try
 		{
-			pl.getBySql("DELETE FROM Employee", null);
+			pl.updateBySql("DELETE FROM Employee", null);
 		}
 		catch (PortKeyException e)
 		{

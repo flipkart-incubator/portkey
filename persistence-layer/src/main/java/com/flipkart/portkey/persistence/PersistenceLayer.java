@@ -809,7 +809,9 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 				catch (QueryExecutionException e)
 				{
 					logger.warn("Failed to execute update query " + sql + " for datastore " + type, e);
-					break;
+					FailureAction failureAction = writeConfig.getFailureAction();
+					if (failureAction.equals(FailureAction.ABORT))
+						break;
 				}
 			}
 		}

@@ -50,12 +50,17 @@ public class JsonSerializer extends Serializer
 		return null;
 	}
 
+	@SuppressWarnings ("unchecked")
 	@Override
 	public <T> T deserialize(String serialized, Class<T> clazz)
 	{
 		if (serialized == null)
 		{
 			return null;
+		}
+		if (clazz.equals(String.class))
+		{
+			return (T) serialized;
 		}
 		try
 		{

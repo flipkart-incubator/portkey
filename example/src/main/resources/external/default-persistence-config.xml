@@ -22,7 +22,6 @@
 		<property name="writeOrder">
 			<util:list value-type="com.flipkart.portkey.common.enumeration.DataStoreType">
 				<value>RDBMS</value>
-				<value>REDIS</value>
 			</util:list>
 		</property>
 		<property name="failureAction" value="CONTINUE" />
@@ -32,7 +31,6 @@
 		<property name="writeOrder">
 			<util:list value-type="com.flipkart.portkey.common.enumeration.DataStoreType">
 				<value>RDBMS</value>
-				<value>REDIS</value>
 			</util:list>
 		</property>
 	</bean>
