@@ -32,7 +32,6 @@
 		<property name="writeOrder">
 			<util:list value-type="com.flipkart.portkey.common.enumeration.DataStoreType">
 				<value>RDBMS</value>
-				<value>REDIS</value>
 			</util:list>
 		</property>
 		<property name="failureAction" value="CONTINUE" />
@@ -41,7 +40,7 @@
 		class="com.flipkart.portkey.common.entity.persistence.WriteConfig">
 		<property name="writeOrder">
 			<util:list value-type="com.flipkart.portkey.common.enumeration.DataStoreType">
-				<value>REDIS</value>
+				<value>RDBMS</value>
 			</util:list>
 		</property>
 		<property name="failureAction" value="CONTINUE" />
@@ -50,7 +49,6 @@
 		class="com.flipkart.portkey.common.entity.persistence.ReadConfig">
 		<property name="readOrder">
 			<util:list value-type="com.flipkart.portkey.common.enumeration.DataStoreType">
-				<value>REDIS</value>
 				<value>RDBMS</value>
 			</util:list>
 		</property>
