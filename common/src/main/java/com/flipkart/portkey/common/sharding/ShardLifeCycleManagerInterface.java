@@ -22,5 +22,5 @@ public interface ShardLifeCycleManagerInterface
 
 	public Map<String, ShardStatus> getStatusMapForDataStore(DataStoreType dataStoreType);
 
-	public Map<DataStoreType, Map<String, ShardStatus>> getStatus();
+	public Map<DataStoreType, Map<String, ShardStatus>> getStatusMap();
 }

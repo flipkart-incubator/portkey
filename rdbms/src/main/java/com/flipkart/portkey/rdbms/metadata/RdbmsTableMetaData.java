@@ -14,20 +14,27 @@ import com.flipkart.portkey.rdbms.metadata.annotation.RdbmsField;
 
 /**
  * @author santosh.p
+ *         The class stores metadata for a Pojo ( and corresponding rdbms table).
+ *         Naming conventions used are as follows:
+ *         fieldName - Name of the field in pojo
+ *         field - Object of class java.lang.reflect.Field
+ *         rdbmsField - Object of Annotation type com.flipkart.portkey.rdbms.metadata.annotation.RdbmsField
+ *         columnName - Name of column in Rdbms table
  */
 public class RdbmsTableMetaData
 {
 	private String databaseName;
 	private String tableName;
-	private String shardKey;
-	private List<String> primaryKeys = new ArrayList<String>();
+	private String shardKeyFieldName;
+	private List<String> primaryKeysList = new ArrayList<String>();
 	private Map<String, RdbmsField> fieldNameToRdbmsFieldMap = new HashMap<String, RdbmsField>();
 	private Map<String, Serializer> fieldNameToSerializerMap = new HashMap<String, Serializer>();
-	private Map<String, String> fieldNameToRdbmsColumnMap = new HashMap<String, String>();
-	private Map<String, String> rdbmsColumnToFieldNameMap = new HashMap<String, String>();
+	private Map<String, String> fieldNameToColumnNameMap = new HashMap<String, String>();
+	private Map<String, String> columnNameToFieldNameMap = new HashMap<String, String>();
 	private Map<String, Field> fieldNameToFieldMap = new HashMap<String, Field>();
 	private String insertQuery;
 	private String updateByPkQuery;
+	private String upsertQuery;
 
 	public String getDatabaseName()
 	{
@@ -49,89 +56,89 @@ public class RdbmsTableMetaData
 		this.tableName = tableName;
 	}
 
-	public String getShardKey()
+	public String getShardKeyFieldName()
 	{
-		return shardKey;
+		return shardKeyFieldName;
 	}
 
-	public void setShardKey(String shardKey)
+	public void setShardKeyFieldName(String shardKey)
 	{
-		this.shardKey = shardKey;
+		this.shardKeyFieldName = shardKey;
 	}
 
-	public List<String> getPrimaryKeys()
+	public List<String> getPrimaryKeysList()
 	{
-		return primaryKeys;
+		return primaryKeysList;
 	}
 
-	public void setPrimaryKeys(List<String> primaryKeys)
+	public void setPrimaryKeysList(List<String> primaryKeys)
 	{
-		this.primaryKeys = primaryKeys;
+		this.primaryKeysList = primaryKeys;
 	}
 
-	public RdbmsField getRdbmsField(String fieldName)
+	public RdbmsField getRdbmsFieldFromFieldName(String fieldName)
 	{
 		return fieldNameToRdbmsFieldMap.get(fieldName);
 	}
 
-	public void addRdbmsField(String fieldName, RdbmsField rdbmsField)
+	public void addToFieldNameToRdbmsFieldMap(String fieldName, RdbmsField rdbmsField)
 	{
 		this.fieldNameToRdbmsFieldMap.put(fieldName, rdbmsField);
 	}
 
-	public void addToPrimaryKeys(String priamryKey)
+	public void addPrimaryKey(String priamryKey)
 	{
-		this.primaryKeys.add(priamryKey);
+		this.primaryKeysList.add(priamryKey);
 	}
 
-	public List<Field> getFieldList()
+	public List<Field> getFieldsList()
 	{
 		return new ArrayList<Field>(fieldNameToFieldMap.values());
 	}
 
-	public Map<String, String> getFieldNameToRdbmsColumnMap()
+	public Map<String, String> getFieldNameToColumnNameMap()
 	{
-		return fieldNameToRdbmsColumnMap;
+		return fieldNameToColumnNameMap;
 	}
 
-	public String getRdbmsColumnFromFieldName(String fieldName)
+	public String getColumnNameFromFieldName(String fieldName)
 	{
-		return fieldNameToRdbmsColumnMap.get(fieldName);
+		return fieldNameToColumnNameMap.get(fieldName);
 	}
 
-	public void setFieldNameToRdbmsColumnMap(Map<String, String> fieldNameToSqlColumnMap)
+	public void setFieldNameToColumnNameMap(Map<String, String> fieldNameToColumnNameMap)
 	{
-		this.fieldNameToRdbmsColumnMap = fieldNameToSqlColumnMap;
+		this.fieldNameToColumnNameMap = fieldNameToColumnNameMap;
 	}
 
-	public void addToFieldNameToRdbmsColumnMap(String fieldName, String column)
+	public void addToFieldNameToColumnNameMap(String fieldName, String column)
 	{
-		this.fieldNameToRdbmsColumnMap.put(fieldName, column);
+		this.fieldNameToColumnNameMap.put(fieldName, column);
 	}
 
-	public Serializer getSerializer(String fieldName)
+	public Serializer getSerializerFromFieldName(String fieldName)
 	{
 		return fieldNameToSerializerMap.get(fieldName);
 	}
 
-	public void setSerializer(String fieldName, Serializer serializer)
+	public void addToFieldNameToSerializerMap(String fieldName, Serializer serializer)
 	{
 		this.fieldNameToSerializerMap.put(fieldName, serializer);
 	}
 
-	public Map<String, String> getRdbmsColumnToFieldNameMap()
+	public Map<String, String> getColumnNameToFieldNameMap()
 	{
-		return rdbmsColumnToFieldNameMap;
+		return columnNameToFieldNameMap;
 	}
 
-	public void setRdbmsColumnToFieldNameMap(Map<String, String> sqlColumnToFieldNameMap)
+	public void setColumnNameToFieldNameMap(Map<String, String> columnNameToFieldNameMap)
 	{
-		this.rdbmsColumnToFieldNameMap = sqlColumnToFieldNameMap;
+		this.columnNameToFieldNameMap = columnNameToFieldNameMap;
 	}
 
-	public void addToRdbmsColumnToFieldNameMap(String column, String fieldName)
+	public void addToColumnNameToFieldNameMap(String column, String fieldName)
 	{
-		this.rdbmsColumnToFieldNameMap.put(column, fieldName);
+		this.columnNameToFieldNameMap.put(column, fieldName);
 	}
 
 	public Map<String, Field> getFieldNameToFieldMap()
@@ -167,5 +174,15 @@ public class RdbmsTableMetaData
 	public void setUpdateByPkQuery(String updateByPkQuery)
 	{
 		this.updateByPkQuery = updateByPkQuery;
+	}
+
+	public String getUpsertQuery()
+	{
+		return upsertQuery;
+	}
+
+	public void setUpsertQuery(String upsertQuery)
+	{
+		this.upsertQuery = upsertQuery;
 	}
 }

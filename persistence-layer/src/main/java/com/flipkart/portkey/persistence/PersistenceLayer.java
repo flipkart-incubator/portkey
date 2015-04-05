@@ -1,6 +1,3 @@
-/**
- * 
- */
 package com.flipkart.portkey.persistence;
 
 import java.util.ArrayList;
@@ -47,6 +44,12 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 	private ShardLifeCycleManagerInterface shardLifeCycleManager;
 	private ScheduledExecutorService scheduledThreadPool;
 	private Map<DataStoreType, Map<String, ShardStatus>> shardStatusMap;
+	private int healthCheckInterval = 15;
+
+	private enum DBOpeartion
+	{
+		INSERT, UPSERT, UPDATE;
+	};
 
 	class HealthCheckScheduler implements Runnable
 	{
@@ -64,7 +67,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 					PersistenceManager pm = ds.getPersistenceManager(shardId);
 					ShardStatus currentStatus = pm.healthCheck();
 					ShardStatus previousStatus = shardLifeCycleManager.getShardStatus(type, shardId);
-					logger.debug("datastoretype=" + type + " shardId=" + shardId + " current status=" + currentStatus
+					logger.debug("Datastore type=" + type + " shard id=" + shardId + " current status=" + currentStatus
 					        + " previous status=" + previousStatus);
 					if (!previousStatus.equals(currentStatus))
 					{
@@ -88,9 +91,9 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		this.entityPersistencePreferenceMap = entityPersistencePreferenceMap;
 	}
 
-	public void setDataStoresMap(Map<DataStoreType, DataStoreConfig> dataStoresMap)
+	public void setDataStoreConfigMap(Map<DataStoreType, DataStoreConfig> dataStoreConfigMap)
 	{
-		this.dataStoreConfigMap = dataStoresMap;
+		this.dataStoreConfigMap = dataStoreConfigMap;
 	}
 
 	@Override
@@ -98,27 +101,31 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 	{
 		Assert.notNull(defaultPersistencePreference);
 		Assert.notNull(dataStoreConfigMap);
-
 		logger.debug("Assertions passed");
 
-		logger.info("Initializing Shard Life Cycle Manager");
-		List<DataStoreType> dataStoreTypes = new ArrayList<DataStoreType>(dataStoreConfigMap.keySet());
+		logger.info("Initializing Shard life cycle manager");
+		List<DataStoreType> dataStoreTypeList = new ArrayList<DataStoreType>(dataStoreConfigMap.keySet());
 		shardStatusMap = new HashMap<DataStoreType, Map<String, ShardStatus>>();
-		for (DataStoreType type : dataStoreTypes)
+		for (DataStoreType dataStoreType : dataStoreTypeList)
 		{
-			shardStatusMap.put(type, new HashMap<String, ShardStatus>());
+			shardStatusMap.put(dataStoreType, new HashMap<String, ShardStatus>());
 		}
-		shardLifeCycleManager = new SimpleShardLifeCycleManager(dataStoreTypes);
-		logger.info("number of data stores to be registered=" + dataStoreTypes.size());
-		logger.info("datastores=" + dataStoreTypes);
-		for (DataStoreType type : dataStoreTypes)
+
+		// If no shard life cycle manager is provided in config then initialize the default shard life cycle manager
+		if (shardLifeCycleManager == null)
+		{
+			shardLifeCycleManager = new SimpleShardLifeCycleManager(dataStoreTypeList);
+		}
+		logger.info("Number of data stores to be registered=" + dataStoreTypeList.size());
+		logger.info("Datastores=" + dataStoreTypeList);
+		for (DataStoreType type : dataStoreTypeList)
 		{
 			DataStoreConfig ds = dataStoreConfigMap.get(type);
 			List<String> shardIds = ds.getShardIds();
-			logger.info("registering " + shardIds.size() + " shards for datastoretype=" + dataStoreTypes);
+			logger.info("Registering " + shardIds.size() + " shards for datastoretype=" + dataStoreTypeList);
 			for (String shardId : shardIds)
 			{
-				logger.info("registering shard id=" + shardId);
+				logger.info("Registering shard id=" + shardId);
 				shardLifeCycleManager.setShardStatus(type, shardId, ShardStatus.getDefaultStatus());
 			}
 		}
@@ -126,7 +133,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		scheduledThreadPool = Executors.newScheduledThreadPool(5);
 		HealthCheckScheduler healthCheckScheduler = new HealthCheckScheduler();
 		healthCheckScheduler.run();
-		scheduledThreadPool.scheduleAtFixedRate(healthCheckScheduler, 0, 15, TimeUnit.SECONDS);
+		scheduledThreadPool.scheduleAtFixedRate(healthCheckScheduler, 0, healthCheckInterval, TimeUnit.SECONDS);
 		logger.info("scheduled health checker");
 		logger.info("Initialized Persistence Layer");
 	}
@@ -205,28 +212,50 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		return dataStore.getShardIdentifier();
 	}
 
-	private <T extends Entity> int insertIntoDataStore(DataStoreType type, T bean) throws QueryExecutionException
+	private ShardLifeCycleManagerInterface getShardLifeCycleManager()
+	{
+		return this.shardLifeCycleManager;
+	}
+
+	private <T extends Entity> String getShardId(DataStoreType type, T bean) throws ShardNotAvailableException
 	{
 		MetaDataCache metaDataCache = getMetaDataCache(type);
-		String shardKeyFieldName = metaDataCache.getShardKey(bean.getClass());
+		String shardKeyFieldName = metaDataCache.getShardKeyFieldName(bean.getClass());
 		String shardKey = PortKeyUtils.toString(PortKeyUtils.getFieldValueFromBean(bean, shardKeyFieldName));
 		ShardIdentifier shardIdentifier = getShardIdentifier(type);
 		List<String> liveShards = shardLifeCycleManager.getShardListForStatus(type, ShardStatus.AVAILABLE_FOR_WRITE);
 		String shardId = shardIdentifier.getShardId(shardKey, liveShards);
+		return shardId;
+	}
+
+	private <T extends Entity> String getShardKey(DataStoreType type, T bean)
+	{
+		MetaDataCache metaDataCache = getMetaDataCache(type);
+		String shardKeyFieldName = metaDataCache.getShardKeyFieldName(bean.getClass());
+		String shardKey = PortKeyUtils.toString(PortKeyUtils.getFieldValueFromBean(bean, shardKeyFieldName));
+		return shardKey;
+	}
+
+	private <T extends Entity> int insertIntoDataStore(DataStoreType type, T bean) throws QueryExecutionException
+	{
+		String shardId = getShardId(type, bean);
 		PersistenceManager pm = getPersistenceManager(type, shardId);
 		int rowsUpdated = pm.insert(bean);
+		return rowsUpdated;
+	}
+
+	private <T extends Entity> int updateIntoDataStore(DataStoreType type, T bean) throws QueryExecutionException
+	{
+		String shardId = getShardId(type, bean);
+		PersistenceManager pm = getPersistenceManager(type, shardId);
+		int rowsUpdated = pm.update(bean);
 		return rowsUpdated;
 	}
 
 	private <T extends Entity> int upsertIntoDataStore(DataStoreType type, T bean,
 	        List<String> columnsToBeUpdatedOnDuplicate) throws QueryExecutionException
 	{
-		MetaDataCache metaDataCache = getMetaDataCache(type);
-		String shardKeyFieldName = metaDataCache.getShardKey(bean.getClass());
-		String shardKey = PortKeyUtils.toString(PortKeyUtils.getFieldValueFromBean(bean, shardKeyFieldName));
-		ShardIdentifier shardIdentifier = getShardIdentifier(type);
-		List<String> liveShards = shardLifeCycleManager.getShardListForStatus(type, ShardStatus.AVAILABLE_FOR_WRITE);
-		String shardId = shardIdentifier.getShardId(shardKey, liveShards);
+		String shardId = getShardId(type, bean);
 		PersistenceManager pm = getPersistenceManager(type, shardId);
 		int rowsUpdated = pm.upsert(bean, columnsToBeUpdatedOnDuplicate);
 		return rowsUpdated;
@@ -234,29 +263,10 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 
 	private <T extends Entity> int upsertIntoDataStore(DataStoreType type, T bean) throws QueryExecutionException
 	{
-		MetaDataCache metaDataCache = getMetaDataCache(type);
-		String shardKeyFieldName = metaDataCache.getShardKey(bean.getClass());
-		String shardKey = PortKeyUtils.toString(PortKeyUtils.getFieldValueFromBean(bean, shardKeyFieldName));
-		ShardIdentifier shardIdentifier = getShardIdentifier(type);
-		List<String> liveShards = shardLifeCycleManager.getShardListForStatus(type, ShardStatus.AVAILABLE_FOR_WRITE);
-		String shardId = shardIdentifier.getShardId(shardKey, liveShards);
+		String shardId = getShardId(type, bean);
 		PersistenceManager pm = getPersistenceManager(type, shardId);
 		int rowsUpdated = pm.upsert(bean);
 		return rowsUpdated;
-	}
-
-	private <T extends Entity> String getShardKey(DataStoreType type, T bean)
-	{
-		MetaDataCache metaDataCache = getMetaDataCache(type);
-		String shardKeyFieldName = metaDataCache.getShardKey(bean.getClass());
-		String shardKey;
-		shardKey = PortKeyUtils.toString(PortKeyUtils.getFieldValueFromBean(bean, shardKeyFieldName));
-		return shardKey;
-	}
-
-	private ShardLifeCycleManagerInterface getShardLifeCycleManager()
-	{
-		return this.shardLifeCycleManager;
 	}
 
 	private <T extends Entity> T generateShardIdAndUpdateBean(DataStoreType type, T bean)
@@ -264,14 +274,63 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 	{
 		MetaDataCache metaDataCache = getMetaDataCache(type);
 		ShardIdentifier shardIdentifier = getShardIdentifier(type);
-		String shardKeyFieldName = metaDataCache.getShardKey(bean.getClass());
-		String shardKey = PortKeyUtils.toString(PortKeyUtils.getFieldValueFromBean(bean, shardKeyFieldName));
+		String shardKeyFieldName = metaDataCache.getShardKeyFieldName(bean.getClass());
+		String shardKey = getShardKey(type, bean);
 		ShardLifeCycleManagerInterface shardLifeCycleManager = getShardLifeCycleManager();
 		List<String> liveShards = shardLifeCycleManager.getShardListForStatus(type, ShardStatus.AVAILABLE_FOR_WRITE);
 		String shardId = shardIdentifier.generateShardId(shardKey, liveShards);
 		String newShardKey = shardIdentifier.generateNewShardKey(shardKey, shardId);
 		PortKeyUtils.setFieldValueInBean(bean, shardKeyFieldName, newShardKey);
 		return bean;
+	}
+
+	private <T extends Entity> Result performDBOperation(DBOpeartion operation, T bean,
+	        List<String> columnsToBeUpdatedOnDuplicate) throws QueryExecutionException
+	{
+		Result result = new Result();
+		WriteConfig writeConfig = getWriteConfigForEntity(bean.getClass());
+		List<DataStoreType> writeOrder = writeConfig.getWriteOrder();
+
+		for (DataStoreType dataStoreType : writeOrder)
+		{
+			int rowsUpdated = 0;
+			try
+			{
+				if (operation.equals(DBOpeartion.INSERT))
+				{
+					rowsUpdated = insertIntoDataStore(dataStoreType, bean);
+				}
+				else if (operation.equals(DBOpeartion.UPDATE))
+				{
+					rowsUpdated = updateIntoDataStore(dataStoreType, bean);
+				}
+				else if (operation.equals(DBOpeartion.UPSERT))
+				{
+					if (columnsToBeUpdatedOnDuplicate == null)
+					{
+						rowsUpdated = upsertIntoDataStore(dataStoreType, bean);
+					}
+					else
+					{
+						rowsUpdated = upsertIntoDataStore(dataStoreType, bean, columnsToBeUpdatedOnDuplicate);
+					}
+				}
+			}
+			catch (QueryExecutionException e)
+			{
+				logger.warn("Exception while trying to " + operation + " bean into data store, bean=" + bean
+				        + ", data store type=" + dataStoreType, e);
+				FailureAction failureAction = writeConfig.getFailureAction();
+				if (failureAction == FailureAction.ABORT)
+				{
+					throw new QueryExecutionException("Failed to " + operation + " bean into datastore, bean=" + bean
+					        + "data store type=" + dataStoreType, e);
+				}
+			}
+			result.setRowsUpdatedForDataStore(dataStoreType, rowsUpdated);
+		}
+		result.setEntity(bean);
+		return result;
 	}
 
 	public <T extends Entity> Result insert(T bean) throws QueryExecutionException
@@ -281,134 +340,31 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 
 	public <T extends Entity> Result insert(T bean, boolean generateShardId) throws QueryExecutionException
 	{
-		Result result = new Result();
-		WriteConfig writeConfig = getWriteConfigForEntity(bean.getClass());
-		List<DataStoreType> writeOrder = writeConfig.getWriteOrder();
 		if (generateShardId)
 		{
+			WriteConfig writeConfig = getWriteConfigForEntity(bean.getClass());
+			List<DataStoreType> writeOrder = writeConfig.getWriteOrder();
 			DataStoreType dataStoreTypeForShardIdGeneration = writeOrder.get(0);
 			bean = generateShardIdAndUpdateBean(dataStoreTypeForShardIdGeneration, bean);
 		}
-
-		for (DataStoreType dataStoreType : writeOrder)
-		{
-			int rowsUpdated = 0;
-			try
-			{
-				rowsUpdated = insertIntoDataStore(dataStoreType, bean);
-			}
-			catch (QueryExecutionException e)
-			{
-				logger.warn("Caught exception while trying to insert bean=" + bean + "\n into data store"
-				        + dataStoreType + "\n", e);
-				FailureAction failureAction = writeConfig.getFailureAction();
-				if (failureAction == FailureAction.ABORT)
-				{
-					throw new QueryExecutionException("Exception while inserting bean into datastore, bean=" + bean
-					        + "\ndatastoretype=" + dataStoreType, e);
-				}
-			}
-			result.setRowsUpdatedForDataStore(dataStoreType, rowsUpdated);
-		}
-		result.setEntity(bean);
-		return result;
+		return performDBOperation(DBOpeartion.INSERT, bean, null);
 	}
 
 	public <T extends Entity> Result upsert(T bean) throws QueryExecutionException
 	{
-		Result result = new Result();
-		WriteConfig writeConfig = getWriteConfigForEntity(bean.getClass());
-		List<DataStoreType> writeOrder = writeConfig.getWriteOrder();
-
-		for (DataStoreType dataStoreType : writeOrder)
-		{
-			int rowsUpdated = 0;
-			try
-			{
-				rowsUpdated = upsertIntoDataStore(dataStoreType, bean);
-			}
-			catch (QueryExecutionException e)
-			{
-				logger.warn("Caught exception while trying to insert bean=" + bean + "\n into data store"
-				        + dataStoreType + "\n", e);
-				FailureAction failureAction = writeConfig.getFailureAction();
-				if (failureAction == FailureAction.ABORT)
-				{
-					throw new QueryExecutionException("Exception while inserting bean into datastore, bean=" + bean
-					        + "\ndatastoretype=" + dataStoreType, e);
-				}
-			}
-			result.setRowsUpdatedForDataStore(dataStoreType, rowsUpdated);
-		}
-		result.setEntity(bean);
-		return result;
+		return performDBOperation(DBOpeartion.UPSERT, bean, null);
 	}
 
 	@Override
 	public <T extends Entity> Result upsert(T bean, List<String> columnsToBeUpdatedOnDuplicate)
 	        throws QueryExecutionException
 	{
-		Result result = new Result();
-		WriteConfig writeConfig = getWriteConfigForEntity(bean.getClass());
-		List<DataStoreType> writeOrder = writeConfig.getWriteOrder();
-
-		for (DataStoreType dataStoreType : writeOrder)
-		{
-			int rowsUpdated = 0;
-			try
-			{
-				rowsUpdated = upsertIntoDataStore(dataStoreType, bean, columnsToBeUpdatedOnDuplicate);
-			}
-			catch (QueryExecutionException e)
-			{
-				logger.warn("Caught exception while trying to insert bean=" + bean + "\n into data store"
-				        + dataStoreType + "\n", e);
-				FailureAction failureAction = writeConfig.getFailureAction();
-				if (failureAction == FailureAction.ABORT)
-				{
-					throw new QueryExecutionException("Exception while inserting bean into datastore, bean=" + bean
-					        + "\ndatastoretype=" + dataStoreType, e);
-				}
-			}
-			result.setRowsUpdatedForDataStore(dataStoreType, rowsUpdated);
-		}
-		result.setEntity(bean);
-		return result;
+		return performDBOperation(DBOpeartion.UPSERT, bean, columnsToBeUpdatedOnDuplicate);
 	}
 
 	public <T extends Entity> Result update(T bean) throws QueryExecutionException
 	{
-		Result result = new Result();
-		WriteConfig writeConfig = getWriteConfigForEntity(bean.getClass());
-		List<DataStoreType> writeOrder = writeConfig.getWriteOrder();
-		for (DataStoreType type : writeOrder)
-		{
-			String shardKey = getShardKey(type, bean);
-			ShardIdentifier shardIdentifier = getShardIdentifier(type);
-			List<String> liveShards =
-			        shardLifeCycleManager.getShardListForStatus(type, ShardStatus.AVAILABLE_FOR_WRITE);
-			int rowsUpdated = 0;
-			try
-			{
-				String shardId = shardIdentifier.getShardId(shardKey, liveShards);
-				PersistenceManager pm = getPersistenceManager(type, shardId);
-				rowsUpdated = pm.update(bean);
-			}
-			catch (QueryExecutionException e)
-			{
-				logger.warn("Caught exception while trying to update bean=" + bean + "\n into data store" + type + "\n"
-				        + e);
-				FailureAction failureAction = writeConfig.getFailureAction();
-				if (failureAction == FailureAction.ABORT)
-				{
-					throw new QueryExecutionException("Exception while updating bean, bean=" + bean
-					        + "\ndatastoretype=" + type, e);
-				}
-			}
-			result.setRowsUpdatedForDataStore(type, rowsUpdated);
-		}
-		result.setEntity(bean);
-		return result;
+		return performDBOperation(DBOpeartion.UPDATE, bean, null);
 	}
 
 	public <T extends Entity> Result update(Class<T> clazz, Map<String, Object> updateValuesMap,
@@ -420,7 +376,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		for (DataStoreType type : writeOrder)
 		{
 			MetaDataCache metaDataCache = getMetaDataCache(type);
-			String shardKeyFieldName = metaDataCache.getShardKey(clazz);
+			String shardKeyFieldName = metaDataCache.getShardKeyFieldName(clazz);
 			if (criteria.containsKey(shardKeyFieldName))
 			{
 				String shardKey = PortKeyUtils.toString(criteria.get(shardKeyFieldName));
@@ -486,7 +442,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		for (DataStoreType type : writeOrder)
 		{
 			MetaDataCache metaDataCache = getMetaDataCache(type);
-			String shardKeyFieldName = metaDataCache.getShardKey(clazz);
+			String shardKeyFieldName = metaDataCache.getShardKeyFieldName(clazz);
 			if (criteria.containsKey(shardKeyFieldName))
 			{
 				int rowsUpdated = 0;
@@ -538,7 +494,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		for (DataStoreType type : readOrder)
 		{
 			MetaDataCache metaDataCache = getMetaDataCache(type);
-			String shardKeyFieldName = metaDataCache.getShardKey(clazz);
+			String shardKeyFieldName = metaDataCache.getShardKeyFieldName(clazz);
 			if (criteria.containsKey(shardKeyFieldName))
 			{
 				String shardKey = (String) criteria.get(shardKeyFieldName);
@@ -600,7 +556,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		{
 			boolean queryExecuted = false;
 			MetaDataCache metaDataCache = getMetaDataCache(type);
-			String shardKeyFieldName = metaDataCache.getShardKey(clazz);
+			String shardKeyFieldName = metaDataCache.getShardKeyFieldName(clazz);
 			if (criteria.containsKey(shardKeyFieldName))
 			{
 				String shardKey = (String) criteria.get(shardKeyFieldName);

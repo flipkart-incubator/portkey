@@ -13,6 +13,6 @@
 	<bean id="persistenceLayer" class="com.flipkart.portkey.persistence.PersistenceLayer">
 	<property name="defaultPersistencePreference" ref="defaultPersistencePreference"/>
 	<property name="entityPersistencePreferenceMap" ref="entityPersistencePreferenceMap"/>
-	<property name="dataStoresMap" ref="dataStoresMap"/>
+	<property name="dataStoreConfigMap" ref="dataStoreConfigMap"/>
 	</bean>
 </beans>

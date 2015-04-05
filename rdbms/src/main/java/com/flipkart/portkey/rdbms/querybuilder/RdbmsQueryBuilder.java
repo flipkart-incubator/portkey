@@ -5,6 +5,7 @@ package com.flipkart.portkey.rdbms.querybuilder;
 
 import java.lang.reflect.Field;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.ibatis.jdbc.SqlBuilder;
 import org.apache.log4j.Logger;
@@ -35,12 +36,12 @@ public class RdbmsQueryBuilder
 		if (insertQuery == null || insertQuery.isEmpty())
 		{
 			SqlBuilder.BEGIN();
-			List<Field> fieldList = tableMetaData.getFieldList();
+			List<Field> fieldsList = tableMetaData.getFieldsList();
 
 			StringBuilder insertQryStrBuilder = new StringBuilder();
 			StringBuilder valuesQryStrBuilder = new StringBuilder();
 
-			for (Field field : fieldList)
+			for (Field field : fieldsList)
 			{
 				RdbmsField rdbmsField = field.getAnnotation(RdbmsField.class);
 
@@ -64,43 +65,45 @@ public class RdbmsQueryBuilder
 
 	public String getUpsertQuery(RdbmsTableMetaData tableMetaData)
 	{
-		String insertQuery = getInsertQuery(tableMetaData);
-		StringBuilder onDuplicateQueryStrBuilder = new StringBuilder();
-		onDuplicateQueryStrBuilder.append(" ON DUPLICATE KEY UPDATE ");
-		List<String> primaryKeys = tableMetaData.getPrimaryKeys();
-		for (String fieldName : tableMetaData.getFieldNameToRdbmsColumnMap().keySet())
+		String upsertQuery = tableMetaData.getUpsertQuery();
+		if (upsertQuery == null || upsertQuery.isEmpty())
 		{
-			if (primaryKeys.contains(fieldName))
+			String insertQuery = getInsertQuery(tableMetaData);
+			StringBuilder onDuplicateQueryStrBuilder = new StringBuilder();
+			onDuplicateQueryStrBuilder.append(" ON DUPLICATE KEY UPDATE ");
+			List<String> primaryKeys = tableMetaData.getPrimaryKeysList();
+			for (String fieldName : tableMetaData.getFieldNameToColumnNameMap().keySet())
 			{
-				continue;
+				if (primaryKeys.contains(fieldName))
+				{
+					continue;
+				}
+				String columnName = tableMetaData.getColumnNameFromFieldName(fieldName);
+				onDuplicateQueryStrBuilder.append("`" + columnName + "`" + "=:" + columnName + ",");
 			}
-			String column = tableMetaData.getRdbmsColumnFromFieldName(fieldName);
-			onDuplicateQueryStrBuilder.append("`" + column + "`" + "=:" + column + ",");
+			upsertQuery =
+			        insertQuery + onDuplicateQueryStrBuilder.substring(0, onDuplicateQueryStrBuilder.length() - 1);
 		}
-		String upsertQuery =
-		        insertQuery + onDuplicateQueryStrBuilder.substring(0, onDuplicateQueryStrBuilder.length() - 1);
+		logger.debug(upsertQuery);
 		return upsertQuery;
 	}
 
-	public String getUpsertQuery(RdbmsTableMetaData tableMetaData, List<String> columnsToBeUpdatedOnDuplicate)
+	public String getUpsertQuery(RdbmsTableMetaData tableMetaData, List<String> fieldsToBeUpdatedOnDuplicate)
 	{
 		String insertQuery = getInsertQuery(tableMetaData);
 		StringBuilder onDuplicateQueryStrBuilder = new StringBuilder();
 		onDuplicateQueryStrBuilder.append(" ON DUPLICATE KEY UPDATE ");
-		for (String column : columnsToBeUpdatedOnDuplicate)
+		for (String fieldName : fieldsToBeUpdatedOnDuplicate)
 		{
-			onDuplicateQueryStrBuilder.append("`" + tableMetaData.getRdbmsColumnFromFieldName(column) + "`" + "=:"
-			        + tableMetaData.getRdbmsColumnFromFieldName(column) + ",");
+			onDuplicateQueryStrBuilder.append("`" + tableMetaData.getColumnNameFromFieldName(fieldName) + "`" + "=:"
+			        + tableMetaData.getColumnNameFromFieldName(fieldName) + ",");
 		}
 		String upsertQuery =
 		        insertQuery + onDuplicateQueryStrBuilder.substring(0, onDuplicateQueryStrBuilder.length() - 1);
+		logger.debug(upsertQuery);
 		return upsertQuery;
 	}
 
-	/**
-	 * @param metaData
-	 * @return
-	 */
 	public String getUpdateByPkQuery(RdbmsTableMetaData tableMetaData)
 	{
 		String updateQuery = tableMetaData.getUpdateByPkQuery();
@@ -109,9 +112,9 @@ public class RdbmsQueryBuilder
 			SqlBuilder.BEGIN();
 			SqlBuilder.UPDATE(tableMetaData.getTableName());
 
-			List<Field> fieldList = tableMetaData.getFieldList();
+			List<Field> fieldsList = tableMetaData.getFieldsList();
 
-			for (Field field : fieldList)
+			for (Field field : fieldsList)
 			{
 				RdbmsField rdbmsField = field.getAnnotation(RdbmsField.class);
 				if (rdbmsField != null)
@@ -134,76 +137,91 @@ public class RdbmsQueryBuilder
 		return updateQuery;
 	}
 
-	public String getUpdateByCriteriaQuery(String tableName, List<String> updateAttributes,
-	        List<String> criteriaAttributes)
+	public String getUpdateByCriteriaQuery(String tableName, List<String> columnsToBeUpdated,
+	        List<String> columnsInCriteria, Map<String, Object> columnToValueMap)
 	{
 		SqlBuilder.BEGIN();
 		SqlBuilder.UPDATE(tableName);
-		for (String attribute : updateAttributes)
+		for (String column : columnsToBeUpdated)
 		{
-			SqlBuilder.SET("`" + attribute + "`" + "=:" + attribute);
+			SqlBuilder.SET("`" + column + "`" + "=:" + column);
 		}
-		for (String criteria : criteriaAttributes)
+		for (String column : columnsInCriteria)
 		{
-
-			SqlBuilder.WHERE("`" + criteria + "`" + "=:" + criteria);
+			if (columnToValueMap.get(column) != null)
+			{
+				SqlBuilder.WHERE("`" + column + "`" + "=:" + column);
+			}
+			else
+			{
+				SqlBuilder.WHERE("`" + column + "`" + " IS :" + column);
+			}
 		}
-
 		String updateQuery = SqlBuilder.SQL();
 		logger.debug(updateQuery);
 		return updateQuery;
 	}
 
-	public String getDeleteByCriteriaQuery(String tableName, List<String> criteriaAttributes)
+	public String getDeleteByCriteriaQuery(String tableName, Map<String, Object> deleteCriteriaColumnToValueMap)
 	{
 		SqlBuilder.BEGIN();
 		SqlBuilder.DELETE_FROM(tableName);
-		for (String attribute : criteriaAttributes)
+		for (String column : deleteCriteriaColumnToValueMap.keySet())
 		{
-			SqlBuilder.WHERE("`" + attribute + "`" + "=:" + attribute);
+			if (deleteCriteriaColumnToValueMap.get(column) != null)
+			{
+				SqlBuilder.WHERE("`" + column + "`" + "=:" + column);
+			}
+			else
+			{
+				SqlBuilder.WHERE("`" + column + "`" + " IS :" + column);
+			}
 		}
-
 		String updateQuery = SqlBuilder.SQL();
 		logger.debug(updateQuery);
 		return updateQuery;
 	}
 
-	/**
-	 * @param tableMetaData
-	 * @param criteria
-	 * @return
-	 */
-	public String getGetByCriteriaQuery(String tableName, List<String> criteriaAttributes)
+	public String getGetByCriteriaQuery(String tableName, Map<String, Object> criteriaColumnToValueMap)
 	{
 		SqlBuilder.BEGIN();
 		SqlBuilder.SELECT("*");
 		SqlBuilder.FROM(tableName);
-		for (String attribute : criteriaAttributes)
+		for (String column : criteriaColumnToValueMap.keySet())
 		{
-			SqlBuilder.WHERE("`" + attribute + "`" + "=:" + attribute);
+			if (criteriaColumnToValueMap.get(column) != null)
+			{
+				SqlBuilder.WHERE("`" + column + "`" + "=:" + column);
+			}
+			else
+			{
+				SqlBuilder.WHERE("`" + column + "`" + " IS :" + column);
+			}
 		}
 		String getQuery = SqlBuilder.SQL();
 		logger.debug(getQuery);
 		return getQuery;
 	}
 
-	/**
-	 * @param tableMetaData
-	 * @param selectAttributes
-	 * @param criteria
-	 * @return
-	 */
-	public String getGetByCriteriaQuery(String tableName, List<String> selectAttributes, List<String> criteriaAttributes)
+	public String getGetByCriteriaQuery(String tableName, List<String> columnsInSelect,
+	        Map<String, Object> criteriaColumnToValueMap)
 	{
 		SqlBuilder.BEGIN();
-		for (String attribute : selectAttributes)
+		for (String column : columnsInSelect)
 		{
-			SqlBuilder.SELECT(attribute);
+			SqlBuilder.SELECT(column);
 		}
 		SqlBuilder.FROM(tableName);
-		for (String attribute : criteriaAttributes)
+		for (String column : criteriaColumnToValueMap.keySet())
 		{
-			SqlBuilder.WHERE("`" + attribute + "`" + "=:" + attribute);
+			if (criteriaColumnToValueMap.get(column) != null)
+			{
+				SqlBuilder.WHERE("`" + column + "`" + "=:" + column);
+			}
+			else
+			{
+				SqlBuilder.WHERE("`" + column + "`" + " IS :" + column);
+			}
 		}
 		String getQuery = SqlBuilder.SQL();
 		logger.debug(getQuery);

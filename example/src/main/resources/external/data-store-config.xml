@@ -11,7 +11,7 @@
 		<property name="location" value="classpath:project.properties" />
 	</bean>
 
-	<util:map id="dataStoresMap"
+	<util:map id="dataStoreConfigMap"
 		key-type="com.flipkart.portkey.common.enumeration.DataStoreType"
 		value-type="com.flipkart.portkey.common.datastore.DataStoreConfig">
 		<entry key="RDBMS" value-ref="rdbmsDataStore" />

@@ -34,7 +34,7 @@
 	<bean id="rdbmsShard1Config"
 		class="com.flipkart.portkey.rdbms.persistence.config.RdbmsPersistenceManagerConfig">
 		<property name="master" ref="rdbmsShard1Master" />
-		<property name="slaves" ref="rdbmsShard1Slaves" />
+<!-- 		<property name="slaves" ref="rdbmsShard1Slaves" /> -->
 	</bean>
 
 	<bean id="rdbmsShard1Master" class="com.mchange.v2.c3p0.ComboPooledDataSource"

@@ -86,7 +86,7 @@ public class SimpleShardLifeCycleManager implements ShardLifeCycleManagerInterfa
 		return statusMap;
 	}
 
-	public Map<DataStoreType, Map<String, ShardStatus>> getStatus()
+	public Map<DataStoreType, Map<String, ShardStatus>> getStatusMap()
 	{
 		Map<DataStoreType, Map<String, ShardStatus>> statusMap =
 		        new HashMap<DataStoreType, Map<String, ShardStatus>>(shardStatusMap);

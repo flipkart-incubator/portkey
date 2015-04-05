@@ -73,10 +73,6 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 		this.poolConfig = poolConfig;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see org.springframework.beans.factory.InitializingBean#afterPropertiesSet()
-	 */
 	@Override
 	public void afterPropertiesSet() throws Exception
 	{
@@ -90,39 +86,37 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 			cm.setJedisPoolConfig(poolConfig);
 		}
 		cm.build();
-		logger.info("initialized connection manager");
+		logger.info("Initialized redis connection manager");
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#healthCheck()
-	 */
 	@Override
 	public ShardStatus healthCheck()
 	{
-		logger.debug("health checking for redis, host=" + host + " port=" + port);
+		logger.debug("Health checking for redis, host=" + host + " port=" + port);
 		Jedis conn = null;
 		try
 		{
 			conn = cm.getConnection();
 			if (conn == null)
 			{
+				logger.info("Failed to acquire redis connection, host=" + host + " port=" + port);
 				return ShardStatus.UNAVAILABLE;
 			}
-			logger.debug("acquired redis connection, checking for response");
+			logger.debug("Acquired redis connection, checking for response");
 			if (conn.ping().equals("PONG"))
 			{
-				logger.debug("instance is available");
+				logger.debug("Instance is available");
 				return ShardStatus.AVAILABLE_FOR_WRITE;
 			}
 			else
 			{
-				logger.debug("instance is unavailable");
+				logger.debug("Instance is unavailable");
 				return ShardStatus.UNAVAILABLE;
 			}
 		}
 		catch (JedisConnectionException e)
 		{
+			logger.info("Exception while trying to connect to redis host=" + host + ", port=" + port, e);
 			return ShardStatus.UNAVAILABLE;
 		}
 		finally
@@ -140,7 +134,7 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 	public <T extends Entity> int insert(T bean) throws ShardNotAvailableException
 	{
 		RedisMetaData metaData = getMetaData(bean.getClass());
-		List<String> keys = keyParser.parsePrimaryKeyPattern(bean, metaData);
+		List<String> keyList = keyParser.parsePrimaryKeyPattern(bean, metaData);
 		String primaryKey = null;
 		Jedis conn = null;
 		try
@@ -148,20 +142,21 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 			conn = cm.getConnection();
 			if (conn == null)
 			{
-				throw new ShardNotAvailableException("Failed to acquire redis connection, bean=" + bean);
+				throw new ShardNotAvailableException("Failed to acquire redis connection to insert bean, host=" + host
+				        + ", port=" + port + ", bean=" + bean);
 			}
-			if (keys.size() == 1)
+			if (keyList.size() == 1)
 			{
-				String key = keys.get(0);
+				String key = keyList.get(0);
 				String serialized = null;
 				serialized = mapper.serialize(bean);
 				conn.set(key, serialized);
 				primaryKey = key;
 			}
-			else if (keys.size() == 2)
+			else if (keyList.size() == 2)
 			{
-				String key = keys.get(0);
-				String field = keys.get(1);
+				String key = keyList.get(0);
+				String field = keyList.get(1);
 				String serialized = null;
 				serialized = mapper.serialize(bean);
 				Long retVal = conn.hset(key, field, serialized);
@@ -173,14 +168,13 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 			}
 			else
 			{
-				throw new InvalidAnnotationException("Exception while trying to parse keys:" + keys
-				        + "\nKey consists of more than 2 parts.");
+				throw new InvalidAnnotationException("Invalid key format, key:" + keyList);
 			}
 		}
 		catch (JedisConnectionException e)
 		{
-			throw new ShardNotAvailableException("Failed to acquire redis connection while trying to insert bean:"
-			        + bean);
+			throw new ShardNotAvailableException("Failed to acquire redis connection to insert bean, host=" + host
+			        + ", port=" + port + ", bean=" + bean);
 		}
 		finally
 		{
@@ -201,22 +195,12 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 		throw new QueryNotSupportedException("Method not supported for redis implementation");
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#update(com.flipkart.portkey.common.entity.Entity)
-	 */
 	@Override
 	public <T extends Entity> int update(T bean) throws ShardNotAvailableException
 	{
-		// TODO: check if this has same impact as update
 		return insert(bean);
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#update(java.lang.Class, java.util.Map,
-	 * java.util.Map)
-	 */
 	@Override
 	public <T extends Entity> int update(Class<T> clazz, Map<String, Object> updateValuesMap,
 	        Map<String, Object> criteria) throws QueryNotSupportedException
@@ -240,7 +224,8 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 		catch (JedisConnectionException e)
 		{
 			throw new ShardNotAvailableException(
-			        "Failed to acquire redis connection while trying delete secondary keys for bean:" + bean);
+			        "Failed to acquire redis connection while trying delete secondary keys, host=" + host + ", port="
+			                + port + ", bean=" + bean);
 		}
 		finally
 		{
@@ -272,7 +257,8 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 		catch (JedisConnectionException e)
 		{
 			throw new ShardNotAvailableException(
-			        "Failed to acquire redis connection while trying to delete primary key of bean:" + bean);
+			        "Failed to acquire redis connection while trying to delete primary key,, host=" + host + ", port="
+			                + port + ", bean=" + bean);
 		}
 		finally
 		{
@@ -280,10 +266,6 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 		}
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#delete(java.lang.Class, java.util.Map)
-	 */
 	@Override
 	public <T extends Entity> int delete(Class<T> clazz, Map<String, Object> criteria)
 	        throws QueryNotSupportedException, ShardNotAvailableException
@@ -300,10 +282,6 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 		return 1;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#getByCriteria(java.lang.Class, java.util.Map)
-	 */
 	@Override
 	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, Map<String, Object> criteria)
 	        throws QueryNotSupportedException, ShardNotAvailableException
@@ -315,7 +293,7 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 	        RedisMetaData metaData) throws ShardNotAvailableException
 	{
 		T bean;
-		List<String> keys = null;
+		List<String> keyList = null;
 		String value;
 		Jedis conn = null;
 		try
@@ -323,30 +301,31 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 			conn = cm.getConnection();
 			if (conn == null)
 			{
-				throw new ShardNotAvailableException("Failed to acquire redis connection");
+				throw new ShardNotAvailableException("Failed to acquire redis connection, host=" + host + ", port="
+				        + port);
 			}
-			keys = keyParser.parsePrimaryKeyPattern(criteria, metaData);
-			if (keys.size() == 1)
+			keyList = keyParser.parsePrimaryKeyPattern(criteria, metaData);
+			if (keyList.size() == 1)
 			{
-				String key = keys.get(0);
+				String key = keyList.get(0);
 				value = conn.get(key);
 			}
-			else if (keys.size() == 2)
+			else if (keyList.size() == 2)
 			{
-				String key = keys.get(0);
-				String field = keys.get(1);
+				String key = keyList.get(0);
+				String field = keyList.get(1);
 				value = conn.hget(key, field);
 			}
 			else
 			{
-				throw new InvalidAnnotationException("Exception while trying to parse keys:" + keys
-				        + "\nKey size more than 2 is not supported.");
+				throw new InvalidAnnotationException("Invalid key format, key:" + keyList);
 			}
 		}
 		catch (JedisConnectionException e)
 		{
 			throw new ShardNotAvailableException(
-			        "Failed to acquire redis connection while trying to read bean from key" + keys);
+			        "Failed to acquire redis connection while trying to read bean from key, host=" + host + ", port="
+			                + port + ", key" + keyList);
 		}
 		finally
 		{
@@ -369,7 +348,8 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 			conn = cm.getConnection();
 			if (conn == null)
 			{
-				throw new ShardNotAvailableException("Redis is down");
+				throw new ShardNotAvailableException("Failed to acquire redis connection, host=" + host + ", port="
+				        + port);
 			}
 			key = keyParser.parseSecondaryKeyPattern(criteria, metaData);
 
@@ -385,14 +365,14 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 			}
 			else
 			{
-				throw new InvalidAnnotationException("Exception while trying to parse keys:" + primaryKeys
-				        + "\nKey size more than 2 is not supported.");
+				throw new InvalidAnnotationException("Invalid key format, key:" + primaryKeys);
 			}
 		}
 		catch (JedisConnectionException e)
 		{
 			throw new ShardNotAvailableException(
-			        "Failed to acquire redis connection while trying to read bean from key" + key);
+			        "Failed to acquire redis connection while trying to read bean from key, host=" + host + ", port="
+			                + port + ", key" + key);
 		}
 		finally
 		{
@@ -402,11 +382,6 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 		return bean;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#getByCriteria(java.lang.Class, java.util.Map,
-	 * boolean)
-	 */
 	@Override
 	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, Map<String, Object> criteria, boolean readMaster)
 	        throws QueryNotSupportedException, ShardNotAvailableException
@@ -433,15 +408,9 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 				return retVal;
 			}
 		}
-		throw new QueryNotSupportedException(
-		        "Passed criteria contains attributes other than primary or secondary keys.");
+		throw new QueryNotSupportedException("Criteria contains attributes from other than primary and secondary keys.");
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#getByCriteria(java.lang.Class, java.util.List,
-	 * java.util.Map)
-	 */
 	@Override
 	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, List<String> attributeNames,
 	        Map<String, Object> criteria) throws QueryNotSupportedException, ShardNotAvailableException
@@ -449,11 +418,6 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 		return getByCriteria(clazz, attributeNames, criteria, false);
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#getByCriteria(java.lang.Class, java.util.List,
-	 * java.util.Map, boolean)
-	 */
 	@Override
 	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, List<String> attributeNames,
 	        Map<String, Object> criteria, boolean readMaster) throws QueryNotSupportedException,
@@ -462,11 +426,6 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 		return getByCriteria(clazz, criteria, readMaster);
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#getBySql(java.lang.Class, java.lang.String,
-	 * java.util.Map)
-	 */
 	@Override
 	public <T extends Entity> List<T> getBySql(Class<T> clazz, String sql, Map<String, Object> criteria)
 	        throws QueryNotSupportedException
@@ -475,11 +434,6 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 		throw new QueryNotSupportedException("Method not supported for redis implementation");
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#getBySql(java.lang.Class, java.lang.String,
-	 * java.util.Map, boolean)
-	 */
 	@Override
 	public <T extends Entity> List<T> getBySql(Class<T> clazz, String sql, Map<String, Object> criteria,
 	        boolean readMaster) throws QueryNotSupportedException
@@ -487,10 +441,6 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 		throw new QueryNotSupportedException("Method not supported for redis implementation");
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#getBySql(java.lang.String, java.util.Map)
-	 */
 	@Override
 	public List<Map<String, Object>> getBySql(String sql, Map<String, Object> criteria)
 	        throws QueryNotSupportedException
@@ -498,11 +448,7 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 		throw new QueryNotSupportedException("Method not supported for redis implementation");
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.common.persistence.PersistenceManager#getBySql(java.lang.String, java.util.Map,
-	 * boolean)
-	 */
+	@Override
 	public List<Map<String, Object>> getBySql(String sql, Map<String, Object> criteria, boolean readMaster)
 	        throws QueryNotSupportedException
 	{

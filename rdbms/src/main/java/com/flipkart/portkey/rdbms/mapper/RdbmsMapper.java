@@ -5,9 +5,14 @@ package com.flipkart.portkey.rdbms.mapper;
 
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.InvocationTargetException;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Time;
+import java.sql.Timestamp;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -19,6 +24,7 @@ import org.springframework.jdbc.core.RowMapper;
 
 import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.common.serializer.Serializer;
+import com.flipkart.portkey.common.util.PortKeyUtils;
 import com.flipkart.portkey.rdbms.metadata.RdbmsMetaDataCache;
 import com.flipkart.portkey.rdbms.metadata.RdbmsTableMetaData;
 
@@ -49,18 +55,26 @@ public class RdbmsMapper<V extends Entity> implements RowMapper<V>
 		return mapper;
 	}
 
+	private static boolean isTypeRdbmsCompatible(Class clazz)
+	{
+		if (clazz.isPrimitive() || clazz.equals(Boolean.class) || clazz.equals(Short.class)
+		        || clazz.equals(Integer.class) || clazz.equals(Long.class) || clazz.equals(BigInteger.class)
+		        || clazz.equals(Double.class) || clazz.equals(BigDecimal.class) || clazz.equals(String.class)
+		        || clazz.equals(Date.class) || clazz.equals(java.sql.Date.class) || clazz.equals(Timestamp.class)
+		        || clazz.equals(Time.class))
+		{
+			return true;
+		}
+		return false;
+	}
+
 	public static <T extends Entity> Object get(T bean, String fieldName)
 	{
 		try
 		{
 			PropertyDescriptor javaField = PropertyUtils.getPropertyDescriptor(bean, fieldName);
 			Object value = javaField.getReadMethod().invoke(bean);
-
-			if (value != null && value.getClass().getName().contains("JSON"))
-			{
-				return value.toString();
-			}
-			return value;
+			return get(bean.getClass(), fieldName, value);
 		}
 		catch (IllegalAccessException e)
 		{
@@ -77,6 +91,28 @@ public class RdbmsMapper<V extends Entity> implements RowMapper<V>
 		return null;
 	}
 
+	public static <T extends Entity> Object get(Class<T> clazz, String fieldName, Object value)
+	{
+
+		if (value == null || isTypeRdbmsCompatible(value.getClass()))
+		{
+			return value;
+		}
+		else if (value.getClass().isEnum())
+		{
+			return PortKeyUtils.enumToString((Enum) value);
+		}
+		else if (value.getClass().getName().contains("JSON"))
+		{
+			return value.toString();
+		}
+		RdbmsMetaDataCache metaDataCache = RdbmsMetaDataCache.getInstance();
+		RdbmsTableMetaData tableMetaData = metaDataCache.getMetaData(clazz);
+		Serializer serializer = tableMetaData.getSerializerFromFieldName(fieldName);
+		Object serialized = serializer.serialize(value);
+		return serialized;
+	}
+
 	public static <T extends Entity> void put(T bean, String fieldName, Object value)
 	{
 
@@ -90,16 +126,15 @@ public class RdbmsMapper<V extends Entity> implements RowMapper<V>
 				{
 					return;
 				}
-				else if (javaField.getPropertyType().isEnum())
+				else if (isTypeRdbmsCompatible(javaField.getPropertyType()) || javaField.getPropertyType().isEnum())
 				{
 					javaField.getWriteMethod().invoke(bean, mapper.convertValue(value, javaField.getPropertyType()));
 				}
 				else
 				{
-
 					RdbmsMetaDataCache metaDataCache = RdbmsMetaDataCache.getInstance();
 					RdbmsTableMetaData tableMetaData = metaDataCache.getMetaData(bean.getClass());
-					Serializer serializer = tableMetaData.getSerializer(fieldName);
+					Serializer serializer = tableMetaData.getSerializerFromFieldName(fieldName);
 					Object deserialized = serializer.deserialize(value.toString(), javaField.getPropertyType());
 					BeanUtils.setProperty(bean, fieldName, deserialized);
 				}
@@ -125,51 +160,6 @@ public class RdbmsMapper<V extends Entity> implements RowMapper<V>
 			logger.debug(e);
 			e.printStackTrace();
 		}
-
-		// try
-		// {
-		// if (value != null && value != "")
-		// {
-		// Field field = PortKeyUtils.getFieldFromBean(bean, fieldName);
-		// if (field.getType().isPrimitive() || field.getType().equals(String.class))
-		// {
-		// field.set(bean, value);
-		// }
-		// else if (field.getType().isEnum())
-		// {
-		// field.set(bean, Enum.valueOf((Class<Enum>) field.getType(), value.toString()));
-		// }
-		// else if (field.getType().equals(Date.class))
-		// {
-		// Timestamp ts = (Timestamp) value;
-		// Date date = ts;
-		// field.set(bean, date);
-		// }
-		// else
-		// {
-		// RdbmsMetaDataCache metaDataCache = RdbmsMetaDataCache.getInstance();
-		// RdbmsTableMetaData tableMetaData = metaDataCache.getMetaData(bean.getClass());
-		// Serializer serializer = tableMetaData.getSerializer(fieldName);
-		// Object deserialized = serializer.deserialize(value.toString(), field.getType());
-		// BeanUtils.setProperty(bean, fieldName, deserialized);
-		// }
-		// }
-		// }
-		// catch (IllegalAccessException e)
-		// {
-		// logger.debug(e);
-		// e.printStackTrace();
-		// }
-		// catch (InvocationTargetException e)
-		// {
-		// logger.debug(e);
-		// e.printStackTrace();
-		// }
-		// catch (IllegalArgumentException e)
-		// {
-		// logger.debug(e);
-		// e.printStackTrace();
-		// }
 	}
 
 	/*
@@ -206,7 +196,7 @@ public class RdbmsMapper<V extends Entity> implements RowMapper<V>
 		for (int i = 1; i <= metadata.getColumnCount(); i++)
 		{
 			String columnName = metadata.getColumnLabel(i);
-			String fieldName = tableMetaData.getRdbmsColumnToFieldNameMap().get(columnName);
+			String fieldName = tableMetaData.getColumnNameToFieldNameMap().get(columnName);
 
 			if ((fieldName == null || fieldName.isEmpty()))
 			{

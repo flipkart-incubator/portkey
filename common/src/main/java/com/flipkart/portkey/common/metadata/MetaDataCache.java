@@ -11,5 +11,5 @@ import com.flipkart.portkey.common.exception.InvalidAnnotationException;
  */
 public interface MetaDataCache
 {
-	public <T extends Entity> String getShardKey(Class<T> clazz) throws InvalidAnnotationException;
+	public <T extends Entity> String getShardKeyFieldName(Class<T> clazz) throws InvalidAnnotationException;
 }

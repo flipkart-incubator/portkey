@@ -3,8 +3,12 @@
  */
 package com.flipkart.portkey.example.dao;
 
+import java.sql.Timestamp;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+
+import org.apache.commons.lang3.time.DateUtils;
 
 import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.rdbms.metadata.annotation.RdbmsDataStore;
@@ -31,10 +35,6 @@ public class Employee implements Entity
 	@RedisField ()
 	private String name;
 
-	@RdbmsField (columnName = "dob")
-	@RedisField ()
-	private Date dob;
-
 	@RdbmsField (columnName = "pan_card_number")
 	@RedisField ()
 	private String panCardNumber;
@@ -54,6 +54,14 @@ public class Employee implements Entity
 	@RdbmsField (columnName = "past_employers")
 	@RedisField ()
 	private List<String> pastEmployers;
+
+	@RdbmsField (columnName = "joining_date")
+	@RedisField ()
+	private Date joiningDate;
+
+	@RdbmsField (columnName = "stamp_created")
+	@RedisField ()
+	private Timestamp stampCreated;
 
 	public String getEmpId()
 	{
@@ -83,16 +91,6 @@ public class Employee implements Entity
 	public void setName(String name)
 	{
 		this.name = name;
-	}
-
-	public Date getDob()
-	{
-		return dob;
-	}
-
-	public void setDob(Date dob)
-	{
-		this.dob = dob;
 	}
 
 	public String getPanCardNumber()
@@ -145,12 +143,33 @@ public class Employee implements Entity
 		this.pastEmployers = pastEmployers;
 	}
 
+	public Date getJoiningDate()
+	{
+		return joiningDate;
+	}
+
+	public void setJoiningDate(Date joiningDate)
+	{
+		this.joiningDate = joiningDate;
+	}
+
+	public Timestamp getStampCreated()
+	{
+		return stampCreated;
+	}
+
+	public void setStampCreated(Timestamp stampCreated)
+	{
+		this.stampCreated = stampCreated;
+	}
+
 	@Override
 	public String toString()
 	{
-		return "Employee [empId=" + empId + ", aadharCardNumber=" + aadharCardNumber + ", name=" + name + ", dob="
-		        + dob + ", panCardNumber=" + panCardNumber + ", address=" + address + ", gender=" + gender
-		        + ", annualSalary=" + annualSalary + ", pastEmployers=" + pastEmployers + "]";
+		return "Employee [empId=" + empId + ", aadharCardNumber=" + aadharCardNumber + ", name=" + name
+		        + ", panCardNumber=" + panCardNumber + ", address=" + address + ", gender=" + gender
+		        + ", annualSalary=" + annualSalary + ", pastEmployers=" + pastEmployers + ", joiningDate="
+		        + joiningDate + ", stampCreated=" + stampCreated + "]";
 	}
 
 	@Override
@@ -161,12 +180,13 @@ public class Employee implements Entity
 		result = prime * result + ((aadharCardNumber == null) ? 0 : aadharCardNumber.hashCode());
 		result = prime * result + ((address == null) ? 0 : address.hashCode());
 		result = prime * result + annualSalary;
-		result = prime * result + ((dob == null) ? 0 : dob.hashCode());
 		result = prime * result + ((empId == null) ? 0 : empId.hashCode());
 		result = prime * result + ((gender == null) ? 0 : gender.hashCode());
+		result = prime * result + ((joiningDate == null) ? 0 : joiningDate.hashCode());
 		result = prime * result + ((name == null) ? 0 : name.hashCode());
 		result = prime * result + ((panCardNumber == null) ? 0 : panCardNumber.hashCode());
 		result = prime * result + ((pastEmployers == null) ? 0 : pastEmployers.hashCode());
+		result = prime * result + ((stampCreated == null) ? 0 : stampCreated.hashCode());
 		return result;
 	}
 
@@ -196,13 +216,6 @@ public class Employee implements Entity
 			return false;
 		if (annualSalary != other.annualSalary)
 			return false;
-		if (dob == null)
-		{
-			if (other.dob != null)
-				return false;
-		}
-		else if (!dob.equals(other.dob))
-			return false;
 		if (empId == null)
 		{
 			if (other.empId != null)
@@ -211,6 +224,13 @@ public class Employee implements Entity
 		else if (!empId.equals(other.empId))
 			return false;
 		if (gender != other.gender)
+			return false;
+		if (joiningDate == null)
+		{
+			if (other.joiningDate != null)
+				return false;
+		}
+		else if (!joiningDate.equals(other.joiningDate))
 			return false;
 		if (name == null)
 		{
@@ -232,6 +252,14 @@ public class Employee implements Entity
 				return false;
 		}
 		else if (!pastEmployers.equals(other.pastEmployers))
+			return false;
+		if (stampCreated == null)
+		{
+			if (other.stampCreated != null)
+				return false;
+		}
+		else if (!DateUtils.round(stampCreated, Calendar.SECOND).equals(
+		        DateUtils.round(other.stampCreated, Calendar.SECOND)))
 			return false;
 		return true;
 	}

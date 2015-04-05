@@ -143,7 +143,7 @@ public class RedisMetaDataCache implements MetaDataCache
 	 * (non-Javadoc)
 	 * @see com.flipkart.portkey.common.metadata.MetaDataCache#getShardKey(java.lang.Class)
 	 */
-	public <T extends Entity> String getShardKey(Class<T> clazz) throws InvalidAnnotationException
+	public <T extends Entity> String getShardKeyFieldName(Class<T> clazz) throws InvalidAnnotationException
 	{
 		return getMetaData(clazz).getShardKey();
 	}

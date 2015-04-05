@@ -50,19 +50,13 @@ public class RdbmsMetaDataCache implements MetaDataCache
 		return metaData;
 	}
 
-	/**
-	 * @param clazz
-	 * @param bean
-	 * @throws InvalidAnnotationException
-	 */
 	private <T extends Entity> void addMetaDataToCache(Class<T> clazz) throws InvalidAnnotationException
 	{
-		// metadata specific to rdbms
 		RdbmsTableMetaData rdbmsTableMetaData = new RdbmsTableMetaData();
 
 		RdbmsDataStore rdbmsDataStore = clazz.getAnnotation(RdbmsDataStore.class);
-		rdbmsTableMetaData.setTableName(rdbmsDataStore.tableName());
 		rdbmsTableMetaData.setDatabaseName(rdbmsDataStore.databaseName());
+		rdbmsTableMetaData.setTableName(rdbmsDataStore.tableName());
 
 		Field[] fields = clazz.getDeclaredFields();
 		boolean primaryKeyPresent = false;
@@ -73,9 +67,9 @@ public class RdbmsMetaDataCache implements MetaDataCache
 			{
 				String columnName = rdbmsField.columnName();
 				String fieldName = field.getName();
-				rdbmsTableMetaData.addRdbmsField(fieldName, rdbmsField);
-				rdbmsTableMetaData.addToFieldNameToRdbmsColumnMap(fieldName, columnName);
-				rdbmsTableMetaData.addToRdbmsColumnToFieldNameMap(columnName, fieldName);
+				rdbmsTableMetaData.addToFieldNameToRdbmsFieldMap(fieldName, rdbmsField);
+				rdbmsTableMetaData.addToFieldNameToColumnNameMap(fieldName, columnName);
+				rdbmsTableMetaData.addToColumnNameToFieldNameMap(columnName, fieldName);
 				rdbmsTableMetaData.addToFieldNameToFieldMap(fieldName, field);
 				Serializer serializer;
 				try
@@ -84,19 +78,23 @@ public class RdbmsMetaDataCache implements MetaDataCache
 				}
 				catch (InstantiationException e)
 				{
-					logger.warn("Exception while fetching serializer for class:" + clazz);
-					throw new InvalidAnnotationException("Exception while fetching serializer for class:" + clazz, e);
+					logger.warn("Exception while fetching serializer for class:" + clazz + ", field:" + field
+					        + ", exception:" + e);
+					throw new InvalidAnnotationException("Exception while initializing serializer for class:" + clazz
+					        + ", field:" + field, e);
 				}
 				catch (IllegalAccessException e)
 				{
-					logger.warn("Exception while fetching serializer for class:" + clazz);
-					throw new InvalidAnnotationException("Exception while fetching serializer for class:" + clazz, e);
+					logger.warn("Exception while fetching serializer for class:" + clazz + ", field:" + field
+					        + ", exception:" + e);
+					throw new InvalidAnnotationException("Exception while initializing serializer for class:" + clazz
+					        + ", field:" + field, e);
 				}
-				rdbmsTableMetaData.setSerializer(fieldName, serializer);
+				rdbmsTableMetaData.addToFieldNameToSerializerMap(fieldName, serializer);
 				if (rdbmsField.isPrimaryKey())
 				{
 					primaryKeyPresent = true;
-					rdbmsTableMetaData.addToPrimaryKeys(fieldName);
+					rdbmsTableMetaData.addPrimaryKey(fieldName);
 				}
 			}
 		}
@@ -105,17 +103,13 @@ public class RdbmsMetaDataCache implements MetaDataCache
 			throw new InvalidAnnotationException("Primary key is not set for class" + clazz);
 		}
 		String shardKeyField = rdbmsDataStore.shardKeyField();
-		rdbmsTableMetaData.setShardKey(shardKeyField);
+		rdbmsTableMetaData.setShardKeyFieldName(shardKeyField);
 		entityToMetaDataMap.put(clazz, rdbmsTableMetaData);
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.common.metadata.MetaDataCache#getShardKey(java.lang.Class)
-	 */
-	public <T extends Entity> String getShardKey(Class<T> clazz) throws InvalidAnnotationException
+	public <T extends Entity> String getShardKeyFieldName(Class<T> clazz) throws InvalidAnnotationException
 	{
-		RdbmsTableMetaData tableMetaData = getMetaData(clazz);
-		return tableMetaData.getShardKey();
+		RdbmsTableMetaData rdbmsTableMetaData = getMetaData(clazz);
+		return rdbmsTableMetaData.getShardKeyFieldName();
 	}
 }
