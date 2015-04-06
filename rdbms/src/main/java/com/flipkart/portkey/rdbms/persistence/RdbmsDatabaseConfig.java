@@ -1,17 +1,10 @@
 package com.flipkart.portkey.rdbms.persistence;
 
+import com.flipkart.portkey.common.sharding.ShardIdentifier;
 
-public abstract class RdbmsDatabaseConfig
+public interface RdbmsDatabaseConfig
 {
-	private final boolean isSharded;
+	public RdbmsPersistenceManager getPersistenceManager(String key);
 
-	RdbmsDatabaseConfig(boolean isSharded)
-	{
-		this.isSharded = isSharded;
-	}
-
-	public boolean isSharded()
-	{
-		return isSharded;
-	}
+	public ShardIdentifier getShardIdentifier();
 }

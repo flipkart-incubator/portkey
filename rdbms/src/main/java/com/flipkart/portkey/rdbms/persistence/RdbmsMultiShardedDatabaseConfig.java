@@ -5,32 +5,13 @@ import java.util.Map;
 import com.flipkart.portkey.common.sharding.ShardIdentifier;
 import com.flipkart.portkey.rdbms.sharding.RdbmsShardIdentifier;
 
-public class RdbmsShardedDatabaseConfig extends RdbmsDatabaseConfig
+public class RdbmsMultiShardedDatabaseConfig implements RdbmsDatabaseConfig
 {
-	ShardIdentifier shardIdentifier = new RdbmsShardIdentifier();
 	Map<String, RdbmsPersistenceManager> shardIdToPersistenceManagerMap;
+	ShardIdentifier shardIdentifler = new RdbmsShardIdentifier();
 
-	public RdbmsShardedDatabaseConfig()
-	{
-		super(true);
-	}
-
-	public ShardIdentifier getShardIdentifier()
-	{
-		return shardIdentifier;
-	}
-
-	public void setShardIdentifier(ShardIdentifier shardIdentifier)
-	{
-		this.shardIdentifier = shardIdentifier;
-	}
-
-	public Map<String, RdbmsPersistenceManager> getShardIdToPersistenceManagerMap()
-	{
-		return shardIdToPersistenceManagerMap;
-	}
-
-	public RdbmsPersistenceManager getPersistenceManagerFromShardId(String shardId)
+	@Override
+	public RdbmsPersistenceManager getPersistenceManager(String shardId)
 	{
 		return shardIdToPersistenceManagerMap.get(shardId);
 	}
@@ -43,5 +24,12 @@ public class RdbmsShardedDatabaseConfig extends RdbmsDatabaseConfig
 	public void addToShardIdToPersistenceManagerMap(String shardId, RdbmsPersistenceManager persistenceManager)
 	{
 		this.shardIdToPersistenceManagerMap.put(shardId, persistenceManager);
+	}
+
+	@Override
+	public ShardIdentifier getShardIdentifier()
+	{
+		// TODO Auto-generated method stub
+		return null;
 	}
 }

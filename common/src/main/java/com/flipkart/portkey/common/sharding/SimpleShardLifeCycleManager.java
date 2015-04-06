@@ -1,7 +1,7 @@
 /**
  * 
  */
-package com.flipkart.portkey.sharding;
+package com.flipkart.portkey.common.sharding;
 
 import java.util.ArrayList;
 import java.util.HashMap;

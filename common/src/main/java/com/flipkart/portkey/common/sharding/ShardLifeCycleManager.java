@@ -1,7 +1,7 @@
 /**
  * 
  */
-package com.flipkart.portkey.sharding;
+package com.flipkart.portkey.common.sharding;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,7 +12,6 @@ import org.apache.log4j.Logger;
 
 import com.flipkart.portkey.common.enumeration.DataStoreType;
 import com.flipkart.portkey.common.enumeration.ShardStatus;
-import com.flipkart.portkey.common.sharding.ShardLifeCycleManagerInterface;
 import com.hazelcast.config.Config;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
@@ -24,10 +23,23 @@ import com.hazelcast.core.IMap;
 public class ShardLifeCycleManager implements ShardLifeCycleManagerInterface
 {
 	private static final Logger logger = Logger.getLogger(ShardLifeCycleManager.class);
-	Config cfg = new Config();
-	List<DataStoreType> dataStoreTypesList;
-	IMap<DataStoreType, Map<String, ShardStatus>> dataStoreTypeToShardStatusMap;
-	ShardLifeCycleManager instance = null;
+	private Config cfg = new Config();
+	private List<DataStoreType> dataStoreTypesList;
+	private IMap<DataStoreType, Map<String, ShardStatus>> dataStoreTypeToShardStatusMap;
+	private static ShardLifeCycleManager instance = null;
+
+	// returns instance of shard life cycle manager
+	public static ShardLifeCycleManager getInstance()
+	{
+		return instance;
+	}
+
+	// (re)initializes shard life cycle manager with passed config and returns the (re)initialized instance
+	public static ShardLifeCycleManager getInstance(List<DataStoreType> dataStoreTypes)
+	{
+		instance = new ShardLifeCycleManager(dataStoreTypes);
+		return instance;
+	}
 
 	private void initializeShardLifeCycleManager()
 	{
@@ -42,7 +54,7 @@ public class ShardLifeCycleManager implements ShardLifeCycleManagerInterface
 		logger.info("Initialization complete");
 	}
 
-	public ShardLifeCycleManager(List<DataStoreType> dataStoreTypes)
+	protected ShardLifeCycleManager(List<DataStoreType> dataStoreTypes)
 	{
 		this.dataStoreTypesList = dataStoreTypes;
 		initializeShardLifeCycleManager();
