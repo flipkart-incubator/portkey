@@ -27,6 +27,7 @@ public class ShardLifeCycleManager implements ShardLifeCycleManagerInterface
 	Config cfg = new Config();
 	List<DataStoreType> dataStoreTypesList;
 	IMap<DataStoreType, Map<String, ShardStatus>> dataStoreTypeToShardStatusMap;
+	ShardLifeCycleManager instance = null;
 
 	private void initializeShardLifeCycleManager()
 	{
