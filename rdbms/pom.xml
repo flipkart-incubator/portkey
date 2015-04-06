@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>com.flipkart.portkey</groupId>
 		<artifactId>portkey</artifactId>
-		<version>0.0.4-SNAPSHOT</version>
+		<version>0.0.5-SNAPSHOT</version>
 	</parent>
 	<artifactId>rdbms</artifactId>
 
@@ -12,7 +12,7 @@
 		<dependency>
 			<groupId>com.flipkart.portkey</groupId>
 			<artifactId>common</artifactId>
-			<version>0.0.4-SNAPSHOT</version>
+			<version>0.0.5-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>commons-beanutils</groupId>
