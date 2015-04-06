@@ -14,7 +14,7 @@
 	<util:map id="dataStoreConfigMap"
 		key-type="com.flipkart.portkey.common.enumeration.DataStoreType"
 		value-type="com.flipkart.portkey.common.datastore.DataStoreConfig">
-		<entry key="RDBMS" value-ref="rdbmsDataStore" />
-		<entry key="REDIS" value-ref="redisDataStore" />
+		<entry key="RDBMS" value-ref="rdbmsDataStoreConfig" />
+		<entry key="REDIS" value-ref="redisDataStoreConfig" />
 	</util:map>
 </beans>

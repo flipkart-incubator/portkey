@@ -20,9 +20,9 @@ import com.flipkart.portkey.rdbms.sharding.RdbmsShardIdentifierForSingleShard;
 /**
  * @author santosh.p
  */
-public class RdbmsDataStore implements DataStoreConfig, InitializingBean
+public class RdbmsDataStoreConfig implements DataStoreConfig, InitializingBean
 {
-	private static final Logger logger = Logger.getLogger(RdbmsDataStore.class);
+	private static final Logger logger = Logger.getLogger(RdbmsDataStoreConfig.class);
 	private Map<String, PersistenceManager> shardIdToPersistenceManagerMap;
 	private RdbmsMetaDataCache metaDataCache;
 	private ShardIdentifier shardIdentifier;

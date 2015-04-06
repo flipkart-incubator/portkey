@@ -16,19 +16,19 @@ import com.flipkart.portkey.redis.sharding.RedisShardIdentifier;
 /**
  * @author santosh.p
  */
-public class RedisDataStore implements DataStoreConfig
+public class RedisDataStoreConfig implements DataStoreConfig
 {
 
 	private Map<String, PersistenceManager> shardIdToPersistenceManagerMap;
 	private RedisMetaDataCache metaDataCache;
 	private ShardIdentifier shardIdentifier = new RedisShardIdentifier();
 
-	public RedisDataStore()
+	public RedisDataStoreConfig()
 	{
 
 	}
 
-	public RedisDataStore(Map<String, PersistenceManager> shardIdToPersistenceManagerMap,
+	public RedisDataStoreConfig(Map<String, PersistenceManager> shardIdToPersistenceManagerMap,
 	        RedisMetaDataCache metaDataCache)
 	{
 		this.shardIdToPersistenceManagerMap = shardIdToPersistenceManagerMap;

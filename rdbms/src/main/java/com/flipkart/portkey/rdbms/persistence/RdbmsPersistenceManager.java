@@ -280,51 +280,45 @@ public class RdbmsPersistenceManager implements PersistenceManager
 		return getByCriteria(clazz, criteria, false);
 	}
 
-	private <T extends Entity> List<T> executeQuery(boolean readMaster, String query,
+	private <T extends Entity> List<T> executeQuery(DataSource dataSource, String query,
 	        Map<String, Object> columnToValueMap, RdbmsMapper<T> mapper) throws QueryExecutionException
 	{
 		List<T> result;
-		NamedParameterJdbcTemplate temp;
+		NamedParameterJdbcTemplate temp = new NamedParameterJdbcTemplate(dataSource);
+		try
+		{
+			result = temp.query(query, columnToValueMap, mapper);
+		}
+		catch (DataAccessException e)
+		{
+			throw new QueryExecutionException("Exception while trying to execute get query " + query + " on "
+			        + dataSource, e);
+		}
+		return result;
+	}
+
+	private <T extends Entity> List<T> executeQuery(boolean readMaster, String query,
+	        Map<String, Object> columnToValueMap, RdbmsMapper<T> mapper) throws QueryExecutionException
+	{
 		if (readMaster)
 		{
-			temp = new NamedParameterJdbcTemplate(master);
-			try
-			{
-				result = temp.query(query, columnToValueMap, mapper);
-			}
-			catch (DataAccessException e)
-			{
-				throw new QueryExecutionException("Exception while trying to execute get query " + query
-				        + " on master " + master, e);
-			}
-			return result;
+			return executeQuery(master, query, columnToValueMap, mapper);
 		}
 		else
 		{
 			for (DataSource slave : slaves)
 			{
-				temp = new NamedParameterJdbcTemplate(slave);
 				try
 				{
-					result = temp.query(query, columnToValueMap, mapper);
+					return executeQuery(slave, query, columnToValueMap, mapper);
 				}
 				catch (Exception e)
 				{
 					logger.warn("Exception while trying to execute get query " + query + " on slave " + slave, e);
 					continue;
 				}
-				return result;
 			}
-			temp = new NamedParameterJdbcTemplate(master);
-			try
-			{
-				result = temp.query(query, columnToValueMap, mapper);
-			}
-			catch (Exception e)
-			{
-				throw new QueryExecutionException("Exception while executing get query " + query, e);
-			}
-			return result;
+			return executeQuery(master, query, columnToValueMap, mapper);
 		}
 
 	}

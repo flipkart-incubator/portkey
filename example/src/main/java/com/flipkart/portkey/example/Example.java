@@ -15,11 +15,10 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.support.FileSystemXmlApplicationContext;
 
 import com.flipkart.portkey.common.exception.PortKeyException;
 import com.flipkart.portkey.common.persistence.Result;
+import com.flipkart.portkey.example.config.PortKeyInitializer;
 import com.flipkart.portkey.example.dao.Employee;
 import com.flipkart.portkey.example.dao.Gender;
 import com.flipkart.portkey.persistence.PersistenceLayer;
@@ -35,9 +34,10 @@ public class Example
 	public static void main(String[] args) throws IllegalAccessException, InvocationTargetException,
 	        NoSuchMethodException
 	{
-		ApplicationContext context =
-		        new FileSystemXmlApplicationContext("src/main/resources/external/portkey-application-context.xml");
-		pl = context.getBean(PersistenceLayer.class, "persistenceLayer");
+		// ApplicationContext context =
+		// new FileSystemXmlApplicationContext("src/main/resources/external/portkey-application-context.xml");
+		// pl = context.getBean(PersistenceLayer.class, "persistenceLayer");
+		pl = PortKeyInitializer.initialize();
 		insert();
 		insertWithGenerateId();
 		upsert();
