@@ -8,6 +8,8 @@ import com.flipkart.portkey.common.exception.QueryExecutionException;
 
 public interface ShardingManager
 {
+	public void healthCheck();
+
 	public <T extends Entity> int insert(T bean) throws QueryExecutionException;
 
 	public <T extends Entity> int upsert(T bean) throws QueryExecutionException;

@@ -29,7 +29,6 @@ public class RdbmsMultiShardedDatabaseConfig implements RdbmsDatabaseConfig
 	@Override
 	public ShardIdentifier getShardIdentifier()
 	{
-		// TODO Auto-generated method stub
-		return null;
+		return shardIdentifler;
 	}
 }

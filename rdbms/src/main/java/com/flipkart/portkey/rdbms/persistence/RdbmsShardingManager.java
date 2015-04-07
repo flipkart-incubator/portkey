@@ -1,10 +1,10 @@
 package com.flipkart.portkey.rdbms.persistence;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import com.flipkart.portkey.common.entity.Entity;
-import com.flipkart.portkey.common.enumeration.DataStoreType;
 import com.flipkart.portkey.common.enumeration.ShardStatus;
 import com.flipkart.portkey.common.exception.QueryExecutionException;
 import com.flipkart.portkey.common.persistence.ShardingManager;
@@ -16,8 +16,35 @@ import com.flipkart.portkey.rdbms.metadata.RdbmsTableMetaData;
 
 public class RdbmsShardingManager implements ShardingManager
 {
-	private static Map<String, RdbmsDatabaseConfig> databaseNameToDatabaseConfigMap;
-	private static RdbmsMetaDataCache metaDataCache;
+	private Map<String, RdbmsDatabaseConfig> databaseNameToDatabaseConfigMap;
+	private RdbmsMetaDataCache metaDataCache;
+	private Map<String, ShardStatus> shardStatusMap;
+
+	private List<String> getShardsAvailableForWrite()
+	{
+		List<String> liveShards = new ArrayList<String>();
+		for (String shard : shardStatusMap.keySet())
+		{
+			if (shardStatusMap.get(shard).equals(ShardStatus.AVAILABLE_FOR_WRITE))
+			{
+				liveShards.add(shard);
+			}
+		}
+		return liveShards;
+	}
+
+	public <T extends Entity> T generateShardIdAndUpdateBean(T bean)
+	{
+		String databaseName = metaDataCache.getMetaData(bean.getClass()).getDatabaseName();
+		String shardKeyFieldName = metaDataCache.getShardKeyFieldName(bean.getClass());
+		String shardKey = PortKeyUtils.toString(PortKeyUtils.getFieldValueFromBean(bean, shardKeyFieldName));
+		ShardLifeCycleManager shardLifeCycleManager = 
+		List<String> liveShards = getShardsAvailableForWrite();
+		String shardId = shardIdentifier.generateShardId(shardKey, liveShards);
+		String newShardKey = shardIdentifier.generateNewShardKey(shardKey, shardId);
+		PortKeyUtils.setFieldValueInBean(bean, shardKeyFieldName, newShardKey);
+		return bean;
+	}
 
 	@Override
 	public <T extends Entity> int insert(T bean) throws QueryExecutionException
@@ -28,9 +55,7 @@ public class RdbmsShardingManager implements ShardingManager
 		String shardKeyFieldName = metaData.getShardKeyFieldName();
 		String shardKey = PortKeyUtils.toString(PortKeyUtils.getFieldValueFromBean(bean, shardKeyFieldName));
 		ShardIdentifier shardIdentifier = databaseConfig.getShardIdentifier();
-		List<String> liveShards =
-		        ShardLifeCycleManager.getInstance().getShardListForStatus(DataStoreType.RDBMS,
-		                ShardStatus.AVAILABLE_FOR_WRITE);
+		List<String> liveShards = getShardsAvailableForWrite();
 		String shardId = shardIdentifier.getShardId(shardKey, liveShards);
 		RdbmsPersistenceManager pm = databaseConfig.getPersistenceManager(shardId);
 		return pm.insert(bean);
@@ -141,6 +166,13 @@ public class RdbmsShardingManager implements ShardingManager
 	{
 		// TODO Auto-generated method stub
 		return 0;
+	}
+
+	@Override
+	public void healthCheck()
+	{
+		// TODO Auto-generated method stub
+
 	}
 
 }

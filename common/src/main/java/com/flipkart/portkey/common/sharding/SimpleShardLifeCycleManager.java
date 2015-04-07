@@ -12,13 +12,13 @@ import org.apache.log4j.Logger;
 
 import com.flipkart.portkey.common.enumeration.DataStoreType;
 import com.flipkart.portkey.common.enumeration.ShardStatus;
-import com.flipkart.portkey.common.sharding.ShardLifeCycleManagerInterface;
+import com.flipkart.portkey.common.sharding.ShardLifeCycleManager;
 import com.hazelcast.config.Config;
 
 /**
  * @author santosh.p
  */
-public class SimpleShardLifeCycleManager implements ShardLifeCycleManagerInterface
+public class SimpleShardLifeCycleManager implements ShardLifeCycleManager
 {
 	private static final Logger logger = Logger.getLogger(SimpleShardLifeCycleManager.class);
 	Config cfg = new Config();
