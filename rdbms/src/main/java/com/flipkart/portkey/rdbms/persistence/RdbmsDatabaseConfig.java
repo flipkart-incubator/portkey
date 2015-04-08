@@ -17,4 +17,6 @@ public interface RdbmsDatabaseConfig
 	public ShardIdentifier getShardIdentifier();
 
 	public <T extends Entity> T generateShardIdAndUpdateBean(T bean) throws ShardNotAvailableException;
+
+	public void healthCheck();
 }

@@ -15,12 +15,14 @@ import org.apache.log4j.Logger;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.common.enumeration.ShardStatus;
 import com.flipkart.portkey.common.exception.InvalidAnnotationException;
 import com.flipkart.portkey.common.exception.QueryExecutionException;
 import com.flipkart.portkey.common.persistence.PersistenceManager;
+import com.flipkart.portkey.common.persistence.query.UpdateQuery;
 import com.flipkart.portkey.common.util.PortKeyUtils;
 import com.flipkart.portkey.rdbms.mapper.RdbmsMapper;
 import com.flipkart.portkey.rdbms.metadata.RdbmsMetaDataCache;
@@ -210,6 +212,45 @@ public class RdbmsPersistenceManager implements PersistenceManager
 		return executeUpdate(temp, updateQuery, columnToValueMap);
 	}
 
+	@Override
+	@Transactional
+	public <T extends Entity> List<Integer> update(List<UpdateQuery> updates) throws QueryExecutionException
+	{
+		List<Integer> rowsUpdatedList = new ArrayList<Integer>();
+		for (UpdateQuery update : updates)
+		{
+			Class<? extends Entity> clazz = update.getClazz();
+			Map<String, Object> updateFieldNameToValuesMap = update.getUpdateFieldNameToValueMap();
+			Map<String, Object> criteriaFieldNameToValueMap = update.getCriteriaFieldNameToValueMap();
+			RdbmsTableMetaData tableMetaData = RdbmsMetaDataCache.getInstance().getMetaData(clazz);
+			Map<String, Object> updateColumnToValueMap =
+			        generateColumnToValueMap(clazz, updateFieldNameToValuesMap, tableMetaData);
+			Map<String, Object> criteriaColumnToValueMap =
+			        generateColumnToValueMap(clazz, criteriaFieldNameToValueMap, tableMetaData);
+			String tableName = tableMetaData.getTableName();
+			List<String> columnsToBeUpdated = new ArrayList<String>(updateColumnToValueMap.keySet());
+			List<String> criteriaAttributes = new ArrayList<String>(criteriaColumnToValueMap.keySet());
+			String updateQuery =
+			        RdbmsQueryBuilder.getInstance().getUpdateByCriteriaQuery(tableName, columnsToBeUpdated,
+			                criteriaAttributes, updateColumnToValueMap);
+			Map<String, Object> namedParameter =
+			        PortKeyUtils.mergeMaps(updateColumnToValueMap, criteriaColumnToValueMap);
+			NamedParameterJdbcTemplate temp = new NamedParameterJdbcTemplate(master);
+			try
+			{
+				int rowsUpdated = temp.update(updateQuery, namedParameter);
+				rowsUpdatedList.add(rowsUpdated);
+			}
+			catch (DataAccessException e)
+			{
+				throw new QueryExecutionException("Exception while trying to execute update query:" + updateQuery
+				        + ", exception:" + e.toString());
+			}
+		}
+		return rowsUpdatedList;
+	}
+
+	@Override
 	public <T extends Entity> int delete(Class<T> clazz, Map<String, Object> criteria) throws QueryExecutionException
 	{
 		RdbmsTableMetaData metaData = RdbmsMetaDataCache.getInstance().getMetaData(clazz);

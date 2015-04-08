@@ -83,4 +83,14 @@ public class RdbmsMultiShardedDatabaseConfig implements RdbmsDatabaseConfig
 		PortKeyUtils.setFieldValueInBean(bean, shardKeyFieldName, newShardKey);
 		return bean;
 	}
+
+	@Override
+	public void healthCheck()
+	{
+		// TODO: set this status into hazelcast
+		for (RdbmsPersistenceManager persistenceManager : shardIdToPersistenceManagerMap.values())
+		{
+			ShardStatus status = persistenceManager.healthCheck();
+		}
+	}
 }

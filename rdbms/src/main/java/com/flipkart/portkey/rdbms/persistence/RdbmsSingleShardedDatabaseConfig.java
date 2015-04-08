@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.flipkart.portkey.common.entity.Entity;
+import com.flipkart.portkey.common.enumeration.ShardStatus;
 import com.flipkart.portkey.common.sharding.ShardIdentifier;
 import com.flipkart.portkey.rdbms.sharding.RdbmsShardIdentifierForSingleShard;
 
@@ -52,5 +53,12 @@ public class RdbmsSingleShardedDatabaseConfig implements RdbmsDatabaseConfig
 	public <T extends Entity> T generateShardIdAndUpdateBean(T bean)
 	{
 		return bean;
+	}
+
+	@Override
+	public void healthCheck()
+	{
+		// TODO: set this status into hazelcast
+		ShardStatus status = persistenceManager.healthCheck();
 	}
 }
