@@ -27,6 +27,7 @@ import com.flipkart.portkey.common.metadata.MetaDataCache;
 import com.flipkart.portkey.common.persistence.PersistenceLayerInterface;
 import com.flipkart.portkey.common.persistence.PersistenceManager;
 import com.flipkart.portkey.common.persistence.Result;
+import com.flipkart.portkey.common.persistence.query.UpdateQuery;
 import com.flipkart.portkey.common.sharding.ShardIdentifier;
 import com.flipkart.portkey.common.sharding.ShardLifeCycleManagerInterface;
 import com.flipkart.portkey.common.util.PortKeyUtils;
@@ -431,6 +432,48 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 			}
 		}
 		return result;
+	}
+
+	private String getShardId(String shardKey, DataStoreType type) throws ShardNotAvailableException
+	{
+		ShardIdentifier shardIdentifier = getShardIdentifier(type);
+		List<String> liveShards = shardLifeCycleManager.getShardListForStatus(type, ShardStatus.AVAILABLE_FOR_WRITE);
+		String shardId = shardIdentifier.getShardId(shardKey, liveShards);
+		return shardId;
+	}
+
+	@Override
+	public <T extends Entity> void update(List<UpdateQuery> updates) throws PortKeyException
+	{
+		for (UpdateQuery update : updates)
+		{
+			WriteConfig writeConfig = getWriteConfigForEntity(update.getClazz());
+			List<DataStoreType> writeOrder = writeConfig.getWriteOrder();
+
+			for (DataStoreType type : writeOrder)
+			{
+				MetaDataCache metaDataCache = getMetaDataCache(type);
+				String shardKeyFieldName = metaDataCache.getShardKeyFieldName(update.getClazz());
+				Map<String, Object> criteria = update.getCriteriaFieldNameToValueMap();
+				Map<String, List<UpdateQuery>> shardIdToUpdateListMap = new HashMap<String, List<UpdateQuery>>();
+				if (criteria.containsKey(shardKeyFieldName))
+				{
+					String shardId = getShardId(PortKeyUtils.toString(criteria.get(shardKeyFieldName)), type);
+					if (!shardIdToUpdateListMap.containsKey(shardId))
+						shardIdToUpdateListMap.put(shardId, new ArrayList<UpdateQuery>());
+					shardIdToUpdateListMap.get(shardId).add(update);
+				}
+				else
+				{
+					throw new PortKeyException("No shard key field is specified in query");
+				}
+				for (String shardId : shardIdToUpdateListMap.keySet())
+				{
+					PersistenceManager pm = getPersistenceManager(type, shardId);
+					pm.update(shardIdToUpdateListMap.get(shardId));
+				}
+			}
+		}
 	}
 
 	public <T extends Entity> Result delete(Class<T> clazz, Map<String, Object> criteria)

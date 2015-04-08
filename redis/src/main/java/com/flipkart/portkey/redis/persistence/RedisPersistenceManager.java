@@ -24,6 +24,7 @@ import com.flipkart.portkey.common.exception.QueryExecutionException;
 import com.flipkart.portkey.common.exception.QueryNotSupportedException;
 import com.flipkart.portkey.common.exception.ShardNotAvailableException;
 import com.flipkart.portkey.common.persistence.PersistenceManager;
+import com.flipkart.portkey.common.persistence.query.UpdateQuery;
 import com.flipkart.portkey.redis.connection.ConnectionManager;
 import com.flipkart.portkey.redis.keyparser.DefaultKeyParser;
 import com.flipkart.portkey.redis.keyparser.KeyParserInterface;
@@ -464,6 +465,12 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 
 	@Override
 	public int updateBySql(String sql, Map<String, Object> criteria) throws QueryExecutionException
+	{
+		throw new QueryNotSupportedException("Method not supported for redis implementation");
+	}
+
+	@Override
+	public <T extends Entity> List<Integer> update(List<UpdateQuery> updates) throws QueryExecutionException
 	{
 		throw new QueryNotSupportedException("Method not supported for redis implementation");
 	}
