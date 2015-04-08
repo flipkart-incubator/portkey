@@ -193,11 +193,11 @@ public class RdbmsPersistenceManager implements PersistenceManager
 		return executeUpdate(temp, updateQuery, columnToValueMap);
 	}
 
-	public <T extends Entity> int update(Class<T> clazz, Map<String, Object> fieldsToBeUpdated,
+	public <T extends Entity> int update(Class<T> clazz, Map<String, Object> updateValuesMap,
 	        Map<String, Object> criteria) throws QueryExecutionException
 	{
 		RdbmsTableMetaData metaData = RdbmsMetaDataCache.getInstance().getMetaData(clazz);
-		Map<String, Object> updateColumnToValueMap = generateColumnToValueMap(clazz, fieldsToBeUpdated, metaData);
+		Map<String, Object> updateColumnToValueMap = generateColumnToValueMap(clazz, updateValuesMap, metaData);
 		Map<String, Object> criteriaColumnToValueMap = generateColumnToValueMap(clazz, criteria, metaData);
 		String tableName = metaData.getTableName();
 		List<String> columnsToBeUpdated = new ArrayList<String>(updateColumnToValueMap.keySet());

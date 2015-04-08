@@ -42,10 +42,12 @@ public interface ShardingManager
 	public <T extends Entity> List<T> getBySql(Class<T> clazz, String sql, Map<String, Object> criteria,
 	        boolean readMaster) throws QueryExecutionException;
 
-	public List<Map<String, Object>> getBySql(String sql, Map<String, Object> criteria) throws QueryExecutionException;
-
-	public List<Map<String, Object>> getBySql(String sql, Map<String, Object> criteria, boolean readMaster)
+	public List<Map<String, Object>> getBySql(String databaseName, String sql, Map<String, Object> criteria)
 	        throws QueryExecutionException;
 
-	public int updateBySql(String sql, Map<String, Object> criteria) throws QueryExecutionException;
+	public List<Map<String, Object>> getBySql(String databaseName, String sql, Map<String, Object> criteria,
+	        boolean readMaster) throws QueryExecutionException;
+
+	public int updateBySql(String databaseName, String sql, Map<String, Object> criteria)
+	        throws QueryExecutionException;
 }
