@@ -100,7 +100,7 @@ public class RdbmsMetaDataCache implements MetaDataCache
 		}
 		if (!primaryKeyPresent)
 		{
-			throw new InvalidAnnotationException("Primary key is not set for class" + clazz);
+			throw new InvalidAnnotationException("Primary key is not set for " + clazz);
 		}
 		String shardKeyField = rdbmsDataStore.shardKeyField();
 		rdbmsTableMetaData.setShardKeyFieldName(shardKeyField);
