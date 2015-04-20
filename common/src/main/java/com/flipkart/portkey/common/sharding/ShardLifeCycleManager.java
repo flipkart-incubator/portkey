@@ -14,13 +14,14 @@ import com.flipkart.portkey.common.enumeration.ShardStatus;
  */
 public interface ShardLifeCycleManager
 {
-	public ShardStatus getShardStatus(DataStoreType dataStoreType, String shardId);
+	public ShardStatus getShardStatus(DataStoreType dataStoreType, String databaseName, String shardId);
 
-	public void setShardStatus(DataStoreType dataStoreType, String shardId, ShardStatus shardStatus);
+	public void setShardStatus(DataStoreType dataStoreType, String databaseName, String shardId, ShardStatus shardStatus);
 
-	public List<String> getShardListForStatus(DataStoreType dataStoreType, ShardStatus shardStatus);
+	public void setShardStatusMap(DataStoreType dataStoreType, String databaseName,
+	        Map<String, ShardStatus> shardStatusMap);
 
-	public Map<String, ShardStatus> getStatusMapForDataStore(DataStoreType dataStoreType);
+	public List<String> getShardListForStatus(DataStoreType dataStoreType, String databaseName, ShardStatus shardStatus);
 
-	public Map<DataStoreType, Map<String, ShardStatus>> getStatusMap();
+	public Map<String, ShardStatus> getShardStatusMap(DataStoreType dataStoreType, String databaseName);
 }

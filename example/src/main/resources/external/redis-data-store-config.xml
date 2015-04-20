@@ -11,39 +11,23 @@
 		<property name="location" value="classpath:project.properties" />
 	</bean>
 
-	<bean id="redisDataStoreConfig"
-		class="com.flipkart.portkey.redis.datastore.RedisDataStoreConfig">
-		<property name="shardIdentifier" ref="redisShardIdentifierForSingleShard" />
-		<property name="shardIdToPersistenceManagerMap" ref="shardIdToPersistenceManagerMap" />
-		<property name="metaDataCache" ref="redisMetaDataCache" />
-	</bean>
-
-	<bean id="redisShardIdentifierForSingleShard"
-		class="com.flipkart.portkey.redis.sharding.RedisShardIdentifierForSingleShard" />
-
-	<util:map id="shardIdToPersistenceManagerMap"
-		value-type="com.flipkart.portkey.common.persistence.PersistenceManager">
-		<entry key="" value-ref="redisShard1" />
-	</util:map>
-	<bean id="redisMetaDataCache" class="com.flipkart.portkey.redis.metadata.RedisMetaDataCache"
-		factory-method="getInstance" />
-
-	<bean id="redisShard1"
-		class="com.flipkart.portkey.redis.persistence.RedisPersistenceManager">
+	<bean id="redisShardingManager"
+		class="com.flipkart.portkey.redis.persistence.RedisShardingManager">
 		<property name="host">
-			<value>${REDIS.SHARD1.HOST}</value>
+			<value>${REDIS.1.HOST}</value>
 		</property>
 		<property name="port">
-			<value>${REDIS.SHARD1.PORT}</value>
+			<value>${REDIS.1.PORT}</value>
 		</property>
 		<property name="database">
-			<value>${REDIS.SHARD1.DATABASE}</value>
+			<value>${REDIS.1.DATABASE}</value>
 		</property>
 		<property name="password">
-			<value>${REDIS.SHARD1.PASSWORD}</value>
+			<value>${REDIS.1.PASSWORD}</value>
 		</property>
 		<property name="poolConfig" ref="jedisPoolConfig" />
 	</bean>
+
 	<bean id="jedisPoolConfig" class="redis.clients.jedis.JedisPoolConfig">
 		<property name="blockWhenExhausted">
 			<value>${REDIS_POOL_CONFIG.BLOCK_WHEN_EXHAUSTED}</value>

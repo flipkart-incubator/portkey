@@ -10,7 +10,7 @@ import javax.sql.DataSource;
 /**
  * @author santosh.p
  */
-public class RdbmsPersistenceManagerConfig
+public class RdbmsConnectionConfig
 {
 	DataSource master;
 	List<DataSource> slaves;

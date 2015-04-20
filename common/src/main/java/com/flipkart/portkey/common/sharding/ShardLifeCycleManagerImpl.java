@@ -4,7 +4,6 @@
 package com.flipkart.portkey.common.sharding;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -12,6 +11,8 @@ import org.apache.log4j.Logger;
 
 import com.flipkart.portkey.common.enumeration.DataStoreType;
 import com.flipkart.portkey.common.enumeration.ShardStatus;
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Table;
 import com.hazelcast.config.Config;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
@@ -24,91 +25,83 @@ public class ShardLifeCycleManagerImpl implements ShardLifeCycleManager
 {
 	private static final Logger logger = Logger.getLogger(ShardLifeCycleManagerImpl.class);
 	private Config cfg = new Config();
-	private List<DataStoreType> dataStoreTypesList;
-	private IMap<DataStoreType, Map<String, ShardStatus>> dataStoreTypeToShardStatusMap;
+	private IMap<DataStoreType, Table<String, String, ShardStatus>> dataStoreTypeToShardStatusTableMap;
 	private static ShardLifeCycleManagerImpl instance = null;
 
-	// returns instance of shard life cycle manager
-	public static ShardLifeCycleManagerImpl getInstance()
+	public static ShardLifeCycleManagerImpl getInstance(DataStoreType dataStoreType)
 	{
+		if (instance == null)
+		{
+			instance = new ShardLifeCycleManagerImpl();
+		}
+		instance.addDataStore(dataStoreType);
 		return instance;
 	}
 
-	// (re)initializes shard life cycle manager with passed config and returns the (re)initialized instance
-	public static ShardLifeCycleManagerImpl getInstance(List<DataStoreType> dataStoreTypes)
+	private void addDataStore(DataStoreType dataStoreType)
 	{
-		instance = new ShardLifeCycleManagerImpl(dataStoreTypes);
-		return instance;
-	}
-
-	private void initializeShardLifeCycleManager()
-	{
-		logger.info("Initializing shard life cycle manager");
-		HazelcastInstance instance = Hazelcast.newHazelcastInstance(cfg);
-		dataStoreTypeToShardStatusMap = instance.getMap("liveShards");
-		for (DataStoreType dataStoreType : dataStoreTypesList)
+		if (dataStoreTypeToShardStatusTableMap.containsKey(dataStoreType))
 		{
-			Map<String, ShardStatus> innerMap = new HashMap<String, ShardStatus>();
-			dataStoreTypeToShardStatusMap.put(dataStoreType, innerMap);
+			logger.info("Data store type " + dataStoreType + " already exists in hazelcast map");
+			return;
 		}
-		logger.info("Initialization complete");
+		Table<String, String, ShardStatus> shardStatusTable = HashBasedTable.create();
+		dataStoreTypeToShardStatusTableMap.put(dataStoreType, shardStatusTable);
 	}
 
-	protected ShardLifeCycleManagerImpl(List<DataStoreType> dataStoreTypes)
+	protected ShardLifeCycleManagerImpl()
 	{
-		this.dataStoreTypesList = dataStoreTypes;
-		initializeShardLifeCycleManager();
+		HazelcastInstance hazelcastInstance = Hazelcast.newHazelcastInstance(cfg);
+		dataStoreTypeToShardStatusTableMap = hazelcastInstance.getMap("liveShards");
 	}
 
-	public void setShardStatus(DataStoreType dataStoreType, String shardId, ShardStatus shardStatus)
+	@Override
+	public void setShardStatus(DataStoreType dataStoreType, String databaseName, String shardId, ShardStatus shardStatus)
 	{
-		logger.debug("setting shard status datastoretype=" + dataStoreType + " shardId=" + shardId + " shardStatus="
-		        + shardStatus);
-		// TODO: handle NullPointerException
-		Map<String, ShardStatus> shardToStatusMap = dataStoreTypeToShardStatusMap.get(dataStoreType);
-		shardToStatusMap.put(shardId, shardStatus);
-		dataStoreTypeToShardStatusMap.put(dataStoreType, shardToStatusMap);
-		logger.debug("value set=" + dataStoreTypeToShardStatusMap.get(dataStoreType).get(shardId));
+		Table<String, String, ShardStatus> shardStatusTable = dataStoreTypeToShardStatusTableMap.get(dataStoreType);
+		shardStatusTable.put(databaseName, shardId, shardStatus);
+		dataStoreTypeToShardStatusTableMap.put(dataStoreType, shardStatusTable);
 	}
 
-	public List<String> getShardListForStatus(DataStoreType dataStoreType, ShardStatus shardStatus)
+	@Override
+	public void setShardStatusMap(DataStoreType dataStoreType, String databaseName,
+	        Map<String, ShardStatus> shardStatusMap)
 	{
-		logger.debug("Generating shard list with status=" + shardStatus + " for datastoretype=" + dataStoreType);
-		Map<String, ShardStatus> shardToStatusMap = dataStoreTypeToShardStatusMap.get(dataStoreType);
-		if (shardToStatusMap == null)
+		Table<String, String, ShardStatus> shardStatusTable = dataStoreTypeToShardStatusTableMap.get(dataStoreType);
+		for (String shardId : shardStatusMap.keySet())
 		{
-			logger.debug("no shards are registered for datastore type=" + dataStoreType);
-			return null;
+			shardStatusTable.put(databaseName, shardId, shardStatusMap.get(shardId));
 		}
+		dataStoreTypeToShardStatusTableMap.put(dataStoreType, shardStatusTable);
+	}
+
+	@Override
+	public List<String> getShardListForStatus(DataStoreType dataStoreType, String databaseName, ShardStatus shardStatus)
+	{
+		Table<String, String, ShardStatus> shardStatusTable = dataStoreTypeToShardStatusTableMap.get(dataStoreType);
+		Map<String, ShardStatus> shardStatusMap = shardStatusTable.row(databaseName);
 		List<String> shardList = new ArrayList<String>();
-		for (String shardId : shardToStatusMap.keySet())
+		for (String shardId : shardStatusMap.keySet())
 		{
-			if (shardToStatusMap.get(shardId) == shardStatus)
+			if (shardStatusMap.get(shardId) == shardStatus)
 			{
 				shardList.add(shardId);
 			}
 		}
-		logger.debug("shard list=" + shardList);
-		return shardList.size() > 0 ? shardList : null;
+		return shardList;
 	}
 
-	public ShardStatus getShardStatus(DataStoreType dataStoreType, String shardId)
+	@Override
+	public ShardStatus getShardStatus(DataStoreType dataStoreType, String databaseName, String shardId)
 	{
-		Map<String, ShardStatus> shardToStatusMap = dataStoreTypeToShardStatusMap.get(dataStoreType);
-		return shardToStatusMap == null ? null : shardToStatusMap.get(shardId);
+		Table<String, String, ShardStatus> shardStatusTable = dataStoreTypeToShardStatusTableMap.get(dataStoreType);
+		return shardStatusTable.get(databaseName, shardId);
 	}
 
-	public Map<String, ShardStatus> getStatusMapForDataStore(DataStoreType dataStoreType)
+	@Override
+	public Map<String, ShardStatus> getShardStatusMap(DataStoreType dataStoreType, String databaseName)
 	{
-		Map<String, ShardStatus> statusMap =
-		        new HashMap<String, ShardStatus>(dataStoreTypeToShardStatusMap.get(dataStoreType));
-		return statusMap;
-	}
-
-	public Map<DataStoreType, Map<String, ShardStatus>> getStatusMap()
-	{
-		Map<DataStoreType, Map<String, ShardStatus>> statusMap =
-		        new HashMap<DataStoreType, Map<String, ShardStatus>>(dataStoreTypeToShardStatusMap);
-		return statusMap;
+		Table<String, String, ShardStatus> shardStatusTable = dataStoreTypeToShardStatusTableMap.get(dataStoreType);
+		return shardStatusTable.row(databaseName);
 	}
 }

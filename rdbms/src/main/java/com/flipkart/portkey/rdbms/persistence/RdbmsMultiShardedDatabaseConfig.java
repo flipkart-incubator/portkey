@@ -1,6 +1,7 @@
 package com.flipkart.portkey.rdbms.persistence;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -11,14 +12,25 @@ import com.flipkart.portkey.common.sharding.ShardIdentifier;
 import com.flipkart.portkey.common.util.PortKeyUtils;
 import com.flipkart.portkey.rdbms.metadata.RdbmsMetaDataCache;
 import com.flipkart.portkey.rdbms.metadata.RdbmsTableMetaData;
+import com.flipkart.portkey.rdbms.persistence.config.RdbmsConnectionConfig;
 import com.flipkart.portkey.rdbms.sharding.RdbmsShardIdentifier;
 
 public class RdbmsMultiShardedDatabaseConfig implements RdbmsDatabaseConfig
 {
-	Map<String, RdbmsPersistenceManager> shardIdToPersistenceManagerMap;
-	ShardIdentifier shardIdentifier = new RdbmsShardIdentifier();
-	RdbmsMetaDataCache metaDataCache = RdbmsMetaDataCache.getInstance();
+	private Map<String, RdbmsPersistenceManager> shardIdToPersistenceManagerMap;
+	private ShardIdentifier shardIdentifier = new RdbmsShardIdentifier();
+	private RdbmsMetaDataCache metaDataCache = RdbmsMetaDataCache.getInstance();
 	private Map<String, ShardStatus> shardStatusMap;
+
+	public RdbmsMultiShardedDatabaseConfig(Map<String, RdbmsConnectionConfig> shardIdToConnectionConfigMap)
+	{
+		shardIdToPersistenceManagerMap = new HashMap<String, RdbmsPersistenceManager>();
+		for (String shardId : shardIdToConnectionConfigMap.keySet())
+		{
+			RdbmsPersistenceManager pm = new RdbmsPersistenceManager(shardIdToConnectionConfigMap.get(shardId));
+			shardIdToPersistenceManagerMap.put(shardId, pm);
+		}
+	}
 
 	private List<String> getShardsAvailableForWrite()
 	{
@@ -85,12 +97,16 @@ public class RdbmsMultiShardedDatabaseConfig implements RdbmsDatabaseConfig
 	}
 
 	@Override
-	public void healthCheck()
+	public Map<String, ShardStatus> healthCheck()
 	{
-		// TODO: set this status into hazelcast
-		for (RdbmsPersistenceManager persistenceManager : shardIdToPersistenceManagerMap.values())
+		Map<String, ShardStatus> statusMap = new HashMap<String, ShardStatus>();
+		for (String shardId : shardIdToPersistenceManagerMap.keySet())
 		{
-			ShardStatus status = persistenceManager.healthCheck();
+			RdbmsPersistenceManager pm = shardIdToPersistenceManagerMap.get(shardId);
+			ShardStatus status = pm.healthCheck();
+			statusMap.put(shardId, status);
 		}
+		shardStatusMap = statusMap;
+		return statusMap;
 	}
 }

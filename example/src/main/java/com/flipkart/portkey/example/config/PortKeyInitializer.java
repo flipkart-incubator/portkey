@@ -6,27 +6,19 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 
 import org.apache.log4j.Logger;
 
-import com.flipkart.portkey.common.datastore.DataStoreConfig;
 import com.flipkart.portkey.common.entity.persistence.EntityPersistencePreference;
 import com.flipkart.portkey.common.entity.persistence.ReadConfig;
 import com.flipkart.portkey.common.entity.persistence.WriteConfig;
 import com.flipkart.portkey.common.enumeration.DataStoreType;
-import com.flipkart.portkey.common.enumeration.FailureAction;
-import com.flipkart.portkey.common.persistence.PersistenceManager;
-import com.flipkart.portkey.common.sharding.ShardIdentifier;
 import com.flipkart.portkey.persistence.PersistenceLayer;
-import com.flipkart.portkey.rdbms.datastore.RdbmsDataStoreConfig;
-import com.flipkart.portkey.rdbms.metadata.RdbmsMetaDataCache;
-import com.flipkart.portkey.rdbms.persistence.RdbmsPersistenceManager;
-import com.flipkart.portkey.rdbms.persistence.config.RdbmsPersistenceManagerConfig;
-import com.flipkart.portkey.rdbms.sharding.RdbmsShardIdentifierForSingleShard;
+import com.flipkart.portkey.rdbms.persistence.RdbmsShardingManager;
+import com.flipkart.portkey.rdbms.persistence.RdbmsSingleShardedDatabaseConfig;
+import com.flipkart.portkey.rdbms.persistence.config.RdbmsConnectionConfig;
 import com.mchange.v2.c3p0.ComboPooledDataSource;
 
 public class PortKeyInitializer
@@ -57,21 +49,19 @@ public class PortKeyInitializer
 
 	public static PersistenceLayer initialize()
 	{
-
-		// Config for MySQL
-		ComboPooledDataSource shard1MasterDataSource = new ComboPooledDataSource();
+		ComboPooledDataSource master = new ComboPooledDataSource();
 		Properties prop = loadProperties("target/classes/project.properties");
 		try
 		{
-			shard1MasterDataSource.setDriverClass(prop.getProperty("RDBMS.SHARD1.MASTER.DRIVER_CLASS"));
+			master.setDriverClass(prop.getProperty("RDBMS.SHARD1.MASTER.DRIVER_CLASS"));
 		}
 		catch (PropertyVetoException e)
 		{
 			logger.error("Failed to set driver class in data source", e);
 		}
-		shard1MasterDataSource.setJdbcUrl(prop.getProperty("RDBMS.SHARD1.MASTER.JDBC_URL"));
-		shard1MasterDataSource.setUser(prop.getProperty("RDBMS.SHARD1.MASTER.USER"));
-		shard1MasterDataSource.setPassword("RDBMS.SHARD1.MASTER.PASSWORD");
+		master.setJdbcUrl(prop.getProperty("RDBMS.SHARD1.MASTER.JDBC_URL"));
+		master.setUser(prop.getProperty("RDBMS.SHARD1.MASTER.USER"));
+		master.setPassword(prop.getProperty("RDBMS.SHARD1.MASTER.PASSWORD"));
 		// shard1MasterDataSource.setAcquireIncrement(Integer.parseInt(prop.getProperty("C3P0_ACQUIRE_INCREMENT")));
 		// shard1MasterDataSource
 		// .setAcquireRetryAttempts(Integer.parseInt(prop.getProperty("C3P0_ACQUIRE_RETRY_ATTEMPTS")));
@@ -86,47 +76,32 @@ public class PortKeyInitializer
 		// .getProperty("C3P0_IDLE_CONNECTION_TEST_PERIOD")));
 		// shard1MasterDataSource.setPreferredTestQuery(prop.getProperty("C3P0_PREFERRED_TEST_QUERY"));
 
-		RdbmsPersistenceManagerConfig shard1Config = new RdbmsPersistenceManagerConfig();
-		shard1Config.setMaster(shard1MasterDataSource);
+		RdbmsConnectionConfig connectionConfig = new RdbmsConnectionConfig();
+		connectionConfig.setMaster(master);
 
-		RdbmsPersistenceManager shard1RdbmsPersistenceManager = new RdbmsPersistenceManager(shard1Config);
-
-		Map<String, PersistenceManager> shardIdToPersistenceManagerMap = new HashMap<String, PersistenceManager>();
-		shardIdToPersistenceManagerMap.put("01", shard1RdbmsPersistenceManager);
-
-		ShardIdentifier rdbmsShardIdentifier = new RdbmsShardIdentifierForSingleShard();
-
-		RdbmsMetaDataCache rdbmsMetaDataCache = RdbmsMetaDataCache.getInstance();
-
-		RdbmsDataStoreConfig rdbmsDataStore = new RdbmsDataStoreConfig();
-		rdbmsDataStore.setMetaDataCache(rdbmsMetaDataCache);
-		rdbmsDataStore.setShardIdentifier(rdbmsShardIdentifier);
-		rdbmsDataStore.setShardIdToPersistenceManagerMap(shardIdToPersistenceManagerMap);
-
-		List<DataStoreType> defaultReadOrder = new ArrayList<DataStoreType>();
-		defaultReadOrder.add(DataStoreType.RDBMS);
-
-		ReadConfig defaultReadConfig = new ReadConfig();
-		defaultReadConfig.setReadOrder(defaultReadOrder);
-
-		List<DataStoreType> defaultWriteOrder = new ArrayList<DataStoreType>();
-		defaultWriteOrder.add(DataStoreType.RDBMS);
-
-		WriteConfig defaultWriteConfig = new WriteConfig();
-		defaultWriteConfig.setFailureAction(FailureAction.CONTINUE);
-		defaultWriteConfig.setWriteOrder(defaultWriteOrder);
-
-		EntityPersistencePreference defaultPersistencePreference = new EntityPersistencePreference();
-		defaultPersistencePreference.setReadConfig(defaultReadConfig);
-		defaultPersistencePreference.setWriteConfig(defaultWriteConfig);
-
-		Map<DataStoreType, DataStoreConfig> dataStoreConfigMap = new HashMap<DataStoreType, DataStoreConfig>();
-		dataStoreConfigMap.put(DataStoreType.RDBMS, rdbmsDataStore);
+		RdbmsSingleShardedDatabaseConfig dbConfig = new RdbmsSingleShardedDatabaseConfig(connectionConfig);
+		RdbmsShardingManager shardingManager = new RdbmsShardingManager();
+		shardingManager.addDatabaseConfig("portkey_example", dbConfig);
 
 		PersistenceLayer pl = new PersistenceLayer();
-		pl.setDataStoreConfigMap(dataStoreConfigMap);
-		pl.setDefaultPersistencePreference(defaultPersistencePreference);
+		pl.addShardingManager(DataStoreType.RDBMS, shardingManager);
 
+		ReadConfig readConfig = new ReadConfig();
+		List<DataStoreType> readOrder = new ArrayList<DataStoreType>();
+		readOrder.add(DataStoreType.RDBMS);
+		readConfig.setReadOrder(readOrder);
+
+		List<DataStoreType> writeOrder = new ArrayList<DataStoreType>();
+		writeOrder.add(DataStoreType.RDBMS);
+		WriteConfig writeConfig = new WriteConfig();
+		writeConfig.setWriteOrder(writeOrder);
+
+		EntityPersistencePreference defaultPersistencePreference = new EntityPersistencePreference();
+		defaultPersistencePreference.setReadConfig(readConfig);
+		defaultPersistencePreference.setWriteConfig(writeConfig);
+
+		pl.setDefaultPersistencePreference(defaultPersistencePreference);
+		pl.initialize(false);
 		return pl;
 	}
 }

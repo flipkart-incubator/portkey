@@ -5,9 +5,13 @@ import java.util.Map;
 
 import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.common.exception.QueryExecutionException;
+import com.flipkart.portkey.common.exception.ShardNotAvailableException;
+import com.flipkart.portkey.common.persistence.query.UpdateQuery;
 
 public interface ShardingManager
 {
+	public <T extends Entity> T generateShardIdAndUpdateBean(T bean) throws ShardNotAvailableException;
+
 	public void healthCheck();
 
 	public <T extends Entity> int insert(T bean) throws QueryExecutionException;
@@ -21,6 +25,8 @@ public interface ShardingManager
 
 	public <T extends Entity> int update(Class<T> clazz, Map<String, Object> updateValuesMap,
 	        Map<String, Object> criteria) throws QueryExecutionException;
+
+	public <T extends Entity> void update(List<UpdateQuery> updates) throws QueryExecutionException;
 
 	public <T extends Entity> int delete(Class<T> clazz, Map<String, Object> criteria) throws QueryExecutionException;
 

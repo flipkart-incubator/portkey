@@ -1,17 +1,25 @@
 package com.flipkart.portkey.rdbms.persistence;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.common.enumeration.ShardStatus;
 import com.flipkart.portkey.common.sharding.ShardIdentifier;
+import com.flipkart.portkey.rdbms.persistence.config.RdbmsConnectionConfig;
 import com.flipkart.portkey.rdbms.sharding.RdbmsShardIdentifierForSingleShard;
 
 public class RdbmsSingleShardedDatabaseConfig implements RdbmsDatabaseConfig
 {
 	RdbmsPersistenceManager persistenceManager;
 	ShardIdentifier shardIdentifier = new RdbmsShardIdentifierForSingleShard();
+
+	public RdbmsSingleShardedDatabaseConfig(RdbmsConnectionConfig connectionConfig)
+	{
+		this.persistenceManager = new RdbmsPersistenceManager(connectionConfig);
+	}
 
 	@Override
 	public <T extends Entity> RdbmsPersistenceManager getPersistenceManager(T bean)
@@ -33,11 +41,6 @@ public class RdbmsSingleShardedDatabaseConfig implements RdbmsDatabaseConfig
 		return allPersitenceManagers;
 	}
 
-	public void setPersistenceManager(RdbmsPersistenceManager persistenceManager)
-	{
-		this.persistenceManager = persistenceManager;
-	}
-
 	@Override
 	public ShardIdentifier getShardIdentifier()
 	{
@@ -56,9 +59,8 @@ public class RdbmsSingleShardedDatabaseConfig implements RdbmsDatabaseConfig
 	}
 
 	@Override
-	public void healthCheck()
+	public Map<String, ShardStatus> healthCheck()
 	{
-		// TODO: set this status into hazelcast
-		ShardStatus status = persistenceManager.healthCheck();
+		return new HashMap<String, ShardStatus>();
 	}
 }

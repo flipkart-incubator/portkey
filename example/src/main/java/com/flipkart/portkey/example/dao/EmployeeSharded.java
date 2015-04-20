@@ -19,9 +19,9 @@ import com.flipkart.portkey.redis.metadata.annotation.RedisField;
 /**
  * @author santosh.p
  */
-@RdbmsDataStore (tableName = "employee", databaseName = "portkey_example", shardKeyField = "empId")
+@RdbmsDataStore (tableName = "employee", databaseName = "portkey_example_sharded", shardKeyField = "empId")
 @RedisDataStore (primaryKeyPattern = "[CLASS]:{empId}:{aadharCardNumber}", secondaryKeyPatterns = "PAN:{panCardNumber}", shardKeyField = "empId")
-public class Employee implements Entity
+public class EmployeeSharded implements Entity
 {
 	@RdbmsField (columnName = "emp_id", isPrimaryKey = true)
 	@RedisField ()
@@ -199,7 +199,7 @@ public class Employee implements Entity
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		Employee other = (Employee) obj;
+		EmployeeSharded other = (EmployeeSharded) obj;
 		if (aadharCardNumber == null)
 		{
 			if (other.aadharCardNumber != null)

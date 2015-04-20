@@ -1,8 +1,10 @@
 package com.flipkart.portkey.rdbms.persistence;
 
 import java.util.List;
+import java.util.Map;
 
 import com.flipkart.portkey.common.entity.Entity;
+import com.flipkart.portkey.common.enumeration.ShardStatus;
 import com.flipkart.portkey.common.exception.ShardNotAvailableException;
 import com.flipkart.portkey.common.sharding.ShardIdentifier;
 
@@ -18,5 +20,5 @@ public interface RdbmsDatabaseConfig
 
 	public <T extends Entity> T generateShardIdAndUpdateBean(T bean) throws ShardNotAvailableException;
 
-	public void healthCheck();
+	public Map<String, ShardStatus> healthCheck();
 }
