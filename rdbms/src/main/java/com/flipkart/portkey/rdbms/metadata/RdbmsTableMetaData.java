@@ -32,6 +32,7 @@ public class RdbmsTableMetaData
 	private Map<String, String> fieldNameToColumnNameMap = new HashMap<String, String>();
 	private Map<String, String> columnNameToFieldNameMap = new HashMap<String, String>();
 	private Map<String, Field> fieldNameToFieldMap = new HashMap<String, Field>();
+	private Map<String, String> fieldNameToDefaultValueMap = new HashMap<String, String>();
 	private String insertQuery;
 	private String updateByPkQuery;
 	private String upsertQuery;
@@ -154,6 +155,26 @@ public class RdbmsTableMetaData
 	public void addToFieldNameToFieldMap(String fieldName, Field field)
 	{
 		this.fieldNameToFieldMap.put(fieldName, field);
+	}
+
+	public Map<String, String> getFieldNameToDefaultValueMap()
+	{
+		return fieldNameToDefaultValueMap;
+	}
+
+	public String getDefaultValueFromFieldName(String fieldName)
+	{
+		return fieldNameToDefaultValueMap.get(fieldName);
+	}
+
+	public void setFieldNameToDefaultValueMap(Map<String, String> fieldNameToDefaultValueMap)
+	{
+		this.fieldNameToDefaultValueMap = fieldNameToDefaultValueMap;
+	}
+
+	public void addToFieldNameToDefaultValueMap(String fieldName, String defaultValue)
+	{
+		this.fieldNameToDefaultValueMap.put(fieldName, defaultValue);
 	}
 
 	public String getInsertQuery()

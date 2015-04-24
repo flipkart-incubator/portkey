@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.common.enumeration.ShardStatus;
 import com.flipkart.portkey.common.exception.QueryExecutionException;
-import com.flipkart.portkey.common.persistence.query.SqlUpdateQuery;
+import com.flipkart.portkey.common.persistence.query.SqlQuery;
 import com.flipkart.portkey.rdbms.mapper.RdbmsMapper;
 import com.flipkart.portkey.rdbms.persistence.config.RdbmsConnectionConfig;
 
@@ -100,11 +100,11 @@ public class RdbmsPersistenceManager
 	}
 
 	@Transactional
-	public List<Integer> executeAtomicUpdates(List<SqlUpdateQuery> queryList) throws QueryExecutionException
+	public List<Integer> executeAtomicUpdates(List<SqlQuery> queryList) throws QueryExecutionException
 	{
 		List<Integer> rowsUpdatedList = new ArrayList<Integer>();
 		NamedParameterJdbcTemplate temp = new NamedParameterJdbcTemplate(master);
-		for (SqlUpdateQuery query : queryList)
+		for (SqlQuery query : queryList)
 		{
 			try
 			{
