@@ -23,7 +23,7 @@ import com.flipkart.portkey.common.exception.QueryExecutionException;
 import com.flipkart.portkey.common.persistence.PersistenceLayerInterface;
 import com.flipkart.portkey.common.persistence.Result;
 import com.flipkart.portkey.common.persistence.ShardingManager;
-import com.flipkart.portkey.common.persistence.query.UpdateQuery;
+import com.flipkart.portkey.common.persistence.query.PortKeyQuery;
 
 /**
  * @author santosh.p
@@ -327,17 +327,14 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 	}
 
 	@Override
-	public <T extends Entity> void update(List<UpdateQuery> updates) throws PortKeyException
+	public <T extends Entity> void executeTransaction(List<PortKeyQuery> queries) throws PortKeyException
 	{
-		for (UpdateQuery update : updates)
+		WriteConfig writeConfig = getDefaultWriteConfig();
+		List<DataStoreType> writeOrder = writeConfig.getWriteOrder();
+		for (DataStoreType type : writeOrder)
 		{
-			WriteConfig writeConfig = getWriteConfigForEntity(update.getClazz());
-			List<DataStoreType> writeOrder = writeConfig.getWriteOrder();
-			for (DataStoreType type : writeOrder)
-			{
-				ShardingManager shardingManager = dataStoreTypeToShardingManagerMap.get(type);
-				shardingManager.update(updates);
-			}
+			ShardingManager shardingManager = dataStoreTypeToShardingManagerMap.get(type);
+			shardingManager.executeTransaction(queries);
 		}
 	}
 

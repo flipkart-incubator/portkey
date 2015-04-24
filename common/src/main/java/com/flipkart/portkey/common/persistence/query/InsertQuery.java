@@ -15,4 +15,11 @@ public class InsertQuery implements PortKeyQuery
 	{
 		this.bean = bean;
 	}
+
+	@Override
+	public Class<? extends Entity> getClazz()
+	{
+		return bean.getClass();
+	}
+
 }

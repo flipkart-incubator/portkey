@@ -23,7 +23,7 @@ import com.flipkart.portkey.common.exception.QueryExecutionException;
 import com.flipkart.portkey.common.exception.QueryNotSupportedException;
 import com.flipkart.portkey.common.exception.ShardNotAvailableException;
 import com.flipkart.portkey.common.persistence.ShardingManager;
-import com.flipkart.portkey.common.persistence.query.UpdateQuery;
+import com.flipkart.portkey.common.persistence.query.PortKeyQuery;
 import com.flipkart.portkey.redis.connection.ConnectionManager;
 import com.flipkart.portkey.redis.keyparser.DefaultKeyParser;
 import com.flipkart.portkey.redis.keyparser.KeyParserInterface;
@@ -417,13 +417,6 @@ public class RedisShardingManager implements ShardingManager, InitializingBean
 	}
 
 	@Override
-	// TODO:SANTOSH: Implement this
-	public <T extends Entity> void update(List<UpdateQuery> updates) throws QueryExecutionException
-	{
-		throw new QueryNotSupportedException("Method not supported for redis implementation");
-	}
-
-	@Override
 	public <T extends Entity> T generateShardIdAndUpdateBean(T bean) throws ShardNotAvailableException
 	{
 		return bean;
@@ -448,5 +441,12 @@ public class RedisShardingManager implements ShardingManager, InitializingBean
 	        throws QueryExecutionException
 	{
 		throw new QueryNotSupportedException("Method not supported for redis implementation");
+	}
+
+	@Override
+	public void executeTransaction(List<PortKeyQuery> queries) throws QueryExecutionException
+	{
+		// TODO Auto-generated method stub
+
 	}
 }

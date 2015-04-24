@@ -42,18 +42,17 @@ public class Example
 		ApplicationContext context =
 		        new FileSystemXmlApplicationContext("src/main/resources/external/portkey-application-context.xml");
 		pl = context.getBean(PersistenceLayer.class, "persistenceLayer");
-		// pl = PortKeyInitializer.initialize();
-		// insert();
-		// insertWithGenerateId();
-		// upsert();
-		// updateBean();
-		// updateByCriteria();
-		// delete();
-		// getByCriteria();
-		// getAllAttributesByCriteria();
-		// getBeansBySql();
-		// getRsMapBySql();
-		// cleanUp();
+		insert();
+		insertWithGenerateId();
+		upsert();
+		updateBean();
+		updateByCriteria();
+		delete();
+		getByCriteria();
+		getAllAttributesByCriteria();
+		getBeansBySql();
+		getRsMapBySql();
+		cleanUp();
 
 		// test sharded
 		insert2();
