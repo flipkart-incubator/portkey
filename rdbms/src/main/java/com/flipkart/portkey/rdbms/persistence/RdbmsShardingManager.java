@@ -172,7 +172,7 @@ public class RdbmsShardingManager implements ShardingManager
 			List<RdbmsPersistenceManager> persistenceManagersList = databaseConfig.getAllPersistenceManagers();
 			for (RdbmsPersistenceManager pm : persistenceManagersList)
 			{
-				return pm.executeUpdate(updateQuery, columnToValueMap);
+				rowsUpdated += pm.executeUpdate(updateQuery, columnToValueMap);
 			}
 		}
 		return rowsUpdated;

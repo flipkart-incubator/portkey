@@ -39,7 +39,7 @@ public class RdbmsQueryBuilder
 			SqlBuilder.BEGIN();
 			List<Field> fieldsList = tableMetaData.getFieldsList();
 
-			StringBuilder insertQryStrBuilder = new StringBuilder();
+			StringBuilder insertQueryStrBuilder = new StringBuilder();
 			StringBuilder valuesQryStrBuilder = new StringBuilder();
 
 			for (Field field : fieldsList)
@@ -48,21 +48,21 @@ public class RdbmsQueryBuilder
 
 				if (rdbmsField != null)
 				{
-					insertQryStrBuilder.append("`" + rdbmsField.columnName() + "`" + ",");
+					insertQueryStrBuilder.append("`" + rdbmsField.columnName() + "`" + ",");
 					if (rdbmsField.defaultValue().equals(""))
 					{
 						valuesQryStrBuilder.append(":" + rdbmsField.columnName() + ",");
 					}
 					else
 					{
-						valuesQryStrBuilder.append(":" + rdbmsField.defaultValue() + ",");
+						valuesQryStrBuilder.append(rdbmsField.defaultValue() + ",");
 					}
 				}
 
 			}
 			SqlBuilder.INSERT_INTO(tableMetaData.getTableName());
 
-			SqlBuilder.VALUES(insertQryStrBuilder.substring(0, insertQryStrBuilder.length() - 1),
+			SqlBuilder.VALUES(insertQueryStrBuilder.substring(0, insertQueryStrBuilder.length() - 1),
 			        valuesQryStrBuilder.substring(0, valuesQryStrBuilder.length() - 1));
 			insertQuery = SqlBuilder.SQL();
 			tableMetaData.setInsertQuery(insertQuery);
@@ -78,7 +78,7 @@ public class RdbmsQueryBuilder
 		{
 			String insertQuery = getInsertQuery(tableMetaData);
 			StringBuilder onDuplicateQueryStrBuilder = new StringBuilder();
-			onDuplicateQueryStrBuilder.append(" ON DUPLICATE KEY UPDATE ");
+			onDuplicateQueryStrBuilder.append("\nON DUPLICATE KEY UPDATE ");
 			List<String> primaryKeys = tableMetaData.getPrimaryKeysList();
 			for (String fieldName : tableMetaData.getFieldNameToColumnNameMap().keySet())
 			{
@@ -108,7 +108,7 @@ public class RdbmsQueryBuilder
 	{
 		String insertQuery = getInsertQuery(tableMetaData);
 		StringBuilder onDuplicateQueryStrBuilder = new StringBuilder();
-		onDuplicateQueryStrBuilder.append(" ON DUPLICATE KEY UPDATE ");
+		onDuplicateQueryStrBuilder.append("\nON DUPLICATE KEY UPDATE ");
 		for (String fieldName : fieldsToBeUpdatedOnDuplicate)
 		{
 			String columnName = tableMetaData.getColumnNameFromFieldName(fieldName);
@@ -181,7 +181,10 @@ public class RdbmsQueryBuilder
 				RdbmsSpecialValue specialValue = (RdbmsSpecialValue) columnToValueMap.get(column);
 				SqlBuilder.SET("`" + column + "`" + "=" + PortKeyUtils.toString(specialValue));
 			}
-			SqlBuilder.SET("`" + column + "`" + "=:" + column);
+			else
+			{
+				SqlBuilder.SET("`" + column + "`" + "=:" + column);
+			}
 		}
 		for (String column : columnsInCriteria)
 		{

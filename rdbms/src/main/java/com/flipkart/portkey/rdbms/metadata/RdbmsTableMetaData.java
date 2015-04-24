@@ -5,7 +5,7 @@ package com.flipkart.portkey.rdbms.metadata;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -27,12 +27,12 @@ public class RdbmsTableMetaData
 	private String tableName;
 	private String shardKeyFieldName;
 	private List<String> primaryKeysList = new ArrayList<String>();
-	private Map<String, RdbmsField> fieldNameToRdbmsFieldMap = new HashMap<String, RdbmsField>();
-	private Map<String, Serializer> fieldNameToSerializerMap = new HashMap<String, Serializer>();
-	private Map<String, String> fieldNameToColumnNameMap = new HashMap<String, String>();
-	private Map<String, String> columnNameToFieldNameMap = new HashMap<String, String>();
-	private Map<String, Field> fieldNameToFieldMap = new HashMap<String, Field>();
-	private Map<String, String> fieldNameToDefaultValueMap = new HashMap<String, String>();
+	private Map<String, RdbmsField> fieldNameToRdbmsFieldMap = new LinkedHashMap<String, RdbmsField>();
+	private Map<String, Serializer> fieldNameToSerializerMap = new LinkedHashMap<String, Serializer>();
+	private Map<String, String> fieldNameToColumnNameMap = new LinkedHashMap<String, String>();
+	private Map<String, String> columnNameToFieldNameMap = new LinkedHashMap<String, String>();
+	private Map<String, Field> fieldNameToFieldMap = new LinkedHashMap<String, Field>();
+	private Map<String, String> fieldNameToDefaultValueMap = new LinkedHashMap<String, String>();
 	private String insertQuery;
 	private String updateByPkQuery;
 	private String upsertQuery;

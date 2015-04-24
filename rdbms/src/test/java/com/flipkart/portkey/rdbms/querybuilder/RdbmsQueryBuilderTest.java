@@ -1,23 +1,32 @@
 package com.flipkart.portkey.rdbms.querybuilder;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
+import junit.framework.Assert;
+
+import org.apache.log4j.Logger;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import com.flipkart.portkey.rdbms.dao.Person;
 import com.flipkart.portkey.rdbms.metadata.RdbmsMetaDataCache;
 import com.flipkart.portkey.rdbms.metadata.RdbmsTableMetaData;
 
 public class RdbmsQueryBuilderTest
 {
+	Logger logger = Logger.getLogger(RdbmsQueryBuilderTest.class);
+
 	@Test
 	public void testGetInsertQuery()
 	{
 		RdbmsTableMetaData metaData = RdbmsMetaDataCache.getInstance().getMetaData(Person.class);
 		String actual = RdbmsQueryBuilder.getInstance().getInsertQuery(metaData);
 		String expected =
-		        "INSERT INTO person" + "\n (`id`,`last_name`,`age`,`first_name`)"
-		                + "\nVALUES (:id,:last_name,:age,:first_name)";
+		        "INSERT INTO person" + "\n (`id`,`first_name`,`last_name`,`age`,`mod_count`,`last_modified`)"
+		                + "\nVALUES (:id,:first_name,:last_name,:age,mod_count+1,now())";
 		Assert.assertEquals(expected, actual);
 	}
 
@@ -25,9 +34,10 @@ public class RdbmsQueryBuilderTest
 	public void testGetUpsertQuery()
 	{
 		String expected =
-		        "INSERT INTO person" + "\n (`id`,`last_name`,`age`,`first_name`)"
-		                + "\nVALUES (:id,:last_name,:age,:first_name)"
-		                + "\nON DUPLICATE KEY UPDATE `last_name`=:last_name,`age`=:age,`first_name`=:first_name";
+		        "INSERT INTO person"
+		                + "\n (`id`,`first_name`,`last_name`,`age`,`mod_count`,`last_modified`)"
+		                + "\nVALUES (:id,:first_name,:last_name,:age,mod_count+1,now())"
+		                + "\nON DUPLICATE KEY UPDATE `first_name`=:first_name,`last_name`=:last_name,`age`=:age,`mod_count`=mod_count+1,`last_modified`=now()";
 		RdbmsTableMetaData metaData = RdbmsMetaDataCache.getInstance().getMetaData(Person.class);
 		String actual = RdbmsQueryBuilder.getInstance().getUpsertQuery(metaData);
 		Assert.assertEquals(expected, actual);
@@ -38,12 +48,15 @@ public class RdbmsQueryBuilderTest
 	{
 		RdbmsTableMetaData metaData = RdbmsMetaDataCache.getInstance().getMetaData(Person.class);
 		List<String> fieldsToBeUpdatedOnDuplicate = new ArrayList<String>();
-		fieldsToBeUpdatedOnDuplicate.add("lastName");
 		fieldsToBeUpdatedOnDuplicate.add("firstName");
+		fieldsToBeUpdatedOnDuplicate.add("lastName");
+		fieldsToBeUpdatedOnDuplicate.add("modCount");
+		fieldsToBeUpdatedOnDuplicate.add("lastModified");
 		String expected =
-		        "INSERT INTO person" + "\n (`id`,`last_name`,`age`,`first_name`)"
-		                + "\nVALUES (:id,:last_name,:age,:first_name)"
-		                + "\nON DUPLICATE KEY UPDATE `last_name`=:last_name,`first_name`=:first_name";
+		        "INSERT INTO person"
+		                + "\n (`id`,`first_name`,`last_name`,`age`,`mod_count`,`last_modified`)"
+		                + "\nVALUES (:id,:first_name,:last_name,:age,mod_count+1,now())"
+		                + "\nON DUPLICATE KEY UPDATE `first_name`=:first_name,`last_name`=:last_name,`mod_count`=mod_count+1,`last_modified`=now()";
 		String actual = RdbmsQueryBuilder.getInstance().getUpsertQuery(metaData, fieldsToBeUpdatedOnDuplicate);
 		Assert.assertEquals(expected, actual);
 	}
@@ -52,19 +65,39 @@ public class RdbmsQueryBuilderTest
 	public void testGetUpdateByPkQuery()
 	{
 		String expected =
-		        "INSERT INTO person" + "\n (`id`,`last_name`,`age`,`first_name`)"
-		                + "\nVALUES (:id,:last_name,:age,:first_name)"
-		                + "\nON DUPLICATE KEY UPDATE `last_name`=:last_name,`age`=:age,`first_name`=:first_name";
+		        "INSERT INTO person"
+		                + "\n (`id`,`first_name`,`last_name`,`age`,`mod_count`,`last_modified`)"
+		                + "\nVALUES (:id,:first_name,:last_name,:age,mod_count+1,now())"
+		                + "\nON DUPLICATE KEY UPDATE `first_name`=:first_name,`last_name`=:last_name,`age`=:age,`mod_count`=mod_count+1,`last_modified`=now()";
 		RdbmsTableMetaData metaData = RdbmsMetaDataCache.getInstance().getMetaData(Person.class);
 		String actual = RdbmsQueryBuilder.getInstance().getUpsertQuery(metaData);
 		Assert.assertEquals(expected, actual);
 	}
 
 	@Test
-	@Ignore
 	public void testGetUpdateByCriteriaQuery()
 	{
-
+		String expected =
+		        "UPDATE person" + "\nSET `firstName`=:firstName, `lastName`=:lastName, `mod_count`=mod_count+1"
+		                + "\nWHERE (`id`=:id)";
+		String tableName = "person";
+		List<String> columnsToBeUpdated = new ArrayList<String>();
+		columnsToBeUpdated.add("firstName");
+		columnsToBeUpdated.add("lastName");
+		columnsToBeUpdated.add("mod_count");
+		List<String> columnsInCriteria = new ArrayList<String>();
+		columnsInCriteria.add("id");
+		Map<String, Object> columnToValueMap = new HashMap<String, Object>();
+		columnToValueMap.put("firstName", "someFirstName");
+		columnToValueMap.put("lastName", "someLastName");
+		RdbmsSpecialValue modCount = new RdbmsSpecialValue();
+		modCount.setValue("mod_count+1");
+		columnToValueMap.put("mod_count", modCount);
+		columnToValueMap.put("id", "someId");
+		String actual =
+		        RdbmsQueryBuilder.getInstance().getUpdateByCriteriaQuery(tableName, columnsToBeUpdated,
+		                columnsInCriteria, columnToValueMap);
+		Assert.assertEquals(expected, actual);
 	}
 
 	@Test
@@ -72,29 +105,5 @@ public class RdbmsQueryBuilderTest
 	public void testGetDeleteByCriteriaQuery()
 	{
 
-	}
-
-	@Test
-	public void testGetByJoinCriteriaQuery()
-	{
-		RdbmsJoinMetaData metaData = RdbmsMetaDataCache.getInstance().getJoinMetaData(JoinForTest.class);
-		List<String> fieldNames = new ArrayList<String>();
-		fieldNames.add("t1c1");
-		fieldNames.add("t2c1");
-		fieldNames.add("t3c1");
-		fieldNames.add("t4c1");
-
-		List<String> criteriaAttributes = new ArrayList<String>();
-		criteriaAttributes.add("t1c2");
-		criteriaAttributes.add("t2c2");
-		criteriaAttributes.add("t3c2");
-		criteriaAttributes.add("t4c2");
-		String expected =
-		        "SELECT t1.t1_c1, t2.t2_c1, t3.t3_c1, t4.t4_c1"
-		                + "\nFROM table1 AS t1 INNER JOIN table2 AS t2 ON t1.t1c1=t2.t2c2 OUTER JOIN table3 AS t3 ON t2.t2c1<t3.t3c2 EQUI JOIN table4 AS t4 ON t3.t3c1>t4.t4c2"
-		                + "\nWHERE `t1.t1c2`=:t1c2,`t2.t2c2`=:t2c2,`t3.t3c2`=:t3c2,`t4.t4c2`=:t4c";
-		String actual =
-		        RdbmsQueryBuilder.getInstance().getGetByJoinCriteriaQuery(metaData, fieldNames, criteriaAttributes);
-		Assert.assertEquals(expected, actual);
 	}
 }
