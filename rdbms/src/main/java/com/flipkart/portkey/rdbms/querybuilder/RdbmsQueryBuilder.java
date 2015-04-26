@@ -148,14 +148,14 @@ public class RdbmsQueryBuilder
 		}
 		for (String column : columnsInCriteria)
 		{
-			if (columnToValueMap.get(column) != null)
-			{
-				SqlBuilder.WHERE("`" + column + "`" + "=:" + column);
-			}
-			else
-			{
-				SqlBuilder.WHERE("`" + column + "`" + " IS :" + column);
-			}
+			// if (columnToValueMap.get(column) != null)
+			// {
+			SqlBuilder.WHERE("`" + column + "`" + "=:" + column);
+			// }
+			// else
+			// {
+			// SqlBuilder.WHERE("`" + column + "`" + " IS :" + column);
+			// }
 		}
 		String updateQuery = SqlBuilder.SQL();
 		logger.debug(updateQuery);
