@@ -230,11 +230,11 @@ public class RdbmsPersistenceManager implements PersistenceManager
 			String tableName = tableMetaData.getTableName();
 			List<String> columnsToBeUpdated = new ArrayList<String>(updateColumnToValueMap.keySet());
 			List<String> criteriaAttributes = new ArrayList<String>(criteriaColumnToValueMap.keySet());
-			String updateQuery =
-			        RdbmsQueryBuilder.getInstance().getUpdateByCriteriaQuery(tableName, columnsToBeUpdated,
-			                criteriaAttributes, updateColumnToValueMap);
 			Map<String, Object> namedParameter =
 			        PortKeyUtils.mergeMaps(updateColumnToValueMap, criteriaColumnToValueMap);
+			String updateQuery =
+			        RdbmsQueryBuilder.getInstance().getUpdateByCriteriaQuery(tableName, columnsToBeUpdated,
+			                criteriaAttributes, namedParameter);
 			NamedParameterJdbcTemplate temp = new NamedParameterJdbcTemplate(master);
 			try
 			{
