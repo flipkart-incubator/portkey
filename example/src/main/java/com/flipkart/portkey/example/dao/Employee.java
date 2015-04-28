@@ -186,7 +186,9 @@ public class Employee implements Entity
 		result = prime * result + ((name == null) ? 0 : name.hashCode());
 		result = prime * result + ((panCardNumber == null) ? 0 : panCardNumber.hashCode());
 		result = prime * result + ((pastEmployers == null) ? 0 : pastEmployers.hashCode());
-		result = prime * result + ((stampCreated == null) ? 0 : stampCreated.hashCode());
+		result =
+		        prime * result
+		                + ((stampCreated == null) ? 0 : DateUtils.round(stampCreated, Calendar.SECOND).hashCode());
 		return result;
 	}
 

@@ -11,17 +11,21 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.log4j.Logger;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.FileSystemXmlApplicationContext;
 
+import com.flipkart.portkey.common.enumeration.DataStoreType;
 import com.flipkart.portkey.common.exception.PortKeyException;
 import com.flipkart.portkey.common.persistence.Result;
+import com.flipkart.portkey.common.persistence.query.UpdateQuery;
 import com.flipkart.portkey.example.dao.Employee;
 import com.flipkart.portkey.example.dao.EmployeeSharded;
 import com.flipkart.portkey.example.dao.Gender;
@@ -42,6 +46,7 @@ public class Example
 		ApplicationContext context =
 		        new FileSystemXmlApplicationContext("src/main/resources/external/portkey-application-context.xml");
 		pl = context.getBean(PersistenceLayer.class, "persistenceLayer");
+		cleanUp();
 		insert();
 		insertWithGenerateId();
 		upsert();
@@ -52,6 +57,12 @@ public class Example
 		getAllAttributesByCriteria();
 		getBeansBySql();
 		getRsMapBySql();
+		updateTransactionalSuccess();
+		updateTransactionalFailure();
+		updateTransactionalSuccessWithNoRowsUpdate();
+		updateTransactionalFailureWithNoRowsUpdate();
+		insertTransactionalSuccess();
+		insertTransactionalFailure();
 		cleanUp();
 
 		// test sharded
@@ -66,6 +77,7 @@ public class Example
 		getBeansBySql2();
 		getRsMapBySql2();
 		cleanUp2();
+		logger.info("Success!!");
 		System.exit(0);
 	}
 
@@ -114,7 +126,7 @@ public class Example
 		return emp;
 	}
 
-	private static void cleanUp()
+	private static boolean cleanUp()
 	{
 		try
 		{
@@ -123,8 +135,15 @@ public class Example
 		catch (PortKeyException e)
 		{
 			logger.info("Exception while cleaning the table:" + e.toString());
+			return false;
 		}
-		logger.info("Cleaned up the table");
+		List<Employee> beans = getAllBeansFromTable();
+		if (beans.size() != 0)
+		{
+			logger.info("Failed to clean tables, beans still present in table" + beans);
+			return false;
+		}
+		return true;
 	}
 
 	private static List<Employee> getAllBeansFromTable()
@@ -143,8 +162,11 @@ public class Example
 
 	private static void insert()
 	{
-		logger.info("Testing insert method");
-		cleanUp();
+		if (!cleanUp())
+		{
+			logger.info("Failed to clean up tables");
+			return;
+		}
 
 		Employee emp = createEmployee();
 
@@ -187,13 +209,15 @@ public class Example
 			logger.info("Failure in insert:Inserted only one bean but query returned more");
 			return;
 		}
-		logger.info("Success!");
 	}
 
 	private static void insertWithGenerateId()
 	{
-		logger.info("Testing insert method with generate id");
-		cleanUp();
+		if (!cleanUp())
+		{
+			logger.info("Failed to clean up tables");
+			return;
+		}
 		Employee emp = createEmployee();
 		try
 		{
@@ -201,8 +225,7 @@ public class Example
 			Employee returned = (Employee) r.getEntity();
 			if (!returned.equals(emp))
 			{
-				System.out
-				        .println("Failure in insertWithGenerateId: Bean returned by insert method does not match with passed one");
+				logger.info("Failure in insertWithGenerateId: Bean returned by insert method does not match with passed one");
 				logger.info("Passed:" + emp);
 				logger.info("Returned:" + returned);
 				return;
@@ -235,13 +258,15 @@ public class Example
 			logger.info("Failure in insertWithGenerateId: Inserted only one bean but query returned more");
 			return;
 		}
-		logger.info("Success!");
 	}
 
 	private static void upsert()
 	{
-		logger.info("Testing upsert method with generate id");
-		cleanUp();
+		if (!cleanUp())
+		{
+			logger.info("Failed to clean up tables");
+			return;
+		}
 		Employee emp = createEmployee();
 		try
 		{
@@ -279,13 +304,15 @@ public class Example
 			logger.info("Failure in upsert: Inserted only one bean but query returned more");
 			return;
 		}
-		logger.info("Success!");
 	}
 
 	private static void updateBean()
 	{
-		logger.info("Testing updateBean");
-		cleanUp();
+		if (!cleanUp())
+		{
+			logger.info("Failed to clean up tables");
+			return;
+		}
 		Employee emp = insertAndReturnBean();
 		emp.setName(emp.getName() + " Some Surname");
 		try
@@ -324,13 +351,15 @@ public class Example
 			logger.info("Failure in updateBean: Inserted only one bean but query returned more");
 			return;
 		}
-		logger.info("Success!");
 	}
 
 	private static void updateByCriteria()
 	{
-		logger.info("Testing updateByCriteria");
-		cleanUp();
+		if (!cleanUp())
+		{
+			logger.info("Failed to clean up tables");
+			return;
+		}
 		Employee emp = insertAndReturnBean();
 		try
 		{
@@ -369,13 +398,15 @@ public class Example
 			logger.info("Failure in updateByCriteria: Inserted only one bean but query returned more");
 			return;
 		}
-		logger.info("Success!");
 	}
 
 	private static void delete()
 	{
-		logger.info("Testing delete");
-		cleanUp();
+		if (!cleanUp())
+		{
+			logger.info("Failed to clean up tables");
+			return;
+		}
 		Employee emp = insertAndReturnBean();
 		try
 		{
@@ -394,13 +425,15 @@ public class Example
 			logger.info("Failure in delete: Non zero number of rows are returned by query");
 			return;
 		}
-		logger.info("Success!");
 	}
 
 	private static void getByCriteria()
 	{
-		logger.info("Testing getByCriteria");
-		cleanUp();
+		if (!cleanUp())
+		{
+			logger.info("Failed to clean up tables");
+			return;
+		}
 		Employee emp = insertAndReturnBean();
 		try
 		{
@@ -441,13 +474,15 @@ public class Example
 			logger.info("Failure in getByCriteria: Exception while trying to delete bean:" + e);
 			return;
 		}
-		logger.info("Success!");
 	}
 
 	private static void getAllAttributesByCriteria()
 	{
-		logger.info("Testing getAllAttributesByCriteria");
-		cleanUp();
+		if (!cleanUp())
+		{
+			logger.info("Failed to clean up tables");
+			return;
+		}
 		Employee emp = insertAndReturnBean();
 		try
 		{
@@ -481,13 +516,15 @@ public class Example
 			logger.info("Failure in getAllAttributesByCriteria: Exception while trying to delete bean:" + e);
 			return;
 		}
-		logger.info("Success!");
 	}
 
 	private static void getBeansBySql()
 	{
-		logger.info("Testing getBeansBySql");
-		cleanUp();
+		if (!cleanUp())
+		{
+			logger.info("Failed to clean up tables");
+			return;
+		}
 		Employee emp = insertAndReturnBean();
 		List<Employee> l = null;
 		try
@@ -519,13 +556,16 @@ public class Example
 			logger.info("Exception while trying to retrieve all rows from table:" + e.toString());
 			return;
 		}
-		logger.info("Success!");
+
 	}
 
 	private static void getRsMapBySql()
 	{
-		logger.info("Testing getRsMapBySql");
-		cleanUp();
+		if (!cleanUp())
+		{
+			logger.info("Failed to clean up tables");
+			return;
+		}
 		Employee emp = insertAndReturnBean();
 		List<Map<String, Object>> tupleList = null;
 		try
@@ -574,7 +614,330 @@ public class Example
 			logger.info("Exception while trying to retrieve all rows from table:" + e.toString());
 			return;
 		}
-		logger.info("Success!");
+
+	}
+
+	private static UpdateQuery getUpdateQueryAndUpdateBean(Employee bean, boolean updateBean)
+	{
+		Map<String, Object> updateFieldNameToValueMap = new HashMap<String, Object>();
+		String newName = RandomStringUtils.random(20, true, true);
+		updateFieldNameToValueMap.put("name", newName);
+		if (updateBean)
+		{
+			bean.setName(newName);
+		}
+		UpdateQuery q = new UpdateQuery();
+		q.setClazz(bean.getClass());
+		Map<String, Object> criteriaFieldNameToValueMap1 = new HashMap<String, Object>();
+		criteriaFieldNameToValueMap1.put("empId", bean.getEmpId());
+		q.setCriteriaFieldNameToValueMap(criteriaFieldNameToValueMap1);
+		q.setUpdateFieldNameToValueMap(updateFieldNameToValueMap);
+		return q;
+	}
+
+	private static UpdateQuery getUpdateQuery(Employee bean)
+	{
+		return getUpdateQueryAndUpdateBean(bean, false);
+	}
+
+	private static UpdateQuery getInvalidUpdateQuery(Employee bean)
+	{
+		Map<String, Object> updateFieldNameToValueMap = new HashMap<String, Object>();
+		updateFieldNameToValueMap.put("panCardNumber", RandomStringUtils.random(20, true, true));
+		UpdateQuery q = new UpdateQuery();
+		q.setClazz(bean.getClass());
+		Map<String, Object> criteriaFieldNameToValueMap1 = new HashMap<String, Object>();
+		criteriaFieldNameToValueMap1.put("empId", bean.getEmpId());
+		q.setCriteriaFieldNameToValueMap(criteriaFieldNameToValueMap1);
+		q.setUpdateFieldNameToValueMap(updateFieldNameToValueMap);
+		return q;
+	}
+
+	private static List<UpdateQuery> getQueries(List<Employee> beans, boolean updateBean)
+	{
+		List<UpdateQuery> queries = new ArrayList<UpdateQuery>();
+		for (Employee bean : beans)
+		{
+			queries.add(getUpdateQueryAndUpdateBean(bean, updateBean));
+		}
+		return queries;
+	}
+
+	private static List<UpdateQuery> getQueriesInvalid(List<Employee> beans)
+	{
+		List<UpdateQuery> queries = new ArrayList<UpdateQuery>();
+		int i = 0;
+		for (Employee bean : beans)
+		{
+			i += 1;
+			if (i == beans.size() - 1)
+			{
+				queries.add(getInvalidUpdateQuery(bean));
+			}
+			else
+			{
+				queries.add(getUpdateQuery(bean));
+			}
+		}
+		return queries;
+	}
+
+	private static void updateTransactionalSuccess()
+	{
+		if (!cleanUp())
+		{
+			logger.info("Failed to clean up tables");
+			return;
+		}
+		List<Employee> expected = new ArrayList<Employee>();
+		for (int i = 0; i < 4; i++)
+		{
+			expected.add(insertAndReturnBean());
+		}
+		List<UpdateQuery> queries = getQueries(expected, true);
+		Result result = null;
+		try
+		{
+			result = pl.update(queries);
+		}
+		catch (PortKeyException e)
+		{
+			logger.info("Failure in updateTransactional: caught exception", e);
+			return;
+		}
+		int rowsUpdated = result.getRowsUpdatedForDataStore(DataStoreType.RDBMS);
+		if (rowsUpdated != queries.size())
+		{
+			logger.info("Failure in updateTransactional: number of update queries sent =" + queries.size()
+			        + ", number of rows updated=" + rowsUpdated);
+			return;
+		}
+		List<Employee> actual = getAllBeansFromTable();
+		if (expected.size() != actual.size())
+		{
+			logger.info("Failure in updateTransactional: expected=" + expected + ", actual=" + actual);
+		}
+		Set<Employee> expectedSet = new HashSet<Employee>(expected);
+		Set<Employee> actualSet = new HashSet<Employee>(actual);
+
+		if (!expectedSet.equals(actualSet))
+		{
+			logger.info("Failure in updateTransactional: expected=" + expected + ", actual=" + actual);
+		}
+
+	}
+
+	private static void updateTransactionalSuccessWithNoRowsUpdate()
+	{
+		if (!cleanUp())
+		{
+			logger.info("Failed to clean up tables");
+			return;
+		}
+		List<Employee> expected = new ArrayList<Employee>();
+		for (int i = 0; i < 4; i++)
+		{
+			expected.add(insertAndReturnBean());
+		}
+		List<UpdateQuery> queries = getQueries(expected, true);
+		Result result = null;
+		try
+		{
+			result = pl.update(queries, true);
+		}
+		catch (PortKeyException e)
+		{
+			logger.info("Failure in updateTransactional: caught exception", e);
+			return;
+		}
+		int rowsUpdated = result.getRowsUpdatedForDataStore(DataStoreType.RDBMS);
+		if (rowsUpdated != queries.size())
+		{
+			logger.info("Failure in updateTransactional: number of update queries sent =" + queries.size()
+			        + ", number of rows updated=" + rowsUpdated);
+			return;
+		}
+		List<Employee> actual = getAllBeansFromTable();
+		if (expected.size() != actual.size())
+		{
+			logger.info("Failure in updateTransactional: expected=" + expected + ", actual=" + actual);
+		}
+		Set<Employee> expectedSet = new HashSet<Employee>(expected);
+		Set<Employee> actualSet = new HashSet<Employee>(actual);
+
+		if (!expectedSet.equals(actualSet))
+		{
+			logger.info("Failure in updateTransactional: expected=" + expected + ", actual=" + actual);
+		}
+	}
+
+	private static void updateTransactionalFailureWithNoRowsUpdate()
+	{
+		boolean exceptionEncountered = false;
+		if (!cleanUp())
+		{
+			logger.info("Failed to clean up tables");
+			return;
+		}
+		List<Employee> expected = new ArrayList<Employee>();
+		for (int i = 0; i < 4; i++)
+		{
+			expected.add(insertAndReturnBean());
+		}
+		List<UpdateQuery> queries = getQueries(expected, false);
+		queries.get(2).getCriteriaFieldNameToValueMap().put("name", "someNameWhichIsNotPresentInTable");
+		try
+		{
+			pl.update(queries, true);
+		}
+		catch (PortKeyException e)
+		{
+			exceptionEncountered = true;
+		}
+		if (!exceptionEncountered)
+		{
+			logger.info("Failure in updateTransactionalFailureWithNoRowsUpdate, exception was expected but encountered none");
+			return;
+		}
+		List<Employee> actual = getAllBeansFromTable();
+		if (expected.size() != actual.size())
+		{
+			logger.info("Failure in updateTransactional: expected=" + expected + ", actual=" + actual);
+		}
+		Set<Employee> expectedSet = new HashSet<Employee>(expected);
+		Set<Employee> actualSet = new HashSet<Employee>(actual);
+
+		if (!expectedSet.equals(actualSet))
+		{
+			logger.info("Failure in updateTransactional: expected=" + expected + ", actual=" + actual);
+		}
+	}
+
+	private static void updateTransactionalFailure()
+	{
+		if (!cleanUp())
+		{
+			logger.info("Failed to clean up tables");
+			return;
+		}
+		boolean exceptionCaught = false;
+		List<Employee> expected = new ArrayList<Employee>();
+		for (int i = 0; i < 4; i++)
+		{
+			expected.add(insertAndReturnBean());
+		}
+		List<UpdateQuery> queries = getQueriesInvalid(expected);
+		try
+		{
+			pl.update(queries);
+		}
+		catch (PortKeyException e)
+		{
+			exceptionCaught = true;
+		}
+		if (!exceptionCaught)
+		{
+			logger.info("Failure in updateTransactionalFailure: exception was expected, but didn't catch any");
+			return;
+		}
+
+		List<Employee> actual = getAllBeansFromTable();
+		if (expected.size() != actual.size())
+		{
+			logger.info("Failure in updateTransactionalFailure: expected=" + expected + ", actual=" + actual);
+		}
+		Set<Employee> expectedSet = new HashSet<Employee>(expected);
+		Set<Employee> actualSet = new HashSet<Employee>(actual);
+
+		if (!expectedSet.equals(actualSet))
+		{
+			logger.info("Failure in updateTransactionalFailure: expected=" + expected + ", actual=" + actual);
+		}
+	}
+
+	private static boolean compareLists(List<Employee> expected, List<Employee> actual)
+	{
+		if (expected.size() != actual.size())
+		{
+			return false;
+		}
+		Set<Employee> expectedSet = new HashSet<Employee>(expected);
+		Set<Employee> actualSet = new HashSet<Employee>(actual);
+
+		if (expectedSet.equals(actualSet))
+		{
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+
+	private static void insertTransactionalSuccess()
+	{
+		if (!cleanUp())
+		{
+			logger.info("Failed to clean up tables");
+			return;
+		}
+		List<Employee> expected = new ArrayList<Employee>();
+		for (int i = 0; i < 4; i++)
+		{
+			expected.add(createEmployee());
+		}
+		try
+		{
+			pl.insert(expected);
+		}
+		catch (PortKeyException e)
+		{
+			logger.info("Failure in insertTransactionalSuccess: Exception while trying to insert beans" + e);
+			return;
+		}
+		List<Employee> actual = getAllBeansFromTable();
+		if (!compareLists(expected, actual))
+		{
+			logger.info("Failure, expected=" + expected + ", actual=" + actual);
+		}
+	}
+
+	private static void insertTransactionalFailure()
+	{
+		boolean exceptionEncountered = false;
+		if (!cleanUp())
+		{
+			logger.info("Failed to clean up tables");
+			return;
+		}
+		List<Employee> expected = new ArrayList<Employee>();
+		for (int i = 0; i < 4; i++)
+		{
+			Employee bean = createEmployee();
+			if (i == 2)
+			{
+				bean.setPanCardNumber(RandomStringUtils.random(20, true, true));
+			}
+			expected.add(bean);
+		}
+		try
+		{
+			pl.insert(expected);
+		}
+		catch (PortKeyException e)
+		{
+			exceptionEncountered = true;
+		}
+		if (!exceptionEncountered)
+		{
+			logger.info("Failure: Exception was expected but didn't catch any");
+			return;
+		}
+		List<Employee> actual = getAllBeansFromTable();
+		if (actual != null && actual.size() != 0)
+		{
+			logger.info("Failure, expected an empty set, actual=" + actual);
+		}
 	}
 
 	private static String generateRandomShardId()
@@ -630,7 +993,7 @@ public class Example
 		return emp;
 	}
 
-	private static void cleanUp2()
+	private static boolean cleanUp2()
 	{
 		try
 		{
@@ -640,7 +1003,13 @@ public class Example
 		{
 			logger.info("Exception while cleaning the table:" + e.toString());
 		}
-		logger.info("Cleaned up the table");
+		List<Employee> beans = getAllBeansFromTable();
+		if (beans.size() != 0)
+		{
+			logger.info("Failed to clean tables, beans still present in table" + beans);
+			return false;
+		}
+		return true;
 	}
 
 	private static List<EmployeeSharded> getAllBeansFromTable2()
@@ -659,8 +1028,10 @@ public class Example
 
 	private static void insert2()
 	{
-		logger.info("Testing insert2 method");
-		cleanUp2();
+		if (!cleanUp2())
+		{
+			logger.info("Failed to clean up tables");
+		}
 
 		EmployeeSharded emp = createEmployee2();
 
@@ -703,13 +1074,15 @@ public class Example
 			logger.info("Failure in insert2: Inserted only one bean but query returned more");
 			return;
 		}
-		logger.info("Success!");
+
 	}
 
 	private static void insertWithGenerateId2()
 	{
-		logger.info("Testing insert2 method with generate id");
-		cleanUp2();
+		if (!cleanUp2())
+		{
+			logger.info("Failed to clean up tables");
+		}
 		EmployeeSharded emp = createEmployee2();
 		try
 		{
@@ -750,13 +1123,15 @@ public class Example
 			logger.info("Failure in insertWithGenerateId2: Inserted only one bean but query returned more");
 			return;
 		}
-		logger.info("Success!");
+
 	}
 
 	private static void upsert2()
 	{
-		logger.info("Testing upsert2 method");
-		cleanUp2();
+		if (!cleanUp2())
+		{
+			logger.info("Failed to clean up tables");
+		}
 		EmployeeSharded emp = createEmployee2();
 		try
 		{
@@ -794,13 +1169,15 @@ public class Example
 			logger.info("Failure in upsert2: Inserted only one bean but query returned more");
 			return;
 		}
-		logger.info("Success!");
+
 	}
 
 	private static void updateBean2()
 	{
-		logger.info("Testing updateBean2");
-		cleanUp2();
+		if (!cleanUp2())
+		{
+			logger.info("Failed to clean up tables");
+		}
 		EmployeeSharded emp = insertAndReturnBean2();
 		emp.setName(emp.getName() + " Some Surname");
 		try
@@ -839,13 +1216,15 @@ public class Example
 			logger.info("Failure in updateBean2: Inserted only one bean but query returned more");
 			return;
 		}
-		logger.info("Success!");
+
 	}
 
 	private static void updateByCriteria2()
 	{
-		logger.info("Testing updateByCriteria2");
-		cleanUp2();
+		if (!cleanUp2())
+		{
+			logger.info("Failed to clean up tables");
+		}
 		EmployeeSharded emp = insertAndReturnBean2();
 		try
 		{
@@ -884,13 +1263,15 @@ public class Example
 			logger.info("Failure in updateByCriteria2: Inserted only one bean but query returned more");
 			return;
 		}
-		logger.info("Success!");
+
 	}
 
 	private static void delete2()
 	{
-		logger.info("Testing delete2");
-		cleanUp2();
+		if (!cleanUp2())
+		{
+			logger.info("Failed to clean up tables");
+		}
 		EmployeeSharded emp = insertAndReturnBean2();
 		try
 		{
@@ -909,13 +1290,15 @@ public class Example
 			logger.info("Failure in delete2: Non zero number of rows are returned by query");
 			return;
 		}
-		logger.info("Success!");
+
 	}
 
 	private static void getByCriteria2()
 	{
-		logger.info("Testing getByCriteria2");
-		cleanUp2();
+		if (!cleanUp2())
+		{
+			logger.info("Failed to clean up tables");
+		}
 		EmployeeSharded emp = insertAndReturnBean2();
 		try
 		{
@@ -956,13 +1339,14 @@ public class Example
 			logger.info("Failure in getByCriteria2: Exception while trying to delete bean:" + e);
 			return;
 		}
-		logger.info("Success!");
 	}
 
 	private static void getAllAttributesByCriteria2()
 	{
-		logger.info("Testing getAllAttributesByCriteria2");
-		cleanUp2();
+		if (!cleanUp2())
+		{
+			logger.info("Failed to clean up tables");
+		}
 		EmployeeSharded emp = insertAndReturnBean2();
 		try
 		{
@@ -996,13 +1380,14 @@ public class Example
 			logger.info("Failure in getAllAttributesByCriteria2: Exception while trying to delete bean:" + e);
 			return;
 		}
-		logger.info("Success!");
 	}
 
 	private static void getBeansBySql2()
 	{
-		logger.info("Testing getBeansBySql2");
-		cleanUp2();
+		if (!cleanUp2())
+		{
+			logger.info("Failed to clean up tables");
+		}
 		EmployeeSharded emp = insertAndReturnBean2();
 		List<EmployeeSharded> l = null;
 		try
@@ -1034,13 +1419,14 @@ public class Example
 			logger.info("Exception while trying to retrieve all rows from table:" + e.toString());
 			return;
 		}
-		logger.info("Success!");
 	}
 
 	private static void getRsMapBySql2()
 	{
-		logger.info("Testing getRsMapBySql2");
-		cleanUp2();
+		if (!cleanUp2())
+		{
+			logger.info("Failed to clean up tables");
+		}
 		EmployeeSharded emp = insertAndReturnBean2();
 		List<Map<String, Object>> tupleList = null;
 		try
@@ -1089,6 +1475,5 @@ public class Example
 			logger.info("Exception while trying to retrieve all rows from table:" + e.toString());
 			return;
 		}
-		logger.info("Success!");
 	}
 }

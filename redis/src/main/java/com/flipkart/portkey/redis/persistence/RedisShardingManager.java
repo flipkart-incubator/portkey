@@ -23,7 +23,7 @@ import com.flipkart.portkey.common.exception.QueryExecutionException;
 import com.flipkart.portkey.common.exception.QueryNotSupportedException;
 import com.flipkart.portkey.common.exception.ShardNotAvailableException;
 import com.flipkart.portkey.common.persistence.ShardingManager;
-import com.flipkart.portkey.common.persistence.query.PortKeyQuery;
+import com.flipkart.portkey.common.persistence.query.UpdateQuery;
 import com.flipkart.portkey.redis.connection.ConnectionManager;
 import com.flipkart.portkey.redis.keyparser.DefaultKeyParser;
 import com.flipkart.portkey.redis.keyparser.KeyParserInterface;
@@ -424,29 +424,41 @@ public class RedisShardingManager implements ShardingManager, InitializingBean
 
 	@Override
 	public List<Map<String, Object>> getBySql(String databaseName, String sql, Map<String, Object> criteria)
-	        throws QueryExecutionException
+	        throws QueryNotSupportedException
 	{
 		throw new QueryNotSupportedException("Method not supported for redis implementation");
 	}
 
 	@Override
 	public List<Map<String, Object>> getBySql(String databaseName, String sql, Map<String, Object> criteria,
-	        boolean readMaster) throws QueryExecutionException
+	        boolean readMaster) throws QueryNotSupportedException
 	{
 		throw new QueryNotSupportedException("Method not supported for redis implementation");
 	}
 
 	@Override
 	public int updateBySql(String databaseName, String sql, Map<String, Object> criteria)
-	        throws QueryExecutionException
+	        throws QueryNotSupportedException
 	{
 		throw new QueryNotSupportedException("Method not supported for redis implementation");
 	}
 
 	@Override
-	public void executeTransaction(List<PortKeyQuery> queries) throws QueryExecutionException
+	public int update(List<UpdateQuery> queries, boolean failIfNoRowsAreUpdated) throws QueryExecutionException
 	{
-		// TODO Auto-generated method stub
+		throw new QueryNotSupportedException("Method not supported for redis implementation");
+	}
 
+	@Override
+	public int update(List<UpdateQuery> queries) throws QueryExecutionException
+	{
+		return update(queries, false);
+	}
+
+	@Override
+	// TODO:Santosh:Implement this
+	public <T extends Entity> int insert(List<T> beans) throws QueryNotSupportedException
+	{
+		throw new QueryNotSupportedException("Method not supported for redis implementation");
 	}
 }

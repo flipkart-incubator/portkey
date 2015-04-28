@@ -20,10 +20,11 @@ import com.flipkart.portkey.common.enumeration.DataStoreType;
 import com.flipkart.portkey.common.enumeration.FailureAction;
 import com.flipkart.portkey.common.exception.PortKeyException;
 import com.flipkart.portkey.common.exception.QueryExecutionException;
+import com.flipkart.portkey.common.exception.QueryNotSupportedException;
 import com.flipkart.portkey.common.persistence.PersistenceLayerInterface;
 import com.flipkart.portkey.common.persistence.Result;
 import com.flipkart.portkey.common.persistence.ShardingManager;
-import com.flipkart.portkey.common.persistence.query.PortKeyQuery;
+import com.flipkart.portkey.common.persistence.query.UpdateQuery;
 
 /**
  * @author santosh.p
@@ -245,6 +246,26 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 	}
 
 	@Override
+	public <T extends Entity> void insert(List<T> beans) throws PortKeyException
+	{
+		WriteConfig writeConfig = getDefaultWriteConfig();
+		List<DataStoreType> writeOrder = writeConfig.getWriteOrder();
+		for (DataStoreType type : writeOrder)
+		{
+			ShardingManager shardingManager = dataStoreTypeToShardingManagerMap.get(type);
+			try
+			{
+				shardingManager.insert(beans);
+			}
+			catch (QueryNotSupportedException e)
+			{
+				logger.info("Method not supported by " + type + " implementation");
+				continue;
+			}
+		}
+	}
+
+	@Override
 	public <T extends Entity> Result upsert(T bean) throws QueryExecutionException
 	{
 		return performDBOperation(DBOpeartion.UPSERT, bean, null);
@@ -327,15 +348,49 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 	}
 
 	@Override
-	public <T extends Entity> void executeTransaction(List<PortKeyQuery> queries) throws PortKeyException
+	public Result update(List<UpdateQuery> queries) throws PortKeyException
 	{
+		Result result = new Result();
 		WriteConfig writeConfig = getDefaultWriteConfig();
 		List<DataStoreType> writeOrder = writeConfig.getWriteOrder();
 		for (DataStoreType type : writeOrder)
 		{
 			ShardingManager shardingManager = dataStoreTypeToShardingManagerMap.get(type);
-			shardingManager.executeTransaction(queries);
+			try
+			{
+				int rowsUpdated = shardingManager.update(queries);
+				result.setRowsUpdatedForDataStore(type, rowsUpdated);
+			}
+			catch (QueryNotSupportedException e)
+			{
+				logger.info("Method not supported by " + type + " implementation");
+				continue;
+			}
 		}
+		return result;
+	}
+
+	@Override
+	public Result update(List<UpdateQuery> queries, boolean failIfNoRowsAreUpdated) throws PortKeyException
+	{
+		Result result = new Result();
+		WriteConfig writeConfig = getDefaultWriteConfig();
+		List<DataStoreType> writeOrder = writeConfig.getWriteOrder();
+		for (DataStoreType type : writeOrder)
+		{
+			ShardingManager shardingManager = dataStoreTypeToShardingManagerMap.get(type);
+			try
+			{
+				int rowsUpdated = shardingManager.update(queries, failIfNoRowsAreUpdated);
+				result.setRowsUpdatedForDataStore(type, rowsUpdated);
+			}
+			catch (QueryNotSupportedException e)
+			{
+				logger.info("Method not supported by " + type + " implementation");
+				continue;
+			}
+		}
+		return result;
 	}
 
 	private <T extends Entity> List<T> performGetByCriteriaQuery(Class<T> clazz, List<String> fieldNameList,

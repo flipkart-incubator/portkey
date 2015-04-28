@@ -13,7 +13,11 @@ import org.apache.log4j.Logger;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.common.enumeration.ShardStatus;
@@ -30,6 +34,7 @@ public class RdbmsPersistenceManager
 	private static final Logger logger = Logger.getLogger(RdbmsPersistenceManager.class);
 	private final DataSource master;
 	private final List<DataSource> slaves;
+	private DataSourceTransactionManager transactionManager;
 
 	public RdbmsPersistenceManager(RdbmsConnectionConfig config)
 	{
@@ -42,6 +47,8 @@ public class RdbmsPersistenceManager
 		{
 			this.slaves = config.getSlaves();
 		}
+		transactionManager = new DataSourceTransactionManager();
+		transactionManager.setDataSource(master);
 	}
 
 	public ShardStatus healthCheck()
@@ -100,24 +107,40 @@ public class RdbmsPersistenceManager
 	}
 
 	@Transactional
-	public List<Integer> executeAtomicUpdates(List<SqlQuery> queryList) throws QueryExecutionException
+	public int executeUpdates(List<SqlQuery> queryList, boolean failIfNoRowsAreUpdated) throws QueryExecutionException
 	{
-		List<Integer> rowsUpdatedList = new ArrayList<Integer>();
+		TransactionDefinition def = new DefaultTransactionDefinition();
+		TransactionStatus status = transactionManager.getTransaction(def);
+		int totalRowsUpdated = 0;
 		NamedParameterJdbcTemplate temp = new NamedParameterJdbcTemplate(master);
 		for (SqlQuery query : queryList)
 		{
 			try
 			{
-				rowsUpdatedList.add(temp.update(query.getQuery(), query.getColumnToValueMap()));
+				int rowsUpdated = temp.update(query.getQuery(), query.getColumnToValueMap());
+				if (failIfNoRowsAreUpdated && rowsUpdated == 0)
+				{
+					transactionManager.rollback(status);
+					throw new QueryExecutionException("No rows updated after executing query, rolling back, query= "
+					        + query.getQuery());
+				}
+				totalRowsUpdated += rowsUpdated;
 			}
 			catch (DataAccessException e)
 			{
+				transactionManager.rollback(status);
 				throw new QueryExecutionException(
 				        "Exception while trying to execute atomic updates, failed while executing " + query.getQuery(),
 				        e);
 			}
 		}
-		return rowsUpdatedList;
+		transactionManager.commit(status);
+		return totalRowsUpdated;
+	}
+
+	public int executeUpdates(List<SqlQuery> sqlQueryList) throws QueryExecutionException
+	{
+		return executeUpdates(sqlQueryList, false);
 	}
 
 	private <T extends Entity> List<T> executeQuery(DataSource dataSource, String query,

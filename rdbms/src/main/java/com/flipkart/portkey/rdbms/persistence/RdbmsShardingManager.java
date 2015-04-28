@@ -3,8 +3,10 @@ package com.flipkart.portkey.rdbms.persistence;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.common.enumeration.DataStoreType;
@@ -12,8 +14,6 @@ import com.flipkart.portkey.common.enumeration.ShardStatus;
 import com.flipkart.portkey.common.exception.QueryExecutionException;
 import com.flipkart.portkey.common.exception.ShardNotAvailableException;
 import com.flipkart.portkey.common.persistence.ShardingManager;
-import com.flipkart.portkey.common.persistence.query.InsertQuery;
-import com.flipkart.portkey.common.persistence.query.PortKeyQuery;
 import com.flipkart.portkey.common.persistence.query.SqlQuery;
 import com.flipkart.portkey.common.persistence.query.UpdateQuery;
 import com.flipkart.portkey.common.sharding.ShardIdentifier;
@@ -25,8 +25,6 @@ import com.flipkart.portkey.rdbms.metadata.RdbmsMetaDataCache;
 import com.flipkart.portkey.rdbms.metadata.RdbmsTableMetaData;
 import com.flipkart.portkey.rdbms.metadata.annotation.RdbmsField;
 import com.flipkart.portkey.rdbms.querybuilder.RdbmsQueryBuilder;
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Table;
 
 public class RdbmsShardingManager implements ShardingManager
 {
@@ -213,88 +211,93 @@ public class RdbmsShardingManager implements ShardingManager
 		return sqlQuery;
 	}
 
-	private void addToMap(UpdateQuery update, Table<String, String, List<SqlQuery>> databaseToShardIdToUpdateListTable)
-	        throws QueryExecutionException
+	@Override
+	public <T extends Entity> int insert(List<T> beans) throws QueryExecutionException
 	{
-		String shardKeyFieldName = metaDataCache.getShardKeyFieldName(update.getClazz());
-		RdbmsTableMetaData metaData = metaDataCache.getMetaData(update.getClazz());
-		Map<String, Object> criteria = update.getCriteriaFieldNameToValueMap();
-		if (criteria.containsKey(shardKeyFieldName))
+		List<SqlQuery> sqlQueryList = new ArrayList<SqlQuery>();
+		Set<String> databases = new HashSet<String>();
+		String databaseName = null;
+		Set<String> shardIds = new HashSet<String>();
+		String shardId = null;
+		for (T bean : beans)
 		{
-			String databaseName = metaData.getDatabaseName();
-			String shardId = getShardId(PortKeyUtils.toString(criteria.get(shardKeyFieldName)), metaData);
-			SqlQuery sqlUpdateQuery = getSqlQueryFromUpdateQuery(update);
-			if (!databaseToShardIdToUpdateListTable.contains(databaseName, shardId))
+			String shardKeyFieldName = metaDataCache.getShardKeyFieldName(bean.getClass());
+			RdbmsTableMetaData metaData = metaDataCache.getMetaData(bean.getClass());
+			databaseName = metaData.getDatabaseName();
+			databases.add(databaseName);
+			if (databases.size() > 1)
 			{
-				databaseToShardIdToUpdateListTable.put(databaseName, shardId, new ArrayList<SqlQuery>());
+				throw new QueryExecutionException("Transactional inserts in multiple databases are not supported.");
 			}
-			databaseToShardIdToUpdateListTable.get(databaseName, shardId).add(sqlUpdateQuery);
+			String shardKey = PortKeyUtils.toString(PortKeyUtils.getFieldValueFromBean(bean, shardKeyFieldName));
+			shardId = getShardId(PortKeyUtils.toString(shardKey), metaData);
+			shardIds.add(shardId);
+			if (shardIds.size() > 1)
+			{
+				throw new QueryExecutionException("Transactional inserts in multiple shards are not supported.");
+			}
+			SqlQuery sqlQuery = new SqlQuery();
+			Map<String, Object> columnToValueMap = generateColumnToValueMap(bean, metaData);
+			sqlQuery.setColumnToValueMap(columnToValueMap);
+			String insertQuery = RdbmsQueryBuilder.getInstance().getInsertQuery(metaData);;
+			sqlQuery.setQueryString(insertQuery);
+			sqlQuery.setColumnToValueMap(columnToValueMap);
+			sqlQueryList.add(sqlQuery);
 		}
-		else
-		{
-			throw new QueryExecutionException(
-			        "Atomic update queries with no shard identifier field in criteria are not supported");
-		}
-	}
-
-	private SqlQuery getSqlQueryFromInsertQuery(InsertQuery query)
-	{
-		SqlQuery sqlQuery = new SqlQuery();
-		Entity bean = query.getBean();
-		RdbmsTableMetaData metaData = metaDataCache.getMetaData(query.getClazz());
-		Map<String, Object> columnToValueMap = generateColumnToValueMap(bean, metaData);
-		sqlQuery.setColumnToValueMap(columnToValueMap);
-		String insertQuery = RdbmsQueryBuilder.getInstance().getInsertQuery(metaData);;
-		sqlQuery.setQueryString(insertQuery);
-		sqlQuery.setColumnToValueMap(columnToValueMap);
-		return sqlQuery;
-	}
-
-	private void addToMap(InsertQuery insert, Table<String, String, List<SqlQuery>> databaseToShardIdToUpdateListTable)
-	        throws QueryExecutionException
-	{
-		Entity bean = insert.getBean();
-		String shardKeyFieldName = metaDataCache.getShardKeyFieldName(bean.getClass());
-		RdbmsTableMetaData metaData = metaDataCache.getMetaData(bean.getClass());
-		String databaseName = metaData.getDatabaseName();
-		String shardKey = PortKeyUtils.toString(PortKeyUtils.getFieldValueFromBean(bean, shardKeyFieldName));
-		String shardId = getShardId(PortKeyUtils.toString(shardKey), metaData);
-		SqlQuery sqlQuery = getSqlQueryFromInsertQuery(insert);
-		if (!databaseToShardIdToUpdateListTable.contains(databaseName, shardId))
-		{
-			databaseToShardIdToUpdateListTable.put(databaseName, shardId, new ArrayList<SqlQuery>());
-		}
-		databaseToShardIdToUpdateListTable.get(databaseName, shardId).add(sqlQuery);
+		RdbmsDatabaseConfig databaseConfig = databaseNameToDatabaseConfigMap.get(databaseName);
+		RdbmsPersistenceManager pm = databaseConfig.getPersistenceManager(shardId);
+		return pm.executeUpdates(sqlQueryList);
 	}
 
 	@Override
-	public void executeTransaction(List<PortKeyQuery> queries) throws QueryExecutionException
+	public int update(List<UpdateQuery> queries, boolean failIfNoRowsAreUpdated) throws QueryExecutionException
 	{
-		Table<String, String, List<SqlQuery>> databaseToShardIdToUpdateListTable = HashBasedTable.create();
-		for (PortKeyQuery query : queries)
+		List<SqlQuery> sqlQueryList = new ArrayList<SqlQuery>();
+		Set<String> databases = new HashSet<String>();
+		String databaseName = null;
+		Set<String> shardIds = new HashSet<String>();
+		String shardId = null;
+		for (UpdateQuery query : queries)
 		{
-			if (query.getClass().equals(UpdateQuery.class))
+			UpdateQuery update = query;
+			String shardKeyFieldName = metaDataCache.getShardKeyFieldName(update.getClazz());
+			RdbmsTableMetaData metaData = metaDataCache.getMetaData(update.getClazz());
+			Map<String, Object> criteria = update.getCriteriaFieldNameToValueMap();
+			if (criteria.containsKey(shardKeyFieldName))
 			{
-				UpdateQuery update = (UpdateQuery) query;
-				addToMap(update, databaseToShardIdToUpdateListTable);
+				databaseName = metaData.getDatabaseName();
+				databases.add(databaseName);
+				if (databases.size() > 1)
+				{
+					throw new QueryExecutionException(
+					        "Updates in multiple databases are not supported in single transaction.");
+				}
+				shardId = getShardId(PortKeyUtils.toString(criteria.get(shardKeyFieldName)), metaData);
+				shardIds.add(shardId);
+				if (shardIds.size() > 1)
+				{
+					throw new QueryExecutionException(
+					        "Updates on multiple shards are not supported in single transaction.");
+				}
+
+				SqlQuery sqlQuery = getSqlQueryFromUpdateQuery(update);
+				sqlQueryList.add(sqlQuery);
 			}
-			else if (query.getClass().equals(UpdateQuery.class))
+			else
 			{
-				InsertQuery insert = (InsertQuery) query;
-				addToMap(insert, databaseToShardIdToUpdateListTable);
+				throw new QueryExecutionException(
+				        "Atomic update queries with no shard identifier field in criteria are not supported");
 			}
 		}
-		for (String databaseName : databaseToShardIdToUpdateListTable.rowKeySet())
-		{
-			RdbmsDatabaseConfig databaseConfig = databaseNameToDatabaseConfigMap.get(databaseName);
-			Map<String, List<SqlQuery>> shardIdToUpdateListMap =
-			        databaseToShardIdToUpdateListTable.column(databaseName);
-			for (String shardId : shardIdToUpdateListMap.keySet())
-			{
-				RdbmsPersistenceManager pm = databaseConfig.getPersistenceManager(shardId);
-				pm.executeAtomicUpdates(shardIdToUpdateListMap.get(shardId));
-			}
-		}
+		RdbmsDatabaseConfig databaseConfig = databaseNameToDatabaseConfigMap.get(databaseName);
+		RdbmsPersistenceManager pm = databaseConfig.getPersistenceManager(shardId);
+		return pm.executeUpdates(sqlQueryList, failIfNoRowsAreUpdated);
+	}
+
+	@Override
+	public int update(List<UpdateQuery> queries) throws QueryExecutionException
+	{
+		return update(queries, false);
 	}
 
 	@Override

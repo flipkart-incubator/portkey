@@ -23,6 +23,7 @@ public class RdbmsConnectionConfig
 	public void setMaster(DataSource master)
 	{
 		this.master = master;
+
 	}
 
 	public List<DataSource> getSlaves()
@@ -39,5 +40,4 @@ public class RdbmsConnectionConfig
 	{
 		this.slaves.add(slave);
 	}
-
 }

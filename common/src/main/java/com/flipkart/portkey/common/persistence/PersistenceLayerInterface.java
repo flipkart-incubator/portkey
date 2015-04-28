@@ -10,7 +10,7 @@ import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.common.enumeration.DataStoreType;
 import com.flipkart.portkey.common.exception.PortKeyException;
 import com.flipkart.portkey.common.exception.QueryExecutionException;
-import com.flipkart.portkey.common.persistence.query.PortKeyQuery;
+import com.flipkart.portkey.common.persistence.query.UpdateQuery;
 
 /**
  * @author santosh.p
@@ -28,10 +28,12 @@ public interface PersistenceLayerInterface
 
 	public <T extends Entity> Result update(T bean) throws PortKeyException;
 
+	public Result update(List<UpdateQuery> queries) throws PortKeyException;
+
+	public Result update(List<UpdateQuery> queries, boolean failIfNoRowsAreUpdated) throws PortKeyException;
+
 	public <T extends Entity> Result update(Class<T> clazz, Map<String, Object> updateValuesMap,
 	        Map<String, Object> criteria) throws PortKeyException;
-
-	public <T extends Entity> void executeTransaction(List<PortKeyQuery> queries) throws PortKeyException;
 
 	public <T extends Entity> Result delete(Class<T> clazz, Map<String, Object> criteria) throws PortKeyException;
 
@@ -54,4 +56,6 @@ public interface PersistenceLayerInterface
 	        Map<DataStoreType, String> sqlMap, Map<String, Object> criteria) throws PortKeyException;
 
 	public Result updateBySql(String databaseName, String sql, Map<String, Object> criteria) throws PortKeyException;
+
+	public <T extends Entity> void insert(List<T> beans) throws PortKeyException;
 }
