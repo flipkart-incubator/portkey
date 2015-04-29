@@ -18,27 +18,18 @@ public class RdbmsShardIdentifierForSingleShard implements ShardIdentifier
 		{
 			throw new ShardNotAvailableException("No live shard is available");
 		}
-		return "01";
+		return "";
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.common.sharding.ShardIdentifierInterface#getShardId(java.lang.String)
-	 */
 	public String getShardId(String shardKey, List<String> liveShards) throws ShardNotAvailableException
 	{
 		if (shardKey == null)
 		{
 			throw new ShardNotAvailableException("Shard key provided is null");
 		}
-		return "01";
+		return "";
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.common.sharding.ShardIdentifierInterface#generateNewShardKey(java.lang.String,
-	 * java.lang.String)
-	 */
 	public String generateNewShardKey(String oldShardKey, String shardId)
 	{
 		return oldShardKey + shardId;

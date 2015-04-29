@@ -9,10 +9,34 @@
 		class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
 		<property name="location" value="classpath:project.properties" />
 	</bean>
-	
+
+	<!-- Persistence layer bean -->
 	<bean id="persistenceLayer" class="com.flipkart.portkey.persistence.PersistenceLayer">
-	<property name="defaultPersistencePreference" ref="defaultPersistencePreference"/>
-	<property name="entityPersistencePreferenceMap" ref="entityPersistencePreferenceMap"/>
-	<property name="dataStoreConfigMap" ref="dataStoreConfigMap"/>
+		<property name="dataStoreTypeToShardingManagerMap" ref="dataStoreTypeToShardingManagerMap" />
+		<property name="defaultPersistencePreference" ref="rdbmsOnly" />
+		<property name="entityPersistencePreferenceMap" ref="entityPersistencePreferenceMap" />
 	</bean>
+
+	<!-- 1. data store to sharding manager map -->
+	<util:map id="dataStoreTypeToShardingManagerMap"
+		key-type="com.flipkart.portkey.common.enumeration.DataStoreType"
+		value-type="com.flipkart.portkey.common.persistence.ShardingManager">
+		<entry key="RDBMS" value-ref="rdbmsShardingManager" />
+		<entry key="REDIS" value-ref="redisShardingManager" />
+	</util:map>
+
+	<!-- 2.Default persistence preferece: If no persistence preference is specified 
+		for some entity, the preferences (orders) specified in following bean will 
+		be used while reading and writing entities from and to data stores - persistence 
+		preference beans are declared in persistence-preference-config.xml -->
+
+	<!-- 3.Entity persistence preference map: map from Entity classes to the 
+		preferences (read and write orders) for their persistence -->
+	<util:map id="entityPersistencePreferenceMap" key-type="java.lang.Class"
+		value-type="com.flipkart.portkey.common.entity.persistence.EntityPersistencePreference">
+		<entry key="com.flipkart.portkey.example.dao.Employee"
+			value-ref="rdbmsOnly" />
+		<entry key="com.flipkart.portkey.example.dao.EmployeeSharded"
+			value-ref="rdbmsOnly" />
+	</util:map>
 </beans>

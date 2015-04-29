@@ -10,10 +10,8 @@
 		<property name="location" value="classpath:project.properties" />
 	</bean>
 
-	<import resource="default-persistence-config.xml" />
-	<import resource="persistence-preference-config.xml" />
-	<import resource="data-store-config.xml" />
+	<import resource="persistence-layer-config.xml" />
+	<import resource="persistence-preference-configs.xml" />
 	<import resource="rdbms-data-store-config.xml" />
 	<import resource="redis-data-store-config.xml" />
-	<import resource="persistence-layer-config.xml" />
 </beans>

@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.flipkart.portkey</groupId>
 	<artifactId>portkey</artifactId>
-	<version>0.0.6-SNAPSHOT</version>
+	<version>0.1.0-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	<name>Portkey</name>
 	<description>Portkey parent project</description>
@@ -35,13 +35,15 @@
 		<module>example</module>
 	</modules>
 	<properties>
-		<portkey.version>0.0.6-SNAPSHOT</portkey.version>
+		<portkey.version>0.1.0-SNAPSHOT</portkey.version>
 		<maven.compiler.target>1.6</maven.compiler.target>
 		<maven.compiler.source>1.6</maven.compiler.source>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<spring.version>4.1.4.RELEASE</spring.version>
 		<log4j.version>1.2.17</log4j.version>
+		<junit.version>4.8.2</junit.version>
 		<hazelcast.version>3.4</hazelcast.version>
 		<c3p0.version>0.9.1</c3p0.version>
+		<powermock.version>1.6.0</powermock.version>
 	</properties>
 </project>

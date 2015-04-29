@@ -5,7 +5,7 @@ package com.flipkart.portkey.rdbms.metadata;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -27,11 +27,12 @@ public class RdbmsTableMetaData
 	private String tableName;
 	private String shardKeyFieldName;
 	private List<String> primaryKeysList = new ArrayList<String>();
-	private Map<String, RdbmsField> fieldNameToRdbmsFieldMap = new HashMap<String, RdbmsField>();
-	private Map<String, Serializer> fieldNameToSerializerMap = new HashMap<String, Serializer>();
-	private Map<String, String> fieldNameToColumnNameMap = new HashMap<String, String>();
-	private Map<String, String> columnNameToFieldNameMap = new HashMap<String, String>();
-	private Map<String, Field> fieldNameToFieldMap = new HashMap<String, Field>();
+	private Map<String, RdbmsField> fieldNameToRdbmsFieldMap = new LinkedHashMap<String, RdbmsField>();
+	private Map<String, Serializer> fieldNameToSerializerMap = new LinkedHashMap<String, Serializer>();
+	private Map<String, String> fieldNameToColumnNameMap = new LinkedHashMap<String, String>();
+	private Map<String, String> columnNameToFieldNameMap = new LinkedHashMap<String, String>();
+	private Map<String, Field> fieldNameToFieldMap = new LinkedHashMap<String, Field>();
+	private Map<String, String> fieldNameToDefaultValueMap = new LinkedHashMap<String, String>();
 	private String insertQuery;
 	private String updateByPkQuery;
 	private String upsertQuery;
@@ -154,6 +155,26 @@ public class RdbmsTableMetaData
 	public void addToFieldNameToFieldMap(String fieldName, Field field)
 	{
 		this.fieldNameToFieldMap.put(fieldName, field);
+	}
+
+	public Map<String, String> getFieldNameToDefaultValueMap()
+	{
+		return fieldNameToDefaultValueMap;
+	}
+
+	public String getDefaultValueFromFieldName(String fieldName)
+	{
+		return fieldNameToDefaultValueMap.get(fieldName);
+	}
+
+	public void setFieldNameToDefaultValueMap(Map<String, String> fieldNameToDefaultValueMap)
+	{
+		this.fieldNameToDefaultValueMap = fieldNameToDefaultValueMap;
+	}
+
+	public void addToFieldNameToDefaultValueMap(String fieldName, String defaultValue)
+	{
+		this.fieldNameToDefaultValueMap.put(fieldName, defaultValue);
 	}
 
 	public String getInsertQuery()

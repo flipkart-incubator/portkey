@@ -5,7 +5,7 @@ import java.util.Map;
 
 import com.flipkart.portkey.common.entity.Entity;
 
-public class UpdateQuery implements PortKeyQuery
+public class UpdateQuery
 {
 	Class<? extends Entity> clazz;
 	Map<String, Object> updateFieldNameToValueeMap = new HashMap<String, Object>();

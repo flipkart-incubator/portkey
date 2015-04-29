@@ -10,7 +10,7 @@ import javax.sql.DataSource;
 /**
  * @author santosh.p
  */
-public class RdbmsPersistenceManagerConfig
+public class RdbmsConnectionConfig
 {
 	DataSource master;
 	List<DataSource> slaves;
@@ -23,6 +23,7 @@ public class RdbmsPersistenceManagerConfig
 	public void setMaster(DataSource master)
 	{
 		this.master = master;
+
 	}
 
 	public List<DataSource> getSlaves()
@@ -39,5 +40,4 @@ public class RdbmsPersistenceManagerConfig
 	{
 		this.slaves.add(slave);
 	}
-
 }

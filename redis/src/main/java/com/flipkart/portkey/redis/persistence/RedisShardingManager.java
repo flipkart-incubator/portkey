@@ -18,12 +18,11 @@ import redis.clients.jedis.JedisPoolConfig;
 import redis.clients.jedis.exceptions.JedisConnectionException;
 
 import com.flipkart.portkey.common.entity.Entity;
-import com.flipkart.portkey.common.enumeration.ShardStatus;
 import com.flipkart.portkey.common.exception.InvalidAnnotationException;
 import com.flipkart.portkey.common.exception.QueryExecutionException;
 import com.flipkart.portkey.common.exception.QueryNotSupportedException;
 import com.flipkart.portkey.common.exception.ShardNotAvailableException;
-import com.flipkart.portkey.common.persistence.PersistenceManager;
+import com.flipkart.portkey.common.persistence.ShardingManager;
 import com.flipkart.portkey.common.persistence.query.UpdateQuery;
 import com.flipkart.portkey.redis.connection.ConnectionManager;
 import com.flipkart.portkey.redis.keyparser.DefaultKeyParser;
@@ -36,9 +35,9 @@ import com.flipkart.portkey.redis.metadata.RedisMetaDataCache;
 /**
  * @author santosh.p
  */
-public class RedisPersistenceManager implements PersistenceManager, InitializingBean
+public class RedisShardingManager implements ShardingManager, InitializingBean
 {
-	private static final Logger logger = Logger.getLogger(RedisPersistenceManager.class);
+	private static final Logger logger = Logger.getLogger(RedisShardingManager.class);
 	String host = "localhost";
 	int port = 6379;
 	int database = 0;
@@ -91,39 +90,9 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 	}
 
 	@Override
-	public ShardStatus healthCheck()
+	public void healthCheck()
 	{
-		logger.debug("Health checking for redis, host=" + host + " port=" + port);
-		Jedis conn = null;
-		try
-		{
-			conn = cm.getConnection();
-			if (conn == null)
-			{
-				logger.info("Failed to acquire redis connection, host=" + host + " port=" + port);
-				return ShardStatus.UNAVAILABLE;
-			}
-			logger.debug("Acquired redis connection, checking for response");
-			if (conn.ping().equals("PONG"))
-			{
-				logger.debug("Instance is available");
-				return ShardStatus.AVAILABLE_FOR_WRITE;
-			}
-			else
-			{
-				logger.debug("Instance is unavailable");
-				return ShardStatus.UNAVAILABLE;
-			}
-		}
-		catch (JedisConnectionException e)
-		{
-			logger.info("Exception while trying to connect to redis host=" + host + ", port=" + port, e);
-			return ShardStatus.UNAVAILABLE;
-		}
-		finally
-		{
-			cm.returnConnection(conn);
-		}
+		// No need of healthcheck with redis sentinel
 	}
 
 	private <T extends Entity> RedisMetaData getMetaData(Class<T> clazz)
@@ -430,7 +399,6 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 	@Override
 	public <T extends Entity> List<T> getBySql(Class<T> clazz, String sql, Map<String, Object> criteria)
 	        throws QueryNotSupportedException
-
 	{
 		throw new QueryNotSupportedException("Method not supported for redis implementation");
 	}
@@ -443,34 +411,53 @@ public class RedisPersistenceManager implements PersistenceManager, Initializing
 	}
 
 	@Override
-	public List<Map<String, Object>> getBySql(String sql, Map<String, Object> criteria)
-	        throws QueryNotSupportedException
-	{
-		throw new QueryNotSupportedException("Method not supported for redis implementation");
-	}
-
-	@Override
-	public List<Map<String, Object>> getBySql(String sql, Map<String, Object> criteria, boolean readMaster)
-	        throws QueryNotSupportedException
-	{
-		throw new QueryNotSupportedException("Method not supported for redis implementation");
-	}
-
-	@Override
-	// TODO:SANTOSH: implement this
 	public <T extends Entity> int upsert(T bean) throws QueryExecutionException
 	{
-		throw new QueryNotSupportedException("Method not supported for redis implementation");
+		return insert(bean);
 	}
 
 	@Override
-	public int updateBySql(String sql, Map<String, Object> criteria) throws QueryExecutionException
+	public <T extends Entity> T generateShardIdAndUpdateBean(T bean) throws ShardNotAvailableException
+	{
+		return bean;
+	}
+
+	@Override
+	public List<Map<String, Object>> getBySql(String databaseName, String sql, Map<String, Object> criteria)
+	        throws QueryNotSupportedException
 	{
 		throw new QueryNotSupportedException("Method not supported for redis implementation");
 	}
 
 	@Override
-	public <T extends Entity> List<Integer> update(List<UpdateQuery> updates) throws QueryExecutionException
+	public List<Map<String, Object>> getBySql(String databaseName, String sql, Map<String, Object> criteria,
+	        boolean readMaster) throws QueryNotSupportedException
+	{
+		throw new QueryNotSupportedException("Method not supported for redis implementation");
+	}
+
+	@Override
+	public int updateBySql(String databaseName, String sql, Map<String, Object> criteria)
+	        throws QueryNotSupportedException
+	{
+		throw new QueryNotSupportedException("Method not supported for redis implementation");
+	}
+
+	@Override
+	public int update(List<UpdateQuery> queries, boolean failIfNoRowsAreUpdated) throws QueryExecutionException
+	{
+		throw new QueryNotSupportedException("Method not supported for redis implementation");
+	}
+
+	@Override
+	public int update(List<UpdateQuery> queries) throws QueryExecutionException
+	{
+		return update(queries, false);
+	}
+
+	@Override
+	// TODO:Santosh:Implement this
+	public <T extends Entity> int insert(List<T> beans) throws QueryNotSupportedException
 	{
 		throw new QueryNotSupportedException("Method not supported for redis implementation");
 	}
