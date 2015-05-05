@@ -213,7 +213,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 				logger.warn("Exception while trying to " + operation + " bean into data store, bean=" + bean
 				        + ", data store type=" + dataStoreType, e);
 				FailureAction failureAction = writeConfig.getFailureAction();
-				if (failureAction == FailureAction.ABORT)
+				if (failureAction != FailureAction.CONTINUE)
 				{
 					throw new QueryExecutionException("Failed to " + operation + " bean into datastore, bean=" + bean
 					        + "data store type=" + dataStoreType, e);

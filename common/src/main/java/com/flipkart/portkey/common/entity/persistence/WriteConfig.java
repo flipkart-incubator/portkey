@@ -17,7 +17,7 @@ import com.flipkart.portkey.common.enumeration.FailureAction;
 public class WriteConfig
 {
 	private List<DataStoreType> writeOrder;
-	private FailureAction failureAction = FailureAction.CONTINUE;
+	private FailureAction failureAction = FailureAction.ABORT;
 
 	public List<DataStoreType> getWriteOrder()
 	{
