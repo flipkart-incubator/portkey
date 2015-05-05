@@ -24,7 +24,9 @@ public @interface RdbmsField
 
 	public boolean isUnique() default false;
 
-	public String defaultValue() default "";
+	public String defaultInsertValue() default "";
+
+	public String defaultUpdateValue() default "";
 
 	public Class<? extends Serializer> serializer() default JsonSerializer.class;
 }

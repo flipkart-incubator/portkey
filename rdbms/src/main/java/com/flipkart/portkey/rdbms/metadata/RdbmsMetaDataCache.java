@@ -96,9 +96,15 @@ public class RdbmsMetaDataCache implements MetaDataCache
 					primaryKeyPresent = true;
 					rdbmsTableMetaData.addPrimaryKey(fieldName);
 				}
-				if (rdbmsField.defaultValue() != "")
+				if (rdbmsField.defaultInsertValue() != "")
 				{
-					rdbmsTableMetaData.addToFieldNameToDefaultValueMap(fieldName, rdbmsField.defaultValue());
+					rdbmsTableMetaData
+					        .addToFieldNameToDefaultInsertValueMap(fieldName, rdbmsField.defaultInsertValue());
+				}
+				if (rdbmsField.defaultUpdateValue() != "")
+				{
+					rdbmsTableMetaData
+					        .addToFieldNameToDefaultUpdateValueMap(fieldName, rdbmsField.defaultUpdateValue());
 				}
 			}
 		}

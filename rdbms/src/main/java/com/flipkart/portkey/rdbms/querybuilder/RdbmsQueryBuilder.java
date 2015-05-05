@@ -49,13 +49,13 @@ public class RdbmsQueryBuilder
 				if (rdbmsField != null)
 				{
 					insertQueryStrBuilder.append("`" + rdbmsField.columnName() + "`" + ",");
-					if (rdbmsField.defaultValue().equals(""))
+					if (rdbmsField.defaultInsertValue().equals(""))
 					{
 						valuesQryStrBuilder.append(":" + rdbmsField.columnName() + ",");
 					}
 					else
 					{
-						valuesQryStrBuilder.append(rdbmsField.defaultValue() + ",");
+						valuesQryStrBuilder.append(rdbmsField.defaultInsertValue() + ",");
 					}
 				}
 
@@ -88,13 +88,14 @@ public class RdbmsQueryBuilder
 				}
 				String columnName = tableMetaData.getColumnNameFromFieldName(fieldName);
 				RdbmsField rdbmsField = tableMetaData.getRdbmsFieldFromFieldName(fieldName);
-				if (rdbmsField.defaultValue().equals(""))
+				if (rdbmsField.defaultUpdateValue().equals(""))
 				{
 					onDuplicateQueryStrBuilder.append("`" + columnName + "`" + "=:" + columnName + ",");
 				}
 				else
 				{
-					onDuplicateQueryStrBuilder.append("`" + columnName + "`" + "=" + rdbmsField.defaultValue() + ",");
+					onDuplicateQueryStrBuilder.append("`" + columnName + "`" + "=" + rdbmsField.defaultUpdateValue()
+					        + ",");
 				}
 			}
 			upsertQuery =
@@ -113,13 +114,13 @@ public class RdbmsQueryBuilder
 		{
 			String columnName = tableMetaData.getColumnNameFromFieldName(fieldName);
 			RdbmsField rdbmsField = tableMetaData.getRdbmsFieldFromFieldName(fieldName);
-			if (rdbmsField.defaultValue().equals(""))
+			if (rdbmsField.defaultUpdateValue().equals(""))
 			{
 				onDuplicateQueryStrBuilder.append("`" + columnName + "`" + "=:" + columnName + ",");
 			}
 			else
 			{
-				onDuplicateQueryStrBuilder.append("`" + columnName + "`" + "=" + rdbmsField.defaultValue() + ",");
+				onDuplicateQueryStrBuilder.append("`" + columnName + "`" + "=" + rdbmsField.defaultUpdateValue() + ",");
 			}
 		}
 		String upsertQuery =
@@ -145,13 +146,14 @@ public class RdbmsQueryBuilder
 				{
 					if (!rdbmsField.isPrimaryKey())
 					{
-						if (rdbmsField.defaultValue().equals(""))
+						if (rdbmsField.defaultUpdateValue().equals(""))
 						{
 							SqlBuilder.SET("`" + rdbmsField.columnName() + "`" + "=:" + rdbmsField.columnName());
 						}
 						else
 						{
-							SqlBuilder.SET("`" + rdbmsField.columnName() + "`" + "=" + rdbmsField.defaultValue() + ",");
+							SqlBuilder.SET("`" + rdbmsField.columnName() + "`" + "=" + rdbmsField.defaultUpdateValue()
+							        + ",");
 						}
 					}
 					else
@@ -188,14 +190,14 @@ public class RdbmsQueryBuilder
 		}
 		for (String column : columnsInCriteria)
 		{
-			 if (columnToValueMap.get(column) != null)
-			 {
-				 SqlBuilder.WHERE("`" + column + "`" + "=:" + column);
-			 }
-			 else
-			 {
-				 SqlBuilder.WHERE("`" + column + "`" + " IS :" + column);
-			 }
+			if (columnToValueMap.get(column) != null)
+			{
+				SqlBuilder.WHERE("`" + column + "`" + "=:" + column);
+			}
+			else
+			{
+				SqlBuilder.WHERE("`" + column + "`" + " IS :" + column);
+			}
 		}
 		String updateQuery = SqlBuilder.SQL();
 		logger.debug(updateQuery);

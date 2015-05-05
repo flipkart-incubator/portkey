@@ -17,9 +17,9 @@ public class Person implements Entity
 	private String lastName;
 	@RdbmsField (columnName = "age")
 	private int age;
-	@RdbmsField (columnName = "mod_count", defaultValue = "mod_count+1")
+	@RdbmsField (columnName = "mod_count", defaultUpdateValue = "mod_count+1")
 	private Timestamp modCount;
-	@RdbmsField (columnName = "last_modified", defaultValue = "now()")
+	@RdbmsField (columnName = "last_modified", defaultInsertValue = "now()", defaultUpdateValue = "now()")
 	private Timestamp lastModified;
 
 	public Long getId()

@@ -26,7 +26,8 @@ public class RdbmsQueryBuilderTest
 		String actual = RdbmsQueryBuilder.getInstance().getInsertQuery(metaData);
 		String expected =
 		        "INSERT INTO person" + "\n (`id`,`first_name`,`last_name`,`age`,`mod_count`,`last_modified`)"
-		                + "\nVALUES (:id,:first_name,:last_name,:age,mod_count+1,now())";
+		                + "\nVALUES (:id,:first_name,:last_name,:age,:mod_count,now())";
+
 		Assert.assertEquals(expected, actual);
 	}
 
@@ -36,7 +37,7 @@ public class RdbmsQueryBuilderTest
 		String expected =
 		        "INSERT INTO person"
 		                + "\n (`id`,`first_name`,`last_name`,`age`,`mod_count`,`last_modified`)"
-		                + "\nVALUES (:id,:first_name,:last_name,:age,mod_count+1,now())"
+		                + "\nVALUES (:id,:first_name,:last_name,:age,:mod_count,now())"
 		                + "\nON DUPLICATE KEY UPDATE `first_name`=:first_name,`last_name`=:last_name,`age`=:age,`mod_count`=mod_count+1,`last_modified`=now()";
 		RdbmsTableMetaData metaData = RdbmsMetaDataCache.getInstance().getMetaData(Person.class);
 		String actual = RdbmsQueryBuilder.getInstance().getUpsertQuery(metaData);
@@ -55,7 +56,7 @@ public class RdbmsQueryBuilderTest
 		String expected =
 		        "INSERT INTO person"
 		                + "\n (`id`,`first_name`,`last_name`,`age`,`mod_count`,`last_modified`)"
-		                + "\nVALUES (:id,:first_name,:last_name,:age,mod_count+1,now())"
+		                + "\nVALUES (:id,:first_name,:last_name,:age,:mod_count,now())"
 		                + "\nON DUPLICATE KEY UPDATE `first_name`=:first_name,`last_name`=:last_name,`mod_count`=mod_count+1,`last_modified`=now()";
 		String actual = RdbmsQueryBuilder.getInstance().getUpsertQuery(metaData, fieldsToBeUpdatedOnDuplicate);
 		Assert.assertEquals(expected, actual);
@@ -67,7 +68,7 @@ public class RdbmsQueryBuilderTest
 		String expected =
 		        "INSERT INTO person"
 		                + "\n (`id`,`first_name`,`last_name`,`age`,`mod_count`,`last_modified`)"
-		                + "\nVALUES (:id,:first_name,:last_name,:age,mod_count+1,now())"
+		                + "\nVALUES (:id,:first_name,:last_name,:age,:mod_count,now())"
 		                + "\nON DUPLICATE KEY UPDATE `first_name`=:first_name,`last_name`=:last_name,`age`=:age,`mod_count`=mod_count+1,`last_modified`=now()";
 		RdbmsTableMetaData metaData = RdbmsMetaDataCache.getInstance().getMetaData(Person.class);
 		String actual = RdbmsQueryBuilder.getInstance().getUpsertQuery(metaData);

@@ -136,7 +136,7 @@
 	</bean>
 
 	<util:list id="shard2Slaves" value-type="com.mchange.v2.c3p0.ComboPooledDataSource">
-		<ref local="shard1Slave1" />
+		<ref local="shard2Slave1" />
 	</util:list>
 
 	<bean id="shard2Slave1" class="com.mchange.v2.c3p0.ComboPooledDataSource"

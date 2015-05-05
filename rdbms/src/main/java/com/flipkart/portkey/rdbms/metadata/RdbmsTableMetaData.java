@@ -32,7 +32,8 @@ public class RdbmsTableMetaData
 	private Map<String, String> fieldNameToColumnNameMap = new LinkedHashMap<String, String>();
 	private Map<String, String> columnNameToFieldNameMap = new LinkedHashMap<String, String>();
 	private Map<String, Field> fieldNameToFieldMap = new LinkedHashMap<String, Field>();
-	private Map<String, String> fieldNameToDefaultValueMap = new LinkedHashMap<String, String>();
+	private Map<String, String> fieldNameToDefaultInsertValueMap = new LinkedHashMap<String, String>();
+	private Map<String, String> fieldNameToDefaultUpdateValueMap = new LinkedHashMap<String, String>();
 	private String insertQuery;
 	private String updateByPkQuery;
 	private String upsertQuery;
@@ -157,24 +158,44 @@ public class RdbmsTableMetaData
 		this.fieldNameToFieldMap.put(fieldName, field);
 	}
 
-	public Map<String, String> getFieldNameToDefaultValueMap()
+	public Map<String, String> getFieldNameToDefaultInsertValueMap()
 	{
-		return fieldNameToDefaultValueMap;
+		return fieldNameToDefaultInsertValueMap;
 	}
 
-	public String getDefaultValueFromFieldName(String fieldName)
+	public String getDefaultInsertValueFromFieldName(String fieldName)
 	{
-		return fieldNameToDefaultValueMap.get(fieldName);
+		return fieldNameToDefaultInsertValueMap.get(fieldName);
 	}
 
-	public void setFieldNameToDefaultValueMap(Map<String, String> fieldNameToDefaultValueMap)
+	public void setFieldNameToDefaultInsertValueMap(Map<String, String> fieldNameToDefaultInsertValueMap)
 	{
-		this.fieldNameToDefaultValueMap = fieldNameToDefaultValueMap;
+		this.fieldNameToDefaultInsertValueMap = fieldNameToDefaultInsertValueMap;
 	}
 
-	public void addToFieldNameToDefaultValueMap(String fieldName, String defaultValue)
+	public void addToFieldNameToDefaultInsertValueMap(String fieldName, String defaultInsertValue)
 	{
-		this.fieldNameToDefaultValueMap.put(fieldName, defaultValue);
+		this.fieldNameToDefaultInsertValueMap.put(fieldName, defaultInsertValue);
+	}
+
+	public Map<String, String> getFieldNameToDefaultUpdateValueMap()
+	{
+		return fieldNameToDefaultUpdateValueMap;
+	}
+
+	public String getDefaultUpdateValueFromFieldName(String fieldName)
+	{
+		return fieldNameToDefaultUpdateValueMap.get(fieldName);
+	}
+
+	public void setFieldNameToDefaultUpdateValueMap(Map<String, String> fieldNameToDefaultUpdateValueMap)
+	{
+		this.fieldNameToDefaultUpdateValueMap = fieldNameToDefaultUpdateValueMap;
+	}
+
+	public void addToFieldNameToDefaultUpdateValueMap(String fieldName, String defaultUpdateValue)
+	{
+		this.fieldNameToDefaultUpdateValueMap.put(fieldName, defaultUpdateValue);
 	}
 
 	public String getInsertQuery()
