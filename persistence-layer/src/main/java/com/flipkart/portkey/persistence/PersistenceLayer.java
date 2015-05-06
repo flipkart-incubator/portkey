@@ -572,4 +572,10 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		}
 		throw new QueryExecutionException("Failed to execute query " + sql + ".\nAll related data stores are down");
 	}
+
+	public <T extends Entity> TransactionLayer getTransaction(T bean)
+	{
+		TransactionLayer transactionLayer = new TransactionLayer();
+		return transactionLayer;
+	}
 }
