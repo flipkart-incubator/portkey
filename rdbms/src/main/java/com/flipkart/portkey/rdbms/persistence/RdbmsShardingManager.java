@@ -25,6 +25,7 @@ import com.flipkart.portkey.rdbms.metadata.RdbmsMetaDataCache;
 import com.flipkart.portkey.rdbms.metadata.RdbmsTableMetaData;
 import com.flipkart.portkey.rdbms.metadata.annotation.RdbmsField;
 import com.flipkart.portkey.rdbms.querybuilder.RdbmsQueryBuilder;
+import com.flipkart.portkey.rdbms.querybuilder.RdbmsSpecialValue;
 
 public class RdbmsShardingManager implements ShardingManager
 {
@@ -86,7 +87,15 @@ public class RdbmsShardingManager implements ShardingManager
 		{
 			String columnName = metaData.getColumnNameFromFieldName(fieldName);
 			Object valueBeforeSerialization = fieldNameToValueMap.get(fieldName);
-			Object value = RdbmsMapper.get(clazz, fieldName, valueBeforeSerialization);
+			Object value;
+			if (valueBeforeSerialization != null && valueBeforeSerialization.getClass().equals(RdbmsSpecialValue.class))
+			{
+				value = valueBeforeSerialization;
+			}
+			else
+			{
+				value = RdbmsMapper.get(clazz, fieldName, valueBeforeSerialization);
+			}
 			columnToValueMap.put(columnName, value);
 		}
 		return columnToValueMap;

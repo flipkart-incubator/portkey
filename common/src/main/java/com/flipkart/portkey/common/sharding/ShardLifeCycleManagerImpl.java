@@ -4,6 +4,7 @@
 package com.flipkart.portkey.common.sharding;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -13,10 +14,6 @@ import com.flipkart.portkey.common.enumeration.DataStoreType;
 import com.flipkart.portkey.common.enumeration.ShardStatus;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
-import com.hazelcast.config.Config;
-import com.hazelcast.core.Hazelcast;
-import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
 
 /**
  * @author santosh.p
@@ -24,8 +21,7 @@ import com.hazelcast.core.IMap;
 public class ShardLifeCycleManagerImpl implements ShardLifeCycleManager
 {
 	private static final Logger logger = Logger.getLogger(ShardLifeCycleManagerImpl.class);
-	private Config cfg = new Config();
-	private IMap<DataStoreType, Table<String, String, ShardStatus>> dataStoreTypeToShardStatusTableMap;
+	private Map<DataStoreType, Table<String, String, ShardStatus>> dataStoreTypeToShardStatusTableMap;
 	private static ShardLifeCycleManagerImpl instance = null;
 
 	public static ShardLifeCycleManagerImpl getInstance(DataStoreType dataStoreType)
@@ -42,7 +38,7 @@ public class ShardLifeCycleManagerImpl implements ShardLifeCycleManager
 	{
 		if (dataStoreTypeToShardStatusTableMap.containsKey(dataStoreType))
 		{
-			logger.info("Data store type " + dataStoreType + " already exists in hazelcast map");
+			logger.info("Data store type " + dataStoreType + " already exists in map");
 			return;
 		}
 		Table<String, String, ShardStatus> shardStatusTable = HashBasedTable.create();
@@ -51,8 +47,7 @@ public class ShardLifeCycleManagerImpl implements ShardLifeCycleManager
 
 	protected ShardLifeCycleManagerImpl()
 	{
-		HazelcastInstance hazelcastInstance = Hazelcast.newHazelcastInstance(cfg);
-		dataStoreTypeToShardStatusTableMap = hazelcastInstance.getMap("liveShards");
+		dataStoreTypeToShardStatusTableMap = new HashMap<DataStoreType, Table<String, String, ShardStatus>>();
 	}
 
 	@Override

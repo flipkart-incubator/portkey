@@ -39,7 +39,8 @@
 		<property name="jdbcUrl" value="${RDBMS.1.MASTER.JDBC_URL}" />
 		<property name="user" value="${RDBMS.1.MASTER.USER}" />
 		<property name="password" value="${RDBMS.1.MASTER.PASSWORD}" />
-
+		<property name="dataSourceName" value="${RDBMS.1.MASTER.DATA_SOURCE_NAME}"/>
+		
 		<property name="acquireIncrement" value="${C3P0_ACQUIRE_INCREMENT}" />
 		<property name="acquireRetryAttempts" value="${C3P0_ACQUIRE_RETRY_ATTEMPTS}" />
 		<property name="acquireRetryDelay" value="${C3P0_ACQUIRE_RETRY_DELAY}" />
@@ -74,6 +75,7 @@
 		<property name="jdbcUrl" value="${RDBMS.2.SHARD1.MASTER.JDBC_URL}" />
 		<property name="user" value="${RDBMS.2.SHARD1.MASTER.USER}" />
 		<property name="password" value="${RDBMS.2.SHARD1.MASTER.PASSWORD}" />
+		<property name="dataSourceName" value="${RDBMS.2.SHARD1.MASTER.DATA_SOURCE_NAME}"/>
 
 		<property name="acquireIncrement" value="${C3P0_ACQUIRE_INCREMENT}" />
 		<property name="acquireRetryAttempts" value="${C3P0_ACQUIRE_RETRY_ATTEMPTS}" />
@@ -97,6 +99,7 @@
 		<property name="jdbcUrl" value="${RDBMS.2.SHARD1.SLAVE1.JDBC_URL}" />
 		<property name="user" value="${RDBMS.2.SHARD1.SLAVE1.USER}" />
 		<property name="password" value="${RDBMS.2.SHARD1.SLAVE1.PASSWORD}" />
+		<property name="dataSourceName" value="${RDBMS.2.SHARD1.SLAVE1.DATA_SOURCE_NAME}"/>
 
 		<property name="acquireIncrement" value="${C3P0_ACQUIRE_INCREMENT}" />
 		<property name="acquireRetryAttempts" value="${C3P0_ACQUIRE_RETRY_ATTEMPTS}" />
@@ -122,6 +125,7 @@
 		<property name="jdbcUrl" value="${RDBMS.2.SHARD2.MASTER.JDBC_URL}" />
 		<property name="user" value="${RDBMS.2.SHARD2.MASTER.USER}" />
 		<property name="password" value="${RDBMS.2.SHARD2.MASTER.PASSWORD}" />
+		<property name="dataSourceName" value="${RDBMS.2.SHARD2.MASTER.DATA_SOURCE_NAME}"/>
 
 		<property name="acquireIncrement" value="${C3P0_ACQUIRE_INCREMENT}" />
 		<property name="acquireRetryAttempts" value="${C3P0_ACQUIRE_RETRY_ATTEMPTS}" />
@@ -141,10 +145,11 @@
 
 	<bean id="shard2Slave1" class="com.mchange.v2.c3p0.ComboPooledDataSource"
 		destroy-method="close">
-		<property name="driverClass" value="${RDBMS.2.SHARD1.SLAVE1.DRIVER_CLASS}" />
-		<property name="jdbcUrl" value="${RDBMS.2.SHARD1.SLAVE1.JDBC_URL}" />
-		<property name="user" value="${RDBMS.2.SHARD1.SLAVE1.USER}" />
-		<property name="password" value="${RDBMS.2.SHARD1.SLAVE1.PASSWORD}" />
+		<property name="driverClass" value="${RDBMS.2.SHARD2.SLAVE1.DRIVER_CLASS}" />
+		<property name="jdbcUrl" value="${RDBMS.2.SHARD2.SLAVE1.JDBC_URL}" />
+		<property name="user" value="${RDBMS.2.SHARD2.SLAVE1.USER}" />
+		<property name="password" value="${RDBMS.2.SHARD2.SLAVE1.PASSWORD}" />
+		<property name="dataSourceName" value="${RDBMS.2.SHARD2.SLAVE1.DATA_SOURCE_NAME}"/>
 
 		<property name="acquireIncrement" value="${C3P0_ACQUIRE_INCREMENT}" />
 		<property name="acquireRetryAttempts" value="${C3P0_ACQUIRE_RETRY_ATTEMPTS}" />

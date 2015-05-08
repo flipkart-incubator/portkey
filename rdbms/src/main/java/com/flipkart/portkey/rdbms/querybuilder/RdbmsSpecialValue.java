@@ -4,6 +4,16 @@ public class RdbmsSpecialValue
 {
 	private Object value;
 
+	public RdbmsSpecialValue()
+	{
+
+	}
+
+	public RdbmsSpecialValue(String value)
+	{
+		this.value = value;
+	}
+
 	public Object getValue()
 	{
 		return value;
