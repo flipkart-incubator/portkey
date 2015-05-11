@@ -13,7 +13,7 @@ public class SqlQuery
 		return query;
 	}
 
-	public void setQueryString(String query)
+	public void setQuery(String query)
 	{
 		this.query = query;
 	}

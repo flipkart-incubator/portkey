@@ -109,4 +109,15 @@ public class RdbmsMultiShardedDatabaseConfig implements RdbmsDatabaseConfig
 		shardStatusMap = statusMap;
 		return statusMap;
 	}
+
+	@Override
+	public <T extends Entity> RdbmsTransactionManager getTransactionManager(T bean) throws ShardNotAvailableException
+	{
+		RdbmsTableMetaData metaData = metaDataCache.getMetaData(bean.getClass());
+		String shardKeyFieldName = metaData.getShardKeyFieldName();
+		String shardKey = PortKeyUtils.toString(PortKeyUtils.getFieldValueFromBean(bean, shardKeyFieldName));
+		List<String> liveShards = getShardsAvailableForWrite();
+		String shardId = shardIdentifier.getShardId(shardKey, liveShards);
+		return shardIdToPersistenceManagerMap.get(shardId).getTransactionManager();
+	}
 }

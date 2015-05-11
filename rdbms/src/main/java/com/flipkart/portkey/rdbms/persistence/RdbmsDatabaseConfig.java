@@ -21,4 +21,6 @@ public interface RdbmsDatabaseConfig
 	public <T extends Entity> T generateShardIdAndUpdateBean(T bean) throws ShardNotAvailableException;
 
 	public Map<String, ShardStatus> healthCheck();
+
+	public <T extends Entity> RdbmsTransactionManager getTransactionManager(T bean) throws ShardNotAvailableException;
 }

@@ -21,9 +21,11 @@ import com.flipkart.portkey.common.enumeration.FailureAction;
 import com.flipkart.portkey.common.exception.PortKeyException;
 import com.flipkart.portkey.common.exception.QueryExecutionException;
 import com.flipkart.portkey.common.exception.QueryNotSupportedException;
+import com.flipkart.portkey.common.exception.ShardNotAvailableException;
 import com.flipkart.portkey.common.persistence.PersistenceLayerInterface;
 import com.flipkart.portkey.common.persistence.Result;
 import com.flipkart.portkey.common.persistence.ShardingManager;
+import com.flipkart.portkey.common.persistence.TransactionManager;
 import com.flipkart.portkey.common.persistence.query.UpdateQuery;
 
 /**
@@ -573,9 +575,16 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		throw new QueryExecutionException("Failed to execute query " + sql + ".\nAll related data stores are down");
 	}
 
-	public <T extends Entity> TransactionLayer getTransaction(T bean)
+	public <T extends Entity> TransactionLayer getTransaction(T bean) throws ShardNotAvailableException
 	{
-		TransactionLayer transactionLayer = new TransactionLayer();
+		Map<DataStoreType, TransactionManager> transactionManagerMap = new HashMap<DataStoreType, TransactionManager>();
+		EntityPersistencePreference persistencePreference = entityPersistencePreferenceMap.get(bean);
+		WriteConfig writeConfig = persistencePreference.getWriteConfig();
+		for (DataStoreType type : writeConfig.getWriteOrder())
+		{
+			transactionManagerMap.put(type, dataStoreTypeToShardingManagerMap.get(type).getTransactionManager(bean));
+		}
+		TransactionLayer transactionLayer = new TransactionLayer(transactionManagerMap);
 		return transactionLayer;
 	}
 }

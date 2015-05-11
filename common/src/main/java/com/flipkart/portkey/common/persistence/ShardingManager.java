@@ -60,4 +60,6 @@ public interface ShardingManager
 	public int update(List<UpdateQuery> queries, boolean failIfNoRowsAreUpdated) throws QueryExecutionException;
 
 	public <T extends Entity> int insert(List<T> beans) throws QueryExecutionException;
+
+	public <T extends Entity> TransactionManager getTransactionManager(T bean) throws ShardNotAvailableException;
 }

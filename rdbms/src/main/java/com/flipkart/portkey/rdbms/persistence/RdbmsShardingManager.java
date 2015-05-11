@@ -1,8 +1,6 @@
 package com.flipkart.portkey.rdbms.persistence;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -23,14 +21,13 @@ import com.flipkart.portkey.common.util.PortKeyUtils;
 import com.flipkart.portkey.rdbms.mapper.RdbmsMapper;
 import com.flipkart.portkey.rdbms.metadata.RdbmsMetaDataCache;
 import com.flipkart.portkey.rdbms.metadata.RdbmsTableMetaData;
-import com.flipkart.portkey.rdbms.metadata.annotation.RdbmsField;
 import com.flipkart.portkey.rdbms.querybuilder.RdbmsQueryBuilder;
 
 public class RdbmsShardingManager implements ShardingManager
 {
 	private Map<String, RdbmsDatabaseConfig> databaseNameToDatabaseConfigMap;
-	private RdbmsMetaDataCache metaDataCache = RdbmsMetaDataCache.getInstance();
 	private ShardLifeCycleManager shardLifeCycleManager = ShardLifeCycleManagerImpl.getInstance(DataStoreType.RDBMS);
+	private RdbmsMetaDataCache metaDataCache = RdbmsMetaDataCache.getInstance();
 
 	public void setDatabaseNameToDatabaseConfigMap(Map<String, RdbmsDatabaseConfig> databaseNameToDatabaseConfigMap)
 	{
@@ -45,51 +42,9 @@ public class RdbmsShardingManager implements ShardingManager
 	@Override
 	public <T extends Entity> T generateShardIdAndUpdateBean(T bean) throws ShardNotAvailableException
 	{
-		String databaseName = metaDataCache.getMetaData(bean.getClass()).getDatabaseName();
+		String databaseName = RdbmsMetaDataCache.getInstance().getMetaData(bean.getClass()).getDatabaseName();
 		RdbmsDatabaseConfig databaseConfig = databaseNameToDatabaseConfigMap.get(databaseName);
 		return databaseConfig.generateShardIdAndUpdateBean(bean);
-	}
-
-	private Map<String, Object> generateColumnToValueMap(Entity obj, RdbmsTableMetaData metaData)
-	{
-		List<Field> fieldsList = metaData.getFieldsList();
-		Map<String, Object> columnToValueMap = new HashMap<String, Object>();
-		for (Field field : fieldsList)
-		{
-			RdbmsField rdbmsField = field.getAnnotation(RdbmsField.class);
-			if (rdbmsField != null)
-			{
-				Object value;
-				value = RdbmsMapper.get(obj, field.getName());
-				columnToValueMap.put(rdbmsField.columnName(), value);
-			}
-		}
-		return columnToValueMap;
-	}
-
-	private List<String> generateColumnsListFromFieldNamesList(RdbmsTableMetaData metaData, List<String> fieldNamesList)
-	{
-		List<String> columnsList = new ArrayList<String>();
-		for (String fieldName : fieldNamesList)
-		{
-			columnsList.add(metaData.getColumnNameFromFieldName(fieldName));
-		}
-		return columnsList;
-	}
-
-	private <T extends Entity> Map<String, Object> generateColumnToValueMap(Class<T> clazz,
-	        Map<String, Object> fieldNameToValueMap)
-	{
-		Map<String, Object> columnToValueMap = new HashMap<String, Object>();
-		RdbmsTableMetaData metaData = metaDataCache.getMetaData(clazz);
-		for (String fieldName : fieldNameToValueMap.keySet())
-		{
-			String columnName = metaData.getColumnNameFromFieldName(fieldName);
-			Object valueBeforeSerialization = fieldNameToValueMap.get(fieldName);
-			Object value = RdbmsMapper.get(clazz, fieldName, valueBeforeSerialization);
-			columnToValueMap.put(columnName, value);
-		}
-		return columnToValueMap;
 	}
 
 	@Override
@@ -99,7 +54,7 @@ public class RdbmsShardingManager implements ShardingManager
 		String databaseName = metaData.getDatabaseName();
 		RdbmsDatabaseConfig databaseConfig = databaseNameToDatabaseConfigMap.get(databaseName);
 		String insertQuery = RdbmsQueryBuilder.getInstance().getInsertQuery(metaData);
-		Map<String, Object> columnToValueMap = generateColumnToValueMap(bean, metaData);
+		Map<String, Object> columnToValueMap = RdbmsHelper.generateColumnToValueMap(bean, metaData);
 		RdbmsPersistenceManager pm = databaseConfig.getPersistenceManager(bean);
 		return pm.executeUpdate(insertQuery, columnToValueMap);
 	}
@@ -111,7 +66,7 @@ public class RdbmsShardingManager implements ShardingManager
 		String databaseName = metaData.getDatabaseName();
 		RdbmsDatabaseConfig databaseConfig = databaseNameToDatabaseConfigMap.get(databaseName);
 		String upsertQuery = RdbmsQueryBuilder.getInstance().getUpsertQuery(metaData);
-		Map<String, Object> columnToValueMap = generateColumnToValueMap(bean, metaData);
+		Map<String, Object> columnToValueMap = RdbmsHelper.generateColumnToValueMap(bean, metaData);
 		RdbmsPersistenceManager pm = databaseConfig.getPersistenceManager(bean);
 		return pm.executeUpdate(upsertQuery, columnToValueMap);
 	}
@@ -124,7 +79,7 @@ public class RdbmsShardingManager implements ShardingManager
 		String databaseName = metaData.getDatabaseName();
 		RdbmsDatabaseConfig databaseConfig = databaseNameToDatabaseConfigMap.get(databaseName);
 		String upsertQuery = RdbmsQueryBuilder.getInstance().getUpsertQuery(metaData, columnsToBeUpdatedOnDuplicate);
-		Map<String, Object> columnToValueMap = generateColumnToValueMap(bean, metaData);
+		Map<String, Object> columnToValueMap = RdbmsHelper.generateColumnToValueMap(bean, metaData);
 		RdbmsPersistenceManager pm = databaseConfig.getPersistenceManager(bean);
 		return pm.executeUpdate(upsertQuery, columnToValueMap);
 	}
@@ -136,7 +91,7 @@ public class RdbmsShardingManager implements ShardingManager
 		String databaseName = metaData.getDatabaseName();
 		RdbmsDatabaseConfig databaseConfig = databaseNameToDatabaseConfigMap.get(databaseName);
 		String updateQuery = RdbmsQueryBuilder.getInstance().getUpdateByPkQuery(metaData);
-		Map<String, Object> columnToValueMap = generateColumnToValueMap(bean, metaData);
+		Map<String, Object> columnToValueMap = RdbmsHelper.generateColumnToValueMap(bean, metaData);
 		RdbmsPersistenceManager pm = databaseConfig.getPersistenceManager(bean);
 		return pm.executeUpdate(updateQuery, columnToValueMap);
 	}
@@ -150,8 +105,8 @@ public class RdbmsShardingManager implements ShardingManager
 		RdbmsDatabaseConfig databaseConfig = databaseNameToDatabaseConfigMap.get(databaseName);
 		String shardKeyFieldName = metaDataCache.getShardKeyFieldName(clazz);
 		RdbmsTableMetaData metaData = metaDataCache.getMetaData(clazz);
-		Map<String, Object> updateColumnToValueMap = generateColumnToValueMap(clazz, updateValuesMap);
-		Map<String, Object> criteriaColumnToValueMap = generateColumnToValueMap(clazz, criteria);
+		Map<String, Object> updateColumnToValueMap = RdbmsHelper.generateColumnToValueMap(clazz, updateValuesMap);
+		Map<String, Object> criteriaColumnToValueMap = RdbmsHelper.generateColumnToValueMap(clazz, criteria);
 		String tableName = metaData.getTableName();
 		Map<String, Object> columnToValueMap = PortKeyUtils.mergeMaps(updateColumnToValueMap, criteriaColumnToValueMap);
 		List<String> columnsToBeUpdated = new ArrayList<String>(updateColumnToValueMap.keySet());
@@ -196,17 +151,17 @@ public class RdbmsShardingManager implements ShardingManager
 		String tableName = metaData.getTableName();
 		Map<String, Object> criteriaFieldNameToValueMap = query.getCriteriaFieldNameToValueMap();
 		Map<String, Object> criteriaColumnToValueMap =
-		        generateColumnToValueMap(query.getClazz(), criteriaFieldNameToValueMap);
+		        RdbmsHelper.generateColumnToValueMap(query.getClazz(), criteriaFieldNameToValueMap);
 		Map<String, Object> updateFieldNameToValueMap = query.getUpdateFieldNameToValueMap();
 		Map<String, Object> updateColumnToValueMap =
-		        generateColumnToValueMap(query.getClazz(), updateFieldNameToValueMap);
+		        RdbmsHelper.generateColumnToValueMap(query.getClazz(), updateFieldNameToValueMap);
 		Map<String, Object> columnToValueMap = PortKeyUtils.mergeMaps(criteriaColumnToValueMap, updateColumnToValueMap);
 		ArrayList<String> columnsToBeUpdated = new ArrayList<String>(updateColumnToValueMap.keySet());
 		ArrayList<String> columnsInCriteria = new ArrayList<String>(criteriaColumnToValueMap.keySet());
 		String queryString =
 		        RdbmsQueryBuilder.getInstance().getUpdateByCriteriaQuery(tableName, columnsToBeUpdated,
 		                columnsInCriteria, columnToValueMap);
-		sqlQuery.setQueryString(queryString);
+		sqlQuery.setQuery(queryString);
 		sqlQuery.setColumnToValueMap(columnToValueMap);
 		return sqlQuery;
 	}
@@ -237,10 +192,10 @@ public class RdbmsShardingManager implements ShardingManager
 				throw new QueryExecutionException("Transactional inserts in multiple shards are not supported.");
 			}
 			SqlQuery sqlQuery = new SqlQuery();
-			Map<String, Object> columnToValueMap = generateColumnToValueMap(bean, metaData);
+			Map<String, Object> columnToValueMap = RdbmsHelper.generateColumnToValueMap(bean, metaData);
 			sqlQuery.setColumnToValueMap(columnToValueMap);
 			String insertQuery = RdbmsQueryBuilder.getInstance().getInsertQuery(metaData);;
-			sqlQuery.setQueryString(insertQuery);
+			sqlQuery.setQuery(insertQuery);
 			sqlQuery.setColumnToValueMap(columnToValueMap);
 			sqlQueryList.add(sqlQuery);
 		}
@@ -309,7 +264,7 @@ public class RdbmsShardingManager implements ShardingManager
 		RdbmsTableMetaData metaData = metaDataCache.getMetaData(clazz);
 		String tableName = metaData.getTableName();
 		String shardKeyFieldName = metaDataCache.getShardKeyFieldName(clazz);
-		Map<String, Object> deleteCriteriaColumnToValueMap = generateColumnToValueMap(clazz, criteria);
+		Map<String, Object> deleteCriteriaColumnToValueMap = RdbmsHelper.generateColumnToValueMap(clazz, criteria);
 		String deleteQuery =
 		        RdbmsQueryBuilder.getInstance().getDeleteByCriteriaQuery(tableName, deleteCriteriaColumnToValueMap);
 		if (criteria.containsKey(shardKeyFieldName))
@@ -346,7 +301,7 @@ public class RdbmsShardingManager implements ShardingManager
 		String shardKeyFieldName = metaDataCache.getShardKeyFieldName(clazz);
 		RdbmsTableMetaData metaData = metaDataCache.getMetaData(clazz);
 		String tableName = metaData.getTableName();
-		Map<String, Object> criteriaColumnToValueMap = generateColumnToValueMap(clazz, criteria);
+		Map<String, Object> criteriaColumnToValueMap = RdbmsHelper.generateColumnToValueMap(clazz, criteria);
 		String getQuery = RdbmsQueryBuilder.getInstance().getGetByCriteriaQuery(tableName, criteriaColumnToValueMap);
 		RdbmsMapper<T> mapper = RdbmsMapper.getInstance(clazz);
 
@@ -384,8 +339,8 @@ public class RdbmsShardingManager implements ShardingManager
 		String shardKeyFieldName = metaDataCache.getShardKeyFieldName(clazz);
 		RdbmsTableMetaData metaData = RdbmsMetaDataCache.getInstance().getMetaData(clazz);
 		String tableName = metaData.getTableName();
-		List<String> columnsInSelect = generateColumnsListFromFieldNamesList(metaData, fieldsInSelect);
-		Map<String, Object> criteriaColumnToValueMap = generateColumnToValueMap(clazz, criteria);
+		List<String> columnsInSelect = RdbmsHelper.generateColumnsListFromFieldNamesList(metaData, fieldsInSelect);
+		Map<String, Object> criteriaColumnToValueMap = RdbmsHelper.generateColumnToValueMap(clazz, criteria);
 		String getQuery =
 		        RdbmsQueryBuilder.getInstance().getGetByCriteriaQuery(tableName, columnsInSelect,
 		                criteriaColumnToValueMap);
@@ -485,5 +440,14 @@ public class RdbmsShardingManager implements ShardingManager
 			Map<String, ShardStatus> shardStatusMap = databaseConfig.healthCheck();
 			shardLifeCycleManager.setShardStatusMap(DataStoreType.RDBMS, databaseName, shardStatusMap);
 		}
+	}
+
+	@Override
+	public <T extends Entity> RdbmsTransactionManager getTransactionManager(T bean) throws ShardNotAvailableException
+	{
+		RdbmsTableMetaData metaData = metaDataCache.getMetaData(bean.getClass());
+		String databaseName = metaData.getDatabaseName();
+		RdbmsDatabaseConfig databaseConfig = databaseNameToDatabaseConfigMap.get(databaseName);
+		return databaseConfig.getTransactionManager(bean);
 	}
 }

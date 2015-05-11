@@ -7,6 +7,7 @@ import java.util.Map;
 
 import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.common.enumeration.ShardStatus;
+import com.flipkart.portkey.common.exception.ShardNotAvailableException;
 import com.flipkart.portkey.common.sharding.ShardIdentifier;
 import com.flipkart.portkey.rdbms.persistence.config.RdbmsConnectionConfig;
 import com.flipkart.portkey.rdbms.sharding.RdbmsShardIdentifierForSingleShard;
@@ -62,5 +63,11 @@ public class RdbmsSingleShardedDatabaseConfig implements RdbmsDatabaseConfig
 	public Map<String, ShardStatus> healthCheck()
 	{
 		return new HashMap<String, ShardStatus>();
+	}
+
+	@Override
+	public <T extends Entity> RdbmsTransactionManager getTransactionManager(T bean) throws ShardNotAvailableException
+	{
+		return persistenceManager.getTransactionManager();
 	}
 }

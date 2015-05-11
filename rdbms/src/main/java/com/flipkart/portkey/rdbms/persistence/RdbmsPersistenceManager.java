@@ -224,4 +224,9 @@ public class RdbmsPersistenceManager
 			return executeQuery(master, sql, criteria);
 		}
 	}
+
+	public RdbmsTransactionManager getTransactionManager()
+	{
+		return new RdbmsTransactionManager(master);
+	}
 }

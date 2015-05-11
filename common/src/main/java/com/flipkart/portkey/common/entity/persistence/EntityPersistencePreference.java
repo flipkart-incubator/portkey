@@ -11,7 +11,6 @@ package com.flipkart.portkey.common.entity.persistence;
  */
 public class EntityPersistencePreference
 {
-
 	private WriteConfig writeConfig;
 	private ReadConfig readConfig;
 

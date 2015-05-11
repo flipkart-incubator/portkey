@@ -23,10 +23,6 @@ public class TransactionLayer implements PersistenceLayerInterface
 		this.dataStoreTypeToTransactionManagerMap = dataStoreTypeToTransactionManagerMap;
 	}
 
-	public TransactionLayer()
-	{
-	}
-
 	public void begin()
 	{
 
@@ -167,5 +163,4 @@ public class TransactionLayer implements PersistenceLayerInterface
 		// TODO Auto-generated method stub
 
 	}
-
 }
