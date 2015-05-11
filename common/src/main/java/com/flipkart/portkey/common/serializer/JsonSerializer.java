@@ -33,7 +33,7 @@ public class JsonSerializer extends Serializer
 	{
 		try
 		{
-			return mapper.writeValueAsString(obj);
+			return mapper.writeValueAsString(obj).replaceAll("^\"|\"$", "");
 		}
 		catch (JsonGenerationException e)
 		{

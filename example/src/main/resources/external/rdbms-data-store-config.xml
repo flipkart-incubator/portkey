@@ -11,41 +11,71 @@
 		<property name="location" value="classpath:project.properties" />
 	</bean>
 
-	<bean id="rdbmsDataStoreConfig"
-		class="com.flipkart.portkey.rdbms.datastore.RdbmsDataStoreConfig">
-		<property name="shardIdentifier" ref="rdbmsShardIdentifierForSingleShard" />
-		<property name="shardIdToPersistenceManagerMap" ref="rdbmsPersistenceManagerMap" />
-		<property name="metaDataCache" ref="rdbmsMetaDataCache" />
+	<bean id="rdbmsShardingManager"
+		class="com.flipkart.portkey.rdbms.persistence.RdbmsShardingManager">
+		<property name="databaseNameToDatabaseConfigMap" ref="databaseNameToDatabaseConfigMap" />
 	</bean>
 
-	<bean id="rdbmsShardIdentifierForSingleShard"
-		class="com.flipkart.portkey.rdbms.sharding.RdbmsShardIdentifierForSingleShard" />
-
-	<util:map id="rdbmsPersistenceManagerMap"
-		value-type="com.flipkart.portkey.common.persistence.PersistenceManager">
-		<entry key="01" value-ref="rdbmsShard1" />
+	<util:map id="databaseNameToDatabaseConfigMap"
+		key-type="java.lang.String"
+		value-type="com.flipkart.portkey.rdbms.persistence.RdbmsDatabaseConfig">
+		<entry key="portkey_example" value-ref="databaseConfig" />
+		<entry key="portkey_example_sharded" value-ref="shardedDatabaseConfig" />
 	</util:map>
 
-	<bean id="rdbmsMetaDataCache" class="com.flipkart.portkey.rdbms.metadata.RdbmsMetaDataCache"
-		factory-method="getInstance" />
-
-	<bean id="rdbmsShard1"
-		class="com.flipkart.portkey.rdbms.persistence.RdbmsPersistenceManager">
-		<constructor-arg ref="rdbmsShard1Config" />
+	<!-- non sharded database config -->
+	<bean id="databaseConfig"
+		class="com.flipkart.portkey.rdbms.persistence.RdbmsSingleShardedDatabaseConfig">
+		<constructor-arg ref="connectionConfig" />
 	</bean>
-	<bean id="rdbmsShard1Config"
-		class="com.flipkart.portkey.rdbms.persistence.config.RdbmsPersistenceManagerConfig">
-		<property name="master" ref="rdbmsShard1Master" />
-		<!-- <property name="slaves" ref="rdbmsShard1Slaves" /> -->
+	<bean id="connectionConfig"
+		class="com.flipkart.portkey.rdbms.persistence.config.RdbmsConnectionConfig">
+		<property name="master" ref="master" />
 	</bean>
 
-	<bean id="rdbmsShard1Master" class="com.mchange.v2.c3p0.ComboPooledDataSource"
+	<bean id="master" class="com.mchange.v2.c3p0.ComboPooledDataSource"
 		destroy-method="close">
+		<property name="driverClass" value="${RDBMS.1.MASTER.DRIVER_CLASS}" />
+		<property name="jdbcUrl" value="${RDBMS.1.MASTER.JDBC_URL}" />
+		<property name="user" value="${RDBMS.1.MASTER.USER}" />
+		<property name="password" value="${RDBMS.1.MASTER.PASSWORD}" />
+		<property name="dataSourceName" value="${RDBMS.1.MASTER.DATA_SOURCE_NAME}"/>
+		
+		<property name="acquireIncrement" value="${C3P0_ACQUIRE_INCREMENT}" />
+		<property name="acquireRetryAttempts" value="${C3P0_ACQUIRE_RETRY_ATTEMPTS}" />
+		<property name="acquireRetryDelay" value="${C3P0_ACQUIRE_RETRY_DELAY}" />
+		<property name="maxIdleTime" value="${C3P0_MAX_IDLE_TIME}" />
+		<property name="maxPoolSize" value="${C3P0_MAX_POOL_SIZE}" />
+		<property name="maxStatements" value="${C3P0_MAX_STATEMENTS}" />
+		<property name="minPoolSize" value="${C3P0_MIN_POOL_SIZE}" />
+		<property name="testConnectionOnCheckin" value="${C3P0_TEST_CONNECTION_ON_CHECKIN}" />
+		<property name="idleConnectionTestPeriod" value="${C3P0_IDLE_CONNECTION_TEST_PERIOD}" />
+		<property name="preferredTestQuery" value="${C3P0_PREFERRED_TEST_QUERY}" />
+	</bean>
 
-		<property name="driverClass" value="com.mysql.jdbc.Driver" />
-		<property name="jdbcUrl" value="${RDBMS.SHARD1.MASTER.JDBC_URL}" />
-		<property name="user" value="${RDBMS.SHARD1.MASTER.USER}" />
-		<property name="password" value="${RDBMS.SHARD1.MASTER.PASSWORD}" />
+	<!-- sharded database config -->
+	<bean id="shardedDatabaseConfig"
+		class="com.flipkart.portkey.rdbms.persistence.RdbmsMultiShardedDatabaseConfig">
+		<constructor-arg ref="shardIdToConnectionConfigMap" />
+	</bean>
+	<util:map id="shardIdToConnectionConfigMap" key-type="java.lang.String"
+		value-type="com.flipkart.portkey.rdbms.persistence.config.RdbmsConnectionConfig">
+		<entry key="01" value-ref="shard1ConnectionConfig" />
+		<entry key="02" value-ref="shard2ConnectionConfig" />
+	</util:map>
+
+	<bean id="shard1ConnectionConfig"
+		class="com.flipkart.portkey.rdbms.persistence.config.RdbmsConnectionConfig">
+		<property name="master" ref="shard1Master" />
+	</bean>
+
+	<bean id="shard1Master" class="com.mchange.v2.c3p0.ComboPooledDataSource"
+		destroy-method="close">
+		<property name="driverClass" value="${RDBMS.2.SHARD1.MASTER.DRIVER_CLASS}" />
+		<property name="jdbcUrl" value="${RDBMS.2.SHARD1.MASTER.JDBC_URL}" />
+		<property name="user" value="${RDBMS.2.SHARD1.MASTER.USER}" />
+		<property name="password" value="${RDBMS.2.SHARD1.MASTER.PASSWORD}" />
+		<property name="dataSourceName" value="${RDBMS.2.SHARD1.MASTER.DATA_SOURCE_NAME}"/>
 
 		<property name="acquireIncrement" value="${C3P0_ACQUIRE_INCREMENT}" />
 		<property name="acquireRetryAttempts" value="${C3P0_ACQUIRE_RETRY_ATTEMPTS}" />
@@ -54,21 +84,22 @@
 		<property name="maxPoolSize" value="${C3P0_MAX_POOL_SIZE}" />
 		<property name="maxStatements" value="${C3P0_MAX_STATEMENTS}" />
 		<property name="minPoolSize" value="${C3P0_MIN_POOL_SIZE}" />
-		<property name="testConnectionOnCheckin" value="true" />
-		<property name="idleConnectionTestPeriod" value="900" />
-		<property name="preferredTestQuery" value="select 1 from DUAL" />
+		<property name="testConnectionOnCheckin" value="${C3P0_TEST_CONNECTION_ON_CHECKIN}" />
+		<property name="idleConnectionTestPeriod" value="${C3P0_IDLE_CONNECTION_TEST_PERIOD}" />
+		<property name="preferredTestQuery" value="${C3P0_PREFERRED_TEST_QUERY}" />
 	</bean>
 
-	<util:list id="rdbmsShard1Slaves" value-type="com.mchange.v2.c3p0.ComboPooledDataSource">
-		<ref local="rdbmsShard1Slave1" />
+	<util:list id="shard1Slaves" value-type="com.mchange.v2.c3p0.ComboPooledDataSource">
+		<ref local="shard1Slave1" />
 	</util:list>
 
-	<bean id="rdbmsShard1Slave1" class="com.mchange.v2.c3p0.ComboPooledDataSource"
+	<bean id="shard1Slave1" class="com.mchange.v2.c3p0.ComboPooledDataSource"
 		destroy-method="close">
-		<property name="driverClass" value="com.mysql.jdbc.Driver" />
-		<property name="jdbcUrl" value="${RDBMS.SHARD1.SLAVE.JDBC_URL}" />
-		<property name="user" value="${RDBMS.SHARD1.SLAVE.USER}" />
-		<property name="password" value="${RDBMS.SHARD1.SLAVE.PASSWORD}" />
+		<property name="driverClass" value="${RDBMS.2.SHARD1.SLAVE1.DRIVER_CLASS}" />
+		<property name="jdbcUrl" value="${RDBMS.2.SHARD1.SLAVE1.JDBC_URL}" />
+		<property name="user" value="${RDBMS.2.SHARD1.SLAVE1.USER}" />
+		<property name="password" value="${RDBMS.2.SHARD1.SLAVE1.PASSWORD}" />
+		<property name="dataSourceName" value="${RDBMS.2.SHARD1.SLAVE1.DATA_SOURCE_NAME}"/>
 
 		<property name="acquireIncrement" value="${C3P0_ACQUIRE_INCREMENT}" />
 		<property name="acquireRetryAttempts" value="${C3P0_ACQUIRE_RETRY_ATTEMPTS}" />
@@ -77,8 +108,58 @@
 		<property name="maxPoolSize" value="${C3P0_MAX_POOL_SIZE}" />
 		<property name="maxStatements" value="${C3P0_MAX_STATEMENTS}" />
 		<property name="minPoolSize" value="${C3P0_MIN_POOL_SIZE}" />
-		<property name="testConnectionOnCheckin" value="true" />
-		<property name="idleConnectionTestPeriod" value="900" />
-		<property name="preferredTestQuery" value="select 1 from DUAL" />
+		<property name="testConnectionOnCheckin" value="${C3P0_TEST_CONNECTION_ON_CHECKIN}" />
+		<property name="idleConnectionTestPeriod" value="${C3P0_IDLE_CONNECTION_TEST_PERIOD}" />
+		<property name="preferredTestQuery" value="${C3P0_PREFERRED_TEST_QUERY}" />
+	</bean>
+
+
+	<bean id="shard2ConnectionConfig"
+		class="com.flipkart.portkey.rdbms.persistence.config.RdbmsConnectionConfig">
+		<property name="master" ref="shard2Master" />
+	</bean>
+
+	<bean id="shard2Master" class="com.mchange.v2.c3p0.ComboPooledDataSource"
+		destroy-method="close">
+		<property name="driverClass" value="${RDBMS.2.SHARD2.MASTER.DRIVER_CLASS}" />
+		<property name="jdbcUrl" value="${RDBMS.2.SHARD2.MASTER.JDBC_URL}" />
+		<property name="user" value="${RDBMS.2.SHARD2.MASTER.USER}" />
+		<property name="password" value="${RDBMS.2.SHARD2.MASTER.PASSWORD}" />
+		<property name="dataSourceName" value="${RDBMS.2.SHARD2.MASTER.DATA_SOURCE_NAME}"/>
+
+		<property name="acquireIncrement" value="${C3P0_ACQUIRE_INCREMENT}" />
+		<property name="acquireRetryAttempts" value="${C3P0_ACQUIRE_RETRY_ATTEMPTS}" />
+		<property name="acquireRetryDelay" value="${C3P0_ACQUIRE_RETRY_DELAY}" />
+		<property name="maxIdleTime" value="${C3P0_MAX_IDLE_TIME}" />
+		<property name="maxPoolSize" value="${C3P0_MAX_POOL_SIZE}" />
+		<property name="maxStatements" value="${C3P0_MAX_STATEMENTS}" />
+		<property name="minPoolSize" value="${C3P0_MIN_POOL_SIZE}" />
+		<property name="testConnectionOnCheckin" value="${C3P0_TEST_CONNECTION_ON_CHECKIN}" />
+		<property name="idleConnectionTestPeriod" value="${C3P0_IDLE_CONNECTION_TEST_PERIOD}" />
+		<property name="preferredTestQuery" value="${C3P0_PREFERRED_TEST_QUERY}" />
+	</bean>
+
+	<util:list id="shard2Slaves" value-type="com.mchange.v2.c3p0.ComboPooledDataSource">
+		<ref local="shard2Slave1" />
+	</util:list>
+
+	<bean id="shard2Slave1" class="com.mchange.v2.c3p0.ComboPooledDataSource"
+		destroy-method="close">
+		<property name="driverClass" value="${RDBMS.2.SHARD2.SLAVE1.DRIVER_CLASS}" />
+		<property name="jdbcUrl" value="${RDBMS.2.SHARD2.SLAVE1.JDBC_URL}" />
+		<property name="user" value="${RDBMS.2.SHARD2.SLAVE1.USER}" />
+		<property name="password" value="${RDBMS.2.SHARD2.SLAVE1.PASSWORD}" />
+		<property name="dataSourceName" value="${RDBMS.2.SHARD2.SLAVE1.DATA_SOURCE_NAME}"/>
+
+		<property name="acquireIncrement" value="${C3P0_ACQUIRE_INCREMENT}" />
+		<property name="acquireRetryAttempts" value="${C3P0_ACQUIRE_RETRY_ATTEMPTS}" />
+		<property name="acquireRetryDelay" value="${C3P0_ACQUIRE_RETRY_DELAY}" />
+		<property name="maxIdleTime" value="${C3P0_MAX_IDLE_TIME}" />
+		<property name="maxPoolSize" value="${C3P0_MAX_POOL_SIZE}" />
+		<property name="maxStatements" value="${C3P0_MAX_STATEMENTS}" />
+		<property name="minPoolSize" value="${C3P0_MIN_POOL_SIZE}" />
+		<property name="testConnectionOnCheckin" value="${C3P0_TEST_CONNECTION_ON_CHECKIN}" />
+		<property name="idleConnectionTestPeriod" value="${C3P0_IDLE_CONNECTION_TEST_PERIOD}" />
+		<property name="preferredTestQuery" value="${C3P0_PREFERRED_TEST_QUERY}" />
 	</bean>
 </beans>

@@ -15,7 +15,6 @@ import java.util.regex.Pattern;
 
 import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.common.exception.InvalidAnnotationException;
-import com.flipkart.portkey.common.exception.PortKeyException;
 import com.flipkart.portkey.common.util.PortKeyUtils;
 import com.flipkart.portkey.redis.metadata.RedisMetaData;
 
@@ -89,11 +88,6 @@ public class DefaultKeyParser implements KeyParserInterface
 		return keyPattern;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.redis.keyparser.KeyParserInterface#parseKey(java.lang.String,
-	 * com.flipkart.portkey.common.entity.Entity, com.flipkart.portkey.redis.metadata.RedisMetaData)
-	 */
 	public List<String> parsePrimaryKeyPattern(Entity bean, RedisMetaData metaData) throws InvalidAnnotationException
 	{
 		String keyPattern = metaData.getPrimaryKeyPattern();
@@ -105,12 +99,6 @@ public class DefaultKeyParser implements KeyParserInterface
 		return Arrays.asList(key.split("->"));
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see
-	 * com.flipkart.portkey.redis.keyparser.KeyParserInterface#parseSecondaryKeyPatterns(com.flipkart.portkey.common
-	 * .entity.Entity, com.flipkart.portkey.redis.metadata.RedisMetaData)
-	 */
 	public List<String> parseSecondaryKeyPatterns(Entity bean, RedisMetaData metaData)
 	        throws InvalidAnnotationException
 	{
@@ -124,13 +112,6 @@ public class DefaultKeyParser implements KeyParserInterface
 		return parsedKeyPatterns;
 	}
 
-	/**
-	 * @param keyPattern
-	 * @param attributeToValueMap
-	 * @param metaData
-	 * @return
-	 * @throws PortKeyException
-	 */
 	private String parseKeyPattern(String keyPattern, Map<String, Object> attributeToValueMap, RedisMetaData metaData)
 	        throws InvalidAnnotationException
 	{
@@ -166,11 +147,6 @@ public class DefaultKeyParser implements KeyParserInterface
 		return keyPattern;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.redis.keyparser.KeyParserInterface#parsePrimaryKeyPattern(java.util.Map,
-	 * com.flipkart.portkey.redis.metadata.RedisMetaData)
-	 */
 	public List<String> parsePrimaryKeyPattern(Map<String, Object> attributeToValueMap, RedisMetaData metaData)
 	        throws InvalidAnnotationException
 	{
@@ -183,11 +159,6 @@ public class DefaultKeyParser implements KeyParserInterface
 		return Arrays.asList(key.split("->"));
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.redis.keyparser.KeyParserInterface#parseSecondaryKeyPattern(java.util.Map,
-	 * com.flipkart.portkey.redis.metadata.RedisMetaData)
-	 */
 	public String parseSecondaryKeyPattern(Map<String, Object> attributeToValueMap, RedisMetaData metaData)
 	        throws InvalidAnnotationException
 	{

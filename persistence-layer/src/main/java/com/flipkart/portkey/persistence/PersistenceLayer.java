@@ -12,26 +12,19 @@ import org.apache.log4j.Logger;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.util.Assert;
 
-import com.flipkart.portkey.common.datastore.DataStoreConfig;
 import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.common.entity.persistence.EntityPersistencePreference;
 import com.flipkart.portkey.common.entity.persistence.ReadConfig;
 import com.flipkart.portkey.common.entity.persistence.WriteConfig;
 import com.flipkart.portkey.common.enumeration.DataStoreType;
 import com.flipkart.portkey.common.enumeration.FailureAction;
-import com.flipkart.portkey.common.enumeration.ShardStatus;
 import com.flipkart.portkey.common.exception.PortKeyException;
 import com.flipkart.portkey.common.exception.QueryExecutionException;
-import com.flipkart.portkey.common.exception.ShardNotAvailableException;
-import com.flipkart.portkey.common.metadata.MetaDataCache;
+import com.flipkart.portkey.common.exception.QueryNotSupportedException;
 import com.flipkart.portkey.common.persistence.PersistenceLayerInterface;
-import com.flipkart.portkey.common.persistence.PersistenceManager;
 import com.flipkart.portkey.common.persistence.Result;
+import com.flipkart.portkey.common.persistence.ShardingManager;
 import com.flipkart.portkey.common.persistence.query.UpdateQuery;
-import com.flipkart.portkey.common.sharding.ShardIdentifier;
-import com.flipkart.portkey.common.sharding.ShardLifeCycleManagerInterface;
-import com.flipkart.portkey.common.util.PortKeyUtils;
-import com.flipkart.portkey.sharding.SimpleShardLifeCycleManager;
 
 /**
  * @author santosh.p
@@ -40,44 +33,33 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 {
 	private static final Logger logger = Logger.getLogger(PersistenceLayer.class);
 	private EntityPersistencePreference defaultPersistencePreference;
-	private Map<Class<? extends Entity>, EntityPersistencePreference> entityPersistencePreferenceMap;
-	private Map<DataStoreType, DataStoreConfig> dataStoreConfigMap;
-	private ShardLifeCycleManagerInterface shardLifeCycleManager;
+	private Map<Class<? extends Entity>, EntityPersistencePreference> entityPersistencePreferenceMap =
+	        new HashMap<Class<? extends Entity>, EntityPersistencePreference>();
+	private Map<DataStoreType, ShardingManager> dataStoreTypeToShardingManagerMap =
+	        new HashMap<DataStoreType, ShardingManager>();
 	private ScheduledExecutorService scheduledThreadPool;
-	private Map<DataStoreType, Map<String, ShardStatus>> shardStatusMap;
-	private int healthCheckInterval = 15;
+	private int healthCheckIntervalInSeconds = 15;
 
 	private enum DBOpeartion
 	{
 		INSERT, UPSERT, UPDATE;
 	};
 
-	class HealthCheckScheduler implements Runnable
+	private enum UpdateOperation
+	{
+		UPDATE, DELETE;
+	};
+
+	class HealthChecker implements Runnable
 	{
 		@Override
 		public void run()
 		{
-			logger.debug("Running healthckecker");
-			// TODO: try fetching a snapshot of shard statuses, instead of individual fetches from shardLifeCycleManager
-			for (DataStoreType type : dataStoreConfigMap.keySet())
+			for (DataStoreType type : dataStoreTypeToShardingManagerMap.keySet())
 			{
-				DataStoreConfig ds = dataStoreConfigMap.get(type);
-				List<String> shardIds = ds.getShardIds();
-				for (String shardId : shardIds)
-				{
-					PersistenceManager pm = ds.getPersistenceManager(shardId);
-					ShardStatus currentStatus = pm.healthCheck();
-					ShardStatus previousStatus = shardLifeCycleManager.getShardStatus(type, shardId);
-					logger.debug("Datastore type=" + type + " shard id=" + shardId + " current status=" + currentStatus
-					        + " previous status=" + previousStatus);
-					if (!previousStatus.equals(currentStatus))
-					{
-						shardLifeCycleManager.setShardStatus(type, shardId, currentStatus);
-						shardStatusMap.get(type).put(shardId, currentStatus);
-					}
-				}
+				ShardingManager shardingManager = dataStoreTypeToShardingManagerMap.get(type);
+				shardingManager.healthCheck();
 			}
-			logger.debug("Health check complete");
 		}
 	}
 
@@ -92,53 +74,28 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		this.entityPersistencePreferenceMap = entityPersistencePreferenceMap;
 	}
 
-	public void setDataStoreConfigMap(Map<DataStoreType, DataStoreConfig> dataStoreConfigMap)
+	public void setDataStoreTypeToShardingManagerMap(
+	        Map<DataStoreType, ShardingManager> dataStoreTypeToShardingManagerMap)
 	{
-		this.dataStoreConfigMap = dataStoreConfigMap;
+		this.dataStoreTypeToShardingManagerMap = dataStoreTypeToShardingManagerMap;
 	}
 
 	@Override
-	public void afterPropertiesSet() throws Exception
+	public void afterPropertiesSet()
 	{
 		Assert.notNull(defaultPersistencePreference);
-		Assert.notNull(dataStoreConfigMap);
-		logger.debug("Assertions passed");
+		Assert.notNull(dataStoreTypeToShardingManagerMap);
 
 		logger.info("Initializing Shard life cycle manager");
-		List<DataStoreType> dataStoreTypeList = new ArrayList<DataStoreType>(dataStoreConfigMap.keySet());
-		shardStatusMap = new HashMap<DataStoreType, Map<String, ShardStatus>>();
-		for (DataStoreType dataStoreType : dataStoreTypeList)
-		{
-			shardStatusMap.put(dataStoreType, new HashMap<String, ShardStatus>());
-		}
-
-		// If no shard life cycle manager is provided in config then initialize the default shard life cycle manager
-		if (shardLifeCycleManager == null)
-		{
-			shardLifeCycleManager = new SimpleShardLifeCycleManager(dataStoreTypeList);
-		}
-		logger.info("Number of data stores to be registered=" + dataStoreTypeList.size());
-		logger.info("Datastores=" + dataStoreTypeList);
-		for (DataStoreType type : dataStoreTypeList)
-		{
-			DataStoreConfig ds = dataStoreConfigMap.get(type);
-			List<String> shardIds = ds.getShardIds();
-			logger.info("Registering " + shardIds.size() + " shards for datastoretype=" + dataStoreTypeList);
-			for (String shardId : shardIds)
-			{
-				logger.info("Registering shard id=" + shardId);
-				shardLifeCycleManager.setShardStatus(type, shardId, ShardStatus.getDefaultStatus());
-			}
-		}
-		logger.info("ShardLifeCycleManager initialized");
 		scheduledThreadPool = Executors.newScheduledThreadPool(5);
-		HealthCheckScheduler healthCheckScheduler = new HealthCheckScheduler();
-		healthCheckScheduler.run();
-		scheduledThreadPool.scheduleAtFixedRate(healthCheckScheduler, 0, healthCheckInterval, TimeUnit.SECONDS);
-		logger.info("scheduled health checker");
+		HealthChecker healthChecker = new HealthChecker();
+		healthChecker.run();
+		scheduledThreadPool.scheduleAtFixedRate(healthChecker, 0, healthCheckIntervalInSeconds, TimeUnit.SECONDS);
+		logger.info("Scheduled health checker");
 		logger.info("Initialized Persistence Layer");
 	}
 
+	// TODO:SANTOSH: Implement this properly
 	public void shutdown()
 	{
 		scheduledThreadPool.shutdown();
@@ -151,14 +108,12 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 
 	private ReadConfig getDefaultReadConfig()
 	{
-		EntityPersistencePreference defaultPersistencePreference = getDefaultPersistencePreference();
-		return defaultPersistencePreference.getReadConfig();
+		return getDefaultPersistencePreference().getReadConfig();
 	}
 
 	private WriteConfig getDefaultWriteConfig()
 	{
-		EntityPersistencePreference defaultPersistencePreference = getDefaultPersistencePreference();
-		return defaultPersistencePreference.getWriteConfig();
+		return getDefaultPersistencePreference().getWriteConfig();
 	}
 
 	private EntityPersistencePreference getEntityPersistencePreference(Class<? extends Entity> entity)
@@ -190,99 +145,35 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		return entityPersistencePreference.getReadConfig();
 	}
 
-	private DataStoreConfig getDataStoreConfig(DataStoreType type)
+	private ShardingManager getShardingManager(DataStoreType type)
 	{
-		return dataStoreConfigMap.get(type);
-	}
-
-	private PersistenceManager getPersistenceManager(DataStoreType type, String shardId)
-	{
-		DataStoreConfig ds = getDataStoreConfig(type);
-		return ds.getPersistenceManager(shardId);
-	}
-
-	private MetaDataCache getMetaDataCache(DataStoreType type)
-	{
-		DataStoreConfig dataStore = getDataStoreConfig(type);
-		return dataStore.getMetaDataCache();
-	}
-
-	private ShardIdentifier getShardIdentifier(DataStoreType type)
-	{
-		DataStoreConfig dataStore = getDataStoreConfig(type);
-		return dataStore.getShardIdentifier();
-	}
-
-	private ShardLifeCycleManagerInterface getShardLifeCycleManager()
-	{
-		return this.shardLifeCycleManager;
-	}
-
-	private <T extends Entity> String getShardId(DataStoreType type, T bean) throws ShardNotAvailableException
-	{
-		MetaDataCache metaDataCache = getMetaDataCache(type);
-		String shardKeyFieldName = metaDataCache.getShardKeyFieldName(bean.getClass());
-		String shardKey = PortKeyUtils.toString(PortKeyUtils.getFieldValueFromBean(bean, shardKeyFieldName));
-		ShardIdentifier shardIdentifier = getShardIdentifier(type);
-		List<String> liveShards = shardLifeCycleManager.getShardListForStatus(type, ShardStatus.AVAILABLE_FOR_WRITE);
-		String shardId = shardIdentifier.getShardId(shardKey, liveShards);
-		return shardId;
-	}
-
-	private <T extends Entity> String getShardKey(DataStoreType type, T bean)
-	{
-		MetaDataCache metaDataCache = getMetaDataCache(type);
-		String shardKeyFieldName = metaDataCache.getShardKeyFieldName(bean.getClass());
-		String shardKey = PortKeyUtils.toString(PortKeyUtils.getFieldValueFromBean(bean, shardKeyFieldName));
-		return shardKey;
+		return dataStoreTypeToShardingManagerMap.get(type);
 	}
 
 	private <T extends Entity> int insertIntoDataStore(DataStoreType type, T bean) throws QueryExecutionException
 	{
-		String shardId = getShardId(type, bean);
-		PersistenceManager pm = getPersistenceManager(type, shardId);
-		int rowsUpdated = pm.insert(bean);
-		return rowsUpdated;
+		return getShardingManager(type).insert(bean);
 	}
 
 	private <T extends Entity> int updateIntoDataStore(DataStoreType type, T bean) throws QueryExecutionException
 	{
-		String shardId = getShardId(type, bean);
-		PersistenceManager pm = getPersistenceManager(type, shardId);
-		int rowsUpdated = pm.update(bean);
-		return rowsUpdated;
+		return getShardingManager(type).update(bean);
+	}
+
+	private <T extends Entity> int upsertIntoDataStore(DataStoreType type, T bean) throws QueryExecutionException
+	{
+		return getShardingManager(type).upsert(bean);
 	}
 
 	private <T extends Entity> int upsertIntoDataStore(DataStoreType type, T bean,
 	        List<String> columnsToBeUpdatedOnDuplicate) throws QueryExecutionException
 	{
-		String shardId = getShardId(type, bean);
-		PersistenceManager pm = getPersistenceManager(type, shardId);
-		int rowsUpdated = pm.upsert(bean, columnsToBeUpdatedOnDuplicate);
-		return rowsUpdated;
+		return getShardingManager(type).upsert(bean, columnsToBeUpdatedOnDuplicate);
 	}
 
-	private <T extends Entity> int upsertIntoDataStore(DataStoreType type, T bean) throws QueryExecutionException
+	private <T extends Entity> Result performDBOperation(DBOpeartion operation, T bean) throws QueryExecutionException
 	{
-		String shardId = getShardId(type, bean);
-		PersistenceManager pm = getPersistenceManager(type, shardId);
-		int rowsUpdated = pm.upsert(bean);
-		return rowsUpdated;
-	}
-
-	private <T extends Entity> T generateShardIdAndUpdateBean(DataStoreType type, T bean)
-	        throws ShardNotAvailableException
-	{
-		MetaDataCache metaDataCache = getMetaDataCache(type);
-		ShardIdentifier shardIdentifier = getShardIdentifier(type);
-		String shardKeyFieldName = metaDataCache.getShardKeyFieldName(bean.getClass());
-		String shardKey = getShardKey(type, bean);
-		ShardLifeCycleManagerInterface shardLifeCycleManager = getShardLifeCycleManager();
-		List<String> liveShards = shardLifeCycleManager.getShardListForStatus(type, ShardStatus.AVAILABLE_FOR_WRITE);
-		String shardId = shardIdentifier.generateShardId(shardKey, liveShards);
-		String newShardKey = shardIdentifier.generateNewShardKey(shardKey, shardId);
-		PortKeyUtils.setFieldValueInBean(bean, shardKeyFieldName, newShardKey);
-		return bean;
+		return performDBOperation(operation, bean, null);
 	}
 
 	private <T extends Entity> Result performDBOperation(DBOpeartion operation, T bean,
@@ -322,7 +213,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 				logger.warn("Exception while trying to " + operation + " bean into data store, bean=" + bean
 				        + ", data store type=" + dataStoreType, e);
 				FailureAction failureAction = writeConfig.getFailureAction();
-				if (failureAction == FailureAction.ABORT)
+				if (failureAction != FailureAction.CONTINUE)
 				{
 					throw new QueryExecutionException("Failed to " + operation + " bean into datastore, bean=" + bean
 					        + "data store type=" + dataStoreType, e);
@@ -334,11 +225,13 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		return result;
 	}
 
+	@Override
 	public <T extends Entity> Result insert(T bean) throws QueryExecutionException
 	{
 		return insert(bean, false);
 	}
 
+	@Override
 	public <T extends Entity> Result insert(T bean, boolean generateShardId) throws QueryExecutionException
 	{
 		if (generateShardId)
@@ -346,11 +239,33 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 			WriteConfig writeConfig = getWriteConfigForEntity(bean.getClass());
 			List<DataStoreType> writeOrder = writeConfig.getWriteOrder();
 			DataStoreType dataStoreTypeForShardIdGeneration = writeOrder.get(0);
-			bean = generateShardIdAndUpdateBean(dataStoreTypeForShardIdGeneration, bean);
+			ShardingManager shardingManager = getShardingManager(dataStoreTypeForShardIdGeneration);
+			bean = shardingManager.generateShardIdAndUpdateBean(bean);
 		}
-		return performDBOperation(DBOpeartion.INSERT, bean, null);
+		return performDBOperation(DBOpeartion.INSERT, bean);
 	}
 
+	@Override
+	public <T extends Entity> void insert(List<T> beans) throws PortKeyException
+	{
+		WriteConfig writeConfig = getDefaultWriteConfig();
+		List<DataStoreType> writeOrder = writeConfig.getWriteOrder();
+		for (DataStoreType type : writeOrder)
+		{
+			ShardingManager shardingManager = dataStoreTypeToShardingManagerMap.get(type);
+			try
+			{
+				shardingManager.insert(beans);
+			}
+			catch (QueryNotSupportedException e)
+			{
+				logger.info("Method not supported by " + type + " implementation");
+				continue;
+			}
+		}
+	}
+
+	@Override
 	public <T extends Entity> Result upsert(T bean) throws QueryExecutionException
 	{
 		return performDBOperation(DBOpeartion.UPSERT, bean, null);
@@ -363,459 +278,296 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		return performDBOperation(DBOpeartion.UPSERT, bean, columnsToBeUpdatedOnDuplicate);
 	}
 
+	@Override
 	public <T extends Entity> Result update(T bean) throws QueryExecutionException
 	{
 		return performDBOperation(DBOpeartion.UPDATE, bean, null);
 	}
 
-	public <T extends Entity> Result update(Class<T> clazz, Map<String, Object> updateValuesMap,
-	        Map<String, Object> criteria) throws QueryExecutionException
+	private <T extends Entity> int updateIntoDataStore(DataStoreType type, Class<T> clazz,
+	        Map<String, Object> updateValuesMap, Map<String, Object> criteria) throws QueryExecutionException
+	{
+		return getShardingManager(type).update(clazz, updateValuesMap, criteria);
+	}
+
+	private <T extends Entity> int deleteFromDataStore(DataStoreType type, Class<T> clazz, Map<String, Object> criteria)
+	        throws QueryExecutionException
+	{
+		return getShardingManager(type).delete(clazz, criteria);
+	}
+
+	private <T extends Entity> Result performUpdateOperation(UpdateOperation operation, Class<T> clazz,
+	        Map<String, Object> updateValuesMap, Map<String, Object> criteria) throws QueryExecutionException
 	{
 		Result result = new Result();
 		WriteConfig writeConfig = getWriteConfigForEntity(clazz);
 		List<DataStoreType> writeOrder = writeConfig.getWriteOrder();
-		for (DataStoreType type : writeOrder)
+		for (DataStoreType dataStoreType : writeOrder)
 		{
-			MetaDataCache metaDataCache = getMetaDataCache(type);
-			String shardKeyFieldName = metaDataCache.getShardKeyFieldName(clazz);
-			if (criteria.containsKey(shardKeyFieldName))
+			int rowsUpdated = 0;
+			try
 			{
-				String shardKey = PortKeyUtils.toString(criteria.get(shardKeyFieldName));
-				ShardIdentifier shardIdentifier = getShardIdentifier(type);
-				List<String> liveShards =
-				        shardLifeCycleManager.getShardListForStatus(type, ShardStatus.AVAILABLE_FOR_WRITE);
-				int rowsUpdated = 0;
-				try
+				if (operation.equals(UpdateOperation.UPDATE))
 				{
-					String shardId = shardIdentifier.getShardId(shardKey, liveShards);
-					PersistenceManager pm = getPersistenceManager(type, shardId);
-					rowsUpdated = pm.update(clazz, updateValuesMap, criteria);
+					rowsUpdated = updateIntoDataStore(dataStoreType, clazz, updateValuesMap, criteria);
 				}
-				catch (QueryExecutionException e)
+				else if (operation.equals(UpdateOperation.DELETE))
 				{
-					logger.warn("Caught exception while trying to execute update " + updateValuesMap + "\n data store:"
-					        + type + "\n" + e);
-					FailureAction failureAction = writeConfig.getFailureAction();
-					if (failureAction == FailureAction.ABORT)
-					{
-						throw new QueryExecutionException("Exception while trying to execute update " + updateValuesMap
-						        + "\n data store:" + type, e);
-					}
+					rowsUpdated = deleteFromDataStore(dataStoreType, clazz, criteria);
 				}
-				result.setRowsUpdatedForDataStore(type, rowsUpdated);
 			}
-			else
+			catch (QueryExecutionException e)
 			{
-				DataStoreConfig dataStoreConfig = getDataStoreConfig(type);
-				List<String> shardIds = dataStoreConfig.getShardIds();
-				int rowsUpdated = 0;
-				boolean updated = false;
-				for (String shardId : shardIds)
+				FailureAction failureAction = writeConfig.getFailureAction();
+				if (failureAction == FailureAction.ABORT)
 				{
-					PersistenceManager pm = getPersistenceManager(type, shardId);
-					try
-					{
-						rowsUpdated += pm.update(clazz, updateValuesMap, criteria);
-						updated = true;
-					}
-					catch (QueryExecutionException e)
-					{
-						break;
-					}
+					throw new QueryExecutionException("Failed to execute update query, class=" + clazz
+					        + ", updateValuesMap=" + updateValuesMap + ", criteria=" + criteria + "data store type="
+					        + dataStoreType, e);
 				}
-				if (!updated)
-				{
-					result.setRowsUpdatedForDataStore(type, rowsUpdated);
-					continue;
-				}
-				result.setRowsUpdatedForDataStore(type, rowsUpdated);
+				logger.warn("Failed to execute update query, class=" + clazz + ", updateValuesMap=" + updateValuesMap
+				        + ", criteria=" + criteria + "data store type=" + dataStoreType, e);
 			}
+			result.setRowsUpdatedForDataStore(dataStoreType, rowsUpdated);
 		}
 		return result;
-	}
-
-	private String getShardId(String shardKey, DataStoreType type) throws ShardNotAvailableException
-	{
-		ShardIdentifier shardIdentifier = getShardIdentifier(type);
-		List<String> liveShards = shardLifeCycleManager.getShardListForStatus(type, ShardStatus.AVAILABLE_FOR_WRITE);
-		String shardId = shardIdentifier.getShardId(shardKey, liveShards);
-		return shardId;
 	}
 
 	@Override
-	public <T extends Entity> void update(List<UpdateQuery> updates) throws PortKeyException
+	public <T extends Entity> Result update(Class<T> clazz, Map<String, Object> updateValuesMap,
+	        Map<String, Object> criteria) throws QueryExecutionException
 	{
-		for (UpdateQuery update : updates)
-		{
-			WriteConfig writeConfig = getWriteConfigForEntity(update.getClazz());
-			List<DataStoreType> writeOrder = writeConfig.getWriteOrder();
-
-			for (DataStoreType type : writeOrder)
-			{
-				MetaDataCache metaDataCache = getMetaDataCache(type);
-				String shardKeyFieldName = metaDataCache.getShardKeyFieldName(update.getClazz());
-				Map<String, Object> criteria = update.getCriteriaFieldNameToValueMap();
-				Map<String, List<UpdateQuery>> shardIdToUpdateListMap = new HashMap<String, List<UpdateQuery>>();
-				if (criteria.containsKey(shardKeyFieldName))
-				{
-					String shardId = getShardId(PortKeyUtils.toString(criteria.get(shardKeyFieldName)), type);
-					if (!shardIdToUpdateListMap.containsKey(shardId))
-						shardIdToUpdateListMap.put(shardId, new ArrayList<UpdateQuery>());
-					shardIdToUpdateListMap.get(shardId).add(update);
-				}
-				else
-				{
-					throw new PortKeyException("No shard key field is specified in query");
-				}
-				for (String shardId : shardIdToUpdateListMap.keySet())
-				{
-					PersistenceManager pm = getPersistenceManager(type, shardId);
-					pm.update(shardIdToUpdateListMap.get(shardId));
-				}
-			}
-		}
+		return performUpdateOperation(UpdateOperation.UPDATE, clazz, updateValuesMap, criteria);
 	}
 
+	@Override
 	public <T extends Entity> Result delete(Class<T> clazz, Map<String, Object> criteria)
 	        throws QueryExecutionException
 	{
+		return performUpdateOperation(UpdateOperation.DELETE, clazz, null, criteria);
+	}
+
+	@Override
+	public Result update(List<UpdateQuery> queries) throws PortKeyException
+	{
 		Result result = new Result();
-		WriteConfig writeConfig = getWriteConfigForEntity(clazz);
+		WriteConfig writeConfig = getDefaultWriteConfig();
 		List<DataStoreType> writeOrder = writeConfig.getWriteOrder();
 		for (DataStoreType type : writeOrder)
 		{
-			MetaDataCache metaDataCache = getMetaDataCache(type);
-			String shardKeyFieldName = metaDataCache.getShardKeyFieldName(clazz);
-			if (criteria.containsKey(shardKeyFieldName))
+			ShardingManager shardingManager = dataStoreTypeToShardingManagerMap.get(type);
+			try
 			{
-				int rowsUpdated = 0;
-				String shardKey = (String) criteria.get(shardKeyFieldName);
-				ShardIdentifier shardIdentifier = getShardIdentifier(type);
-				List<String> liveShards =
-				        shardLifeCycleManager.getShardListForStatus(type, ShardStatus.AVAILABLE_FOR_WRITE);
-				try
-				{
-					String shardId = shardIdentifier.getShardId(shardKey, liveShards);
-					PersistenceManager pm = getPersistenceManager(type, shardId);
-					rowsUpdated = pm.delete(clazz, criteria);
-					result.setRowsUpdatedForDataStore(type, rowsUpdated);
-				}
-				catch (QueryExecutionException e)
-				{
-					logger.warn("Caught exception while trying to delete from data store" + type + "\n" + e);
-					FailureAction failureAction = writeConfig.getFailureAction();
-					if (failureAction == FailureAction.ABORT)
-					{
-						throw new QueryExecutionException("Exception while executing delete from datastore, type="
-						        + type, e);
-					}
-					result.setRowsUpdatedForDataStore(type, rowsUpdated);
-					continue;
-				}
-			}
-			else
-			{
-				List<String> shardIds = dataStoreConfigMap.get(type).getShardIds();
-				int rowsUpdated = 0;
-				for (String shardId : shardIds)
-				{
-					PersistenceManager pm = getPersistenceManager(type, shardId);
-					rowsUpdated += pm.delete(clazz, criteria);
-				}
+				int rowsUpdated = shardingManager.update(queries);
 				result.setRowsUpdatedForDataStore(type, rowsUpdated);
+			}
+			catch (QueryNotSupportedException e)
+			{
+				logger.info("Method not supported by " + type + " implementation");
+				continue;
 			}
 		}
 		return result;
 	}
 
-	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, Map<String, Object> criteria)
-	        throws QueryExecutionException
+	@Override
+	public Result update(List<UpdateQuery> queries, boolean failIfNoRowsAreUpdated) throws PortKeyException
 	{
-		List<T> result = new ArrayList<T>();
-		ReadConfig readConfig = getReadConfigForEntity(clazz);
-		List<DataStoreType> readOrder = readConfig.getReadOrder();
-		for (DataStoreType type : readOrder)
+		Result result = new Result();
+		WriteConfig writeConfig = getDefaultWriteConfig();
+		List<DataStoreType> writeOrder = writeConfig.getWriteOrder();
+		for (DataStoreType type : writeOrder)
 		{
-			MetaDataCache metaDataCache = getMetaDataCache(type);
-			String shardKeyFieldName = metaDataCache.getShardKeyFieldName(clazz);
-			if (criteria.containsKey(shardKeyFieldName))
+			ShardingManager shardingManager = dataStoreTypeToShardingManagerMap.get(type);
+			try
 			{
-				String shardKey = (String) criteria.get(shardKeyFieldName);
-				ShardIdentifier shardIdentifier = getShardIdentifier(type);
-				List<String> liveShards =
-				        shardLifeCycleManager.getShardListForStatus(type, ShardStatus.AVAILABLE_FOR_WRITE);
-				try
-				{
-					String shardId = shardIdentifier.getShardId(shardKey, liveShards);
-					PersistenceManager pm = getPersistenceManager(type, shardId);
-					result = pm.getByCriteria(clazz, criteria);
-				}
-				catch (QueryExecutionException e)
-				{
-					logger.warn("Encountered exception while trying to execute query \n DataStoreType=" + type
-					        + "\ncriteria=" + criteria + "\nexception=" + e);
-					continue;
-				}
-				return result;
+				int rowsUpdated = shardingManager.update(queries, failIfNoRowsAreUpdated);
+				result.setRowsUpdatedForDataStore(type, rowsUpdated);
 			}
-			else
+			catch (QueryNotSupportedException e)
 			{
-				boolean queryExecuted = false;
-				List<String> shardIds = dataStoreConfigMap.get(type).getShardIds();
-				for (String shardId : shardIds)
-				{
-					PersistenceManager pm = getPersistenceManager(type, shardId);
-					List<T> intermediateResult;
-					try
-					{
-						intermediateResult = pm.getByCriteria(clazz, criteria);
-						queryExecuted = true;
-					}
-					catch (QueryExecutionException e)
-					{
-						logger.warn("Encountered exception while trying to execute query \n DataStoreType=" + type
-						        + "\ncriteria=" + criteria + "\nexception=" + e);
-						break;
-					}
-					result.addAll(intermediateResult);
-				}
-				if (!queryExecuted)
-				{
-					continue;
-				}
-				return result;
+				logger.info("Method not supported by " + type + " implementation");
+				continue;
 			}
 		}
-		throw new QueryExecutionException("Failed to execute query.");
+		return result;
 	}
 
-	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, List<String> attributeNames,
-	        Map<String, Object> criteria) throws QueryExecutionException
+	private <T extends Entity> List<T> performGetByCriteriaQuery(Class<T> clazz, List<String> fieldNameList,
+	        Map<String, Object> criteriaMap) throws QueryExecutionException
 	{
 		List<T> result = new ArrayList<T>();
-		ReadConfig readConfig = getReadConfigForEntity(clazz);
-		List<DataStoreType> readOrder = readConfig.getReadOrder();
-		for (DataStoreType type : readOrder)
-		{
-			boolean queryExecuted = false;
-			MetaDataCache metaDataCache = getMetaDataCache(type);
-			String shardKeyFieldName = metaDataCache.getShardKeyFieldName(clazz);
-			if (criteria.containsKey(shardKeyFieldName))
-			{
-				String shardKey = (String) criteria.get(shardKeyFieldName);
-				ShardIdentifier shardIdentifier = getShardIdentifier(type);
-				List<String> liveShards =
-				        shardLifeCycleManager.getShardListForStatus(type, ShardStatus.AVAILABLE_FOR_READ);
-				String shardId;
-				try
-				{
-					shardId = shardIdentifier.getShardId(shardKey, liveShards);
-					PersistenceManager pm = getPersistenceManager(type, shardId);
-					result = pm.getByCriteria(clazz, attributeNames, criteria);
-					queryExecuted = true;
-				}
-				catch (QueryExecutionException e)
-				{
-					logger.warn("Exception while trying to fetch from data store:" + type, e);
-					continue;
-				}
-			}
-			else
-			{
-				List<String> shardIds = dataStoreConfigMap.get(type).getShardIds();
-				for (String shardId : shardIds)
-				{
-					queryExecuted = false;
-					PersistenceManager pm = getPersistenceManager(type, shardId);
-					List<T> intermediateResult = null;
-					try
-					{
-						intermediateResult = pm.getByCriteria(clazz, attributeNames, criteria);
-						result.addAll(intermediateResult);
-						queryExecuted = true;
-					}
-					catch (QueryExecutionException e)
-					{
-						logger.warn("Exception while trying to fetch from data store:" + type, e);
-						break;
-					}
-				}
-			}
-			if (queryExecuted)
-			{
-				return result;
-			}
-		}
-		throw new QueryExecutionException("Failed to execute query.");
-	}
-
-	public <T extends Entity> List<T> getBySql(Class<T> clazz, String sql, Map<String, Object> criteria)
-	        throws QueryExecutionException
-	{
 		ReadConfig readConfig = getReadConfigForEntity(clazz);
 		List<DataStoreType> readOrder = readConfig.getReadOrder();
 		for (DataStoreType type : readOrder)
 		{
 			try
 			{
-				List<T> result = new ArrayList<T>();
-				List<String> shardIds = dataStoreConfigMap.get(type).getShardIds();
-				for (String shardId : shardIds)
+				ShardingManager shardingManager = dataStoreTypeToShardingManagerMap.get(type);
+				if (fieldNameList == null)
 				{
-					PersistenceManager pm = getPersistenceManager(type, shardId);
-					List<T> intermediateResult = pm.getBySql(clazz, sql, criteria);
-					result.addAll(intermediateResult);
+					result = shardingManager.getByCriteria(clazz, criteriaMap);
 				}
-				return result;
+				else
+				{
+					result = shardingManager.getByCriteria(clazz, fieldNameList, criteriaMap);
+				}
 			}
 			catch (QueryExecutionException e)
 			{
-				logger.warn("Exception while trying to execute sql query" + sql + " on datastore " + type, e);
+				logger.warn("Exception while trying to fetch from data store:" + type, e);
 				continue;
 			}
+			return result;
 		}
-		throw new QueryExecutionException("Failed to execute query, all related datastore instances are down");
+		throw new QueryExecutionException("Failed to execute query, class=" + clazz + ", fieldNames=" + fieldNameList
+		        + ", criteria" + criteriaMap);
 	}
 
-	public List<Map<String, Object>> getBySql(String sql, Map<String, Object> criteria) throws QueryExecutionException
+	@Override
+	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, Map<String, Object> criteriaMap)
+	        throws QueryExecutionException
 	{
-		boolean queryExecuted = false;
+		return performGetByCriteriaQuery(clazz, null, criteriaMap);
+	}
+
+	@Override
+	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, List<String> fieldNameList,
+	        Map<String, Object> criteriaMap) throws QueryExecutionException
+	{
+		return performGetByCriteriaQuery(clazz, fieldNameList, criteriaMap);
+	}
+
+	@Override
+	public <T extends Entity> List<T> getBySql(Class<T> clazz, String sql, Map<String, Object> criteria)
+	        throws QueryExecutionException
+	{
+		List<T> result = new ArrayList<T>();
+		ReadConfig readConfig = getReadConfigForEntity(clazz);
+		List<DataStoreType> readOrder = readConfig.getReadOrder();
+		for (DataStoreType type : readOrder)
+		{
+			try
+			{
+				ShardingManager shardingManager = dataStoreTypeToShardingManagerMap.get(type);
+				result = shardingManager.getBySql(clazz, sql, criteria);
+			}
+			catch (QueryExecutionException e)
+			{
+				logger.warn("Exception while trying to execute sql query " + sql + " on datastore " + type, e);
+				continue;
+			}
+			return result;
+		}
+		throw new QueryExecutionException("Failed to execute query, class=" + clazz + ", sql=" + sql + ", criteria="
+		        + criteria);
+	}
+
+	@Override
+	public List<Map<String, Object>> getBySql(String databaseName, String sql, Map<String, Object> criteria)
+	        throws QueryExecutionException
+	{
 		List<Map<String, Object>> result;
 		ReadConfig readConfig = getDefaultReadConfig();
 		List<DataStoreType> readOrder = readConfig.getReadOrder();
 		for (DataStoreType type : readOrder)
 		{
-			result = new ArrayList<Map<String, Object>>();
-			List<String> shardIds = dataStoreConfigMap.get(type).getShardIds();
-			for (String shardId : shardIds)
+			try
 			{
-				queryExecuted = false;
-				PersistenceManager pm = getPersistenceManager(type, shardId);
-				List<Map<String, Object>> intermediateResult = null;
-				try
-				{
-					intermediateResult = pm.getBySql(sql, criteria);
-					queryExecuted = true;
-				}
-				catch (QueryExecutionException e)
-				{
-					logger.warn("Failed to execute query " + sql + " for datastore " + type, e);
-					break;
-				}
-				result.addAll(intermediateResult);
+				ShardingManager shardingManager = dataStoreTypeToShardingManagerMap.get(type);
+				result = shardingManager.getBySql(databaseName, sql, criteria);
 			}
-			if (queryExecuted)
+			catch (QueryExecutionException e)
 			{
-				return result;
+				logger.warn("Exception while trying to execute sql query " + sql + " on datastore " + type, e);
+				continue;
 			}
+			return result;
 		}
-		throw new QueryExecutionException("Failed to execute query " + sql + ".\nAll related data stores are down");
+		throw new QueryExecutionException("Failed to execute query, sql=" + sql + ", criteria=" + criteria);
 	}
 
+	@Override
 	public <T extends Entity> List<T> getBySql(Class<T> clazz, Map<DataStoreType, String> sqlMap,
 	        Map<String, Object> criteria) throws QueryExecutionException
 	{
-		boolean queryExecuted = false;
 		List<T> result = null;
 		ReadConfig readConfig = getReadConfigForEntity(clazz);
 		List<DataStoreType> readOrder = readConfig.getReadOrder();
 		for (DataStoreType type : readOrder)
 		{
-			String sql = sqlMap.get(type);
-			result = new ArrayList<T>();
-			List<String> shardIds = dataStoreConfigMap.get(type).getShardIds();
-			for (String shardId : shardIds)
+			try
 			{
-				queryExecuted = false;
-				PersistenceManager pm = getPersistenceManager(type, shardId);
-				List<T> intermediateResult;
-				try
-				{
-					intermediateResult = pm.getBySql(clazz, sql, criteria);
-					queryExecuted = true;
-				}
-				catch (QueryExecutionException e)
-				{
-					logger.warn("Failed to execute query " + sql + " for datastore" + type, e);
-					break;
-				}
-				result.addAll(intermediateResult);
+				ShardingManager shardingManager = dataStoreTypeToShardingManagerMap.get(type);
+				result = shardingManager.getBySql(clazz, sqlMap.get(type), criteria);
 			}
-			if (queryExecuted)
+			catch (QueryExecutionException e)
 			{
-				return result;
+				logger.warn("Failed to execute query " + sqlMap.get(type) + " for datastore" + type, e);
+				continue;
 			}
+
+			return result;
 		}
-		throw new QueryExecutionException("Failed to execute query.\nAll related data stores are down");
+		throw new QueryExecutionException("Failed to execute query, class=" + clazz + "sqlMap=" + sqlMap
+		        + ", criteria=" + criteria);
 	}
 
-	public List<Map<String, Object>> getBySql(Map<DataStoreType, String> sqlMap, Map<String, Object> criteria)
+	@Override
+	public List<Map<String, Object>> getBySql(Map<DataStoreType, String> datStoreTypeToDatabaseNameMap,
+	        Map<DataStoreType, String> dataStoreTypeToSqlMap, Map<String, Object> criteria)
 	        throws QueryExecutionException
 	{
-		boolean queryExecuted = false;
 		List<Map<String, Object>> result = null;
 		ReadConfig readConfig = getDefaultReadConfig();
 		List<DataStoreType> readOrder = readConfig.getReadOrder();
 		for (DataStoreType type : readOrder)
 		{
-			String sql = sqlMap.get(type);
-			result = new ArrayList<Map<String, Object>>();
-			List<String> shardIds = dataStoreConfigMap.get(type).getShardIds();
-			for (String shardId : shardIds)
+
+			try
 			{
-				queryExecuted = false;
-				PersistenceManager pm = getPersistenceManager(type, shardId);
-				List<Map<String, Object>> intermediateResult = null;
-				try
-				{
-					intermediateResult = pm.getBySql(sql, criteria);
-					queryExecuted = true;
-				}
-				catch (QueryExecutionException e)
-				{
-					logger.warn("Failed to execute query " + sql + " for datastore" + type, e);
-				}
-				result.addAll(intermediateResult);
+				ShardingManager shardingManager = dataStoreTypeToShardingManagerMap.get(type);
+				result =
+				        shardingManager.getBySql(datStoreTypeToDatabaseNameMap.get(type),
+				                dataStoreTypeToSqlMap.get(type), criteria);
 			}
-			if (queryExecuted)
+			catch (QueryExecutionException e)
 			{
-				return result;
+				logger.warn("Failed to execute query " + dataStoreTypeToSqlMap.get(type) + " for datastore" + type, e);
+				continue;
 			}
+			return result;
 		}
-		throw new QueryExecutionException("Failed to execute query.\nAll related data stores are down");
+		throw new QueryExecutionException("Failed to execute query sqlMap=" + dataStoreTypeToSqlMap + ", criteria="
+		        + criteria);
 	}
 
 	@Override
-	public Result updateBySql(String sql, Map<String, Object> criteria) throws PortKeyException
+	public Result updateBySql(String databaseName, String sql, Map<String, Object> criteria) throws PortKeyException
 	{
-		boolean updateExecuted = false;
 		Result result = new Result();
+		int rowsUpdated;
 		WriteConfig writeConfig = getDefaultWriteConfig();
 		List<DataStoreType> writeOrder = writeConfig.getWriteOrder();
 		for (DataStoreType type : writeOrder)
 		{
-			List<String> shardIds = dataStoreConfigMap.get(type).getShardIds();
-			for (String shardId : shardIds)
+			rowsUpdated = 0;
+			try
 			{
-				try
-				{
-					updateExecuted = false;
-					PersistenceManager pm = getPersistenceManager(type, shardId);
-					int rowsUpdated = pm.updateBySql(sql, criteria);
-					result.setRowsUpdatedForDataStore(type, rowsUpdated);
-					updateExecuted = true;
-				}
-				catch (QueryExecutionException e)
-				{
-					logger.warn("Failed to execute update query " + sql + " for datastore " + type, e);
-					FailureAction failureAction = writeConfig.getFailureAction();
-					if (failureAction.equals(FailureAction.ABORT))
-						break;
-				}
+				ShardingManager shardingManager = dataStoreTypeToShardingManagerMap.get(type);
+				rowsUpdated = shardingManager.updateBySql(databaseName, sql, criteria);
+				result.setRowsUpdatedForDataStore(type, rowsUpdated);
 			}
-		}
-		if (updateExecuted)
-		{
+			catch (QueryExecutionException e)
+			{
+				logger.warn("Failed to execute update query " + sql + " for datastore " + type, e);
+				FailureAction failureAction = writeConfig.getFailureAction();
+				if (failureAction.equals(FailureAction.ABORT))
+				{
+					throw new QueryExecutionException("Failed to execute query, sql=" + sql + ", criteria=" + criteria);
+				}
+				continue;
+			}
 			return result;
 		}
 		throw new QueryExecutionException("Failed to execute query " + sql + ".\nAll related data stores are down");

@@ -10,6 +10,7 @@ import java.util.Map;
 import org.apache.ibatis.jdbc.SqlBuilder;
 import org.apache.log4j.Logger;
 
+import com.flipkart.portkey.common.util.PortKeyUtils;
 import com.flipkart.portkey.rdbms.metadata.RdbmsTableMetaData;
 import com.flipkart.portkey.rdbms.metadata.annotation.RdbmsField;
 
@@ -38,7 +39,7 @@ public class RdbmsQueryBuilder
 			SqlBuilder.BEGIN();
 			List<Field> fieldsList = tableMetaData.getFieldsList();
 
-			StringBuilder insertQryStrBuilder = new StringBuilder();
+			StringBuilder insertQueryStrBuilder = new StringBuilder();
 			StringBuilder valuesQryStrBuilder = new StringBuilder();
 
 			for (Field field : fieldsList)
@@ -47,14 +48,21 @@ public class RdbmsQueryBuilder
 
 				if (rdbmsField != null)
 				{
-					insertQryStrBuilder.append("`" + rdbmsField.columnName() + "`" + ",");
-					valuesQryStrBuilder.append(":" + rdbmsField.columnName() + ",");
+					insertQueryStrBuilder.append("`" + rdbmsField.columnName() + "`" + ",");
+					if (rdbmsField.defaultInsertValue().equals(""))
+					{
+						valuesQryStrBuilder.append(":" + rdbmsField.columnName() + ",");
+					}
+					else
+					{
+						valuesQryStrBuilder.append(rdbmsField.defaultInsertValue() + ",");
+					}
 				}
 
 			}
 			SqlBuilder.INSERT_INTO(tableMetaData.getTableName());
 
-			SqlBuilder.VALUES(insertQryStrBuilder.substring(0, insertQryStrBuilder.length() - 1),
+			SqlBuilder.VALUES(insertQueryStrBuilder.substring(0, insertQueryStrBuilder.length() - 1),
 			        valuesQryStrBuilder.substring(0, valuesQryStrBuilder.length() - 1));
 			insertQuery = SqlBuilder.SQL();
 			tableMetaData.setInsertQuery(insertQuery);
@@ -70,7 +78,7 @@ public class RdbmsQueryBuilder
 		{
 			String insertQuery = getInsertQuery(tableMetaData);
 			StringBuilder onDuplicateQueryStrBuilder = new StringBuilder();
-			onDuplicateQueryStrBuilder.append(" ON DUPLICATE KEY UPDATE ");
+			onDuplicateQueryStrBuilder.append("\nON DUPLICATE KEY UPDATE ");
 			List<String> primaryKeys = tableMetaData.getPrimaryKeysList();
 			for (String fieldName : tableMetaData.getFieldNameToColumnNameMap().keySet())
 			{
@@ -79,7 +87,16 @@ public class RdbmsQueryBuilder
 					continue;
 				}
 				String columnName = tableMetaData.getColumnNameFromFieldName(fieldName);
-				onDuplicateQueryStrBuilder.append("`" + columnName + "`" + "=:" + columnName + ",");
+				RdbmsField rdbmsField = tableMetaData.getRdbmsFieldFromFieldName(fieldName);
+				if (rdbmsField.defaultUpdateValue().equals(""))
+				{
+					onDuplicateQueryStrBuilder.append("`" + columnName + "`" + "=:" + columnName + ",");
+				}
+				else
+				{
+					onDuplicateQueryStrBuilder.append("`" + columnName + "`" + "=" + rdbmsField.defaultUpdateValue()
+					        + ",");
+				}
 			}
 			upsertQuery =
 			        insertQuery + onDuplicateQueryStrBuilder.substring(0, onDuplicateQueryStrBuilder.length() - 1);
@@ -92,11 +109,19 @@ public class RdbmsQueryBuilder
 	{
 		String insertQuery = getInsertQuery(tableMetaData);
 		StringBuilder onDuplicateQueryStrBuilder = new StringBuilder();
-		onDuplicateQueryStrBuilder.append(" ON DUPLICATE KEY UPDATE ");
+		onDuplicateQueryStrBuilder.append("\nON DUPLICATE KEY UPDATE ");
 		for (String fieldName : fieldsToBeUpdatedOnDuplicate)
 		{
-			onDuplicateQueryStrBuilder.append("`" + tableMetaData.getColumnNameFromFieldName(fieldName) + "`" + "=:"
-			        + tableMetaData.getColumnNameFromFieldName(fieldName) + ",");
+			String columnName = tableMetaData.getColumnNameFromFieldName(fieldName);
+			RdbmsField rdbmsField = tableMetaData.getRdbmsFieldFromFieldName(fieldName);
+			if (rdbmsField.defaultUpdateValue().equals(""))
+			{
+				onDuplicateQueryStrBuilder.append("`" + columnName + "`" + "=:" + columnName + ",");
+			}
+			else
+			{
+				onDuplicateQueryStrBuilder.append("`" + columnName + "`" + "=" + rdbmsField.defaultUpdateValue() + ",");
+			}
 		}
 		String upsertQuery =
 		        insertQuery + onDuplicateQueryStrBuilder.substring(0, onDuplicateQueryStrBuilder.length() - 1);
@@ -121,7 +146,15 @@ public class RdbmsQueryBuilder
 				{
 					if (!rdbmsField.isPrimaryKey())
 					{
-						SqlBuilder.SET("`" + rdbmsField.columnName() + "`" + "=:" + rdbmsField.columnName());
+						if (rdbmsField.defaultUpdateValue().equals(""))
+						{
+							SqlBuilder.SET("`" + rdbmsField.columnName() + "`" + "=:" + rdbmsField.columnName());
+						}
+						else
+						{
+							SqlBuilder.SET("`" + rdbmsField.columnName() + "`" + "=" + rdbmsField.defaultUpdateValue()
+							        + ",");
+						}
 					}
 					else
 					{
@@ -144,7 +177,16 @@ public class RdbmsQueryBuilder
 		SqlBuilder.UPDATE(tableName);
 		for (String column : columnsToBeUpdated)
 		{
-			SqlBuilder.SET("`" + column + "`" + "=:" + column);
+			if (columnToValueMap.get(column) != null
+			        && columnToValueMap.get(column).getClass().equals(RdbmsSpecialValue.class))
+			{
+				RdbmsSpecialValue specialValue = (RdbmsSpecialValue) columnToValueMap.get(column);
+				SqlBuilder.SET("`" + column + "`" + "=" + PortKeyUtils.toString(specialValue));
+			}
+			else
+			{
+				SqlBuilder.SET("`" + column + "`" + "=:" + column);
+			}
 		}
 		for (String column : columnsInCriteria)
 		{

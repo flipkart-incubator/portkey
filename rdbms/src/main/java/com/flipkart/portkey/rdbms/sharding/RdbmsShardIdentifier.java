@@ -13,9 +13,6 @@ import com.flipkart.portkey.common.sharding.ShardIdentifier;
  */
 public class RdbmsShardIdentifier implements ShardIdentifier
 {
-	// private int shardIdLength = 2;
-	// private int shardKeyLength = 16;
-
 	public String generateShardId(String shardKey, List<String> liveShards) throws ShardNotAvailableException
 	{
 		if (shardKey == null)
@@ -30,10 +27,6 @@ public class RdbmsShardIdentifier implements ShardIdentifier
 		return liveShards.get(shardId);
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.common.sharding.ShardIdentifierInterface#getShardId(java.lang.String)
-	 */
 	public String getShardId(String shardKey, List<String> liveShards) throws ShardNotAvailableException
 	{
 		if (shardKey == null)
@@ -43,11 +36,6 @@ public class RdbmsShardIdentifier implements ShardIdentifier
 		return shardKey.substring(shardKey.length() - 2);
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.flipkart.portkey.common.sharding.ShardIdentifierInterface#generateNewShardKey(java.lang.String,
-	 * java.lang.String)
-	 */
 	public String generateNewShardKey(String oldShardKey, String shardId)
 	{
 		return oldShardKey + shardId;
