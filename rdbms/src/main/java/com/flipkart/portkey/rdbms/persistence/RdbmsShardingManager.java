@@ -22,6 +22,7 @@ import com.flipkart.portkey.rdbms.mapper.RdbmsMapper;
 import com.flipkart.portkey.rdbms.metadata.RdbmsMetaDataCache;
 import com.flipkart.portkey.rdbms.metadata.RdbmsTableMetaData;
 import com.flipkart.portkey.rdbms.querybuilder.RdbmsQueryBuilder;
+import com.flipkart.portkey.rdbms.transaction.RdbmsTransactionManager;
 
 public class RdbmsShardingManager implements ShardingManager
 {

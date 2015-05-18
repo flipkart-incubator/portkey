@@ -14,6 +14,7 @@ import com.flipkart.portkey.rdbms.metadata.RdbmsMetaDataCache;
 import com.flipkart.portkey.rdbms.metadata.RdbmsTableMetaData;
 import com.flipkart.portkey.rdbms.persistence.config.RdbmsConnectionConfig;
 import com.flipkart.portkey.rdbms.sharding.RdbmsShardIdentifier;
+import com.flipkart.portkey.rdbms.transaction.RdbmsTransactionManager;
 
 public class RdbmsMultiShardedDatabaseConfig implements RdbmsDatabaseConfig
 {

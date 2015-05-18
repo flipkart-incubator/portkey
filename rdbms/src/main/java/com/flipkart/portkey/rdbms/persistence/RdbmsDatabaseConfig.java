@@ -7,6 +7,7 @@ import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.common.enumeration.ShardStatus;
 import com.flipkart.portkey.common.exception.ShardNotAvailableException;
 import com.flipkart.portkey.common.sharding.ShardIdentifier;
+import com.flipkart.portkey.rdbms.transaction.RdbmsTransactionManager;
 
 public interface RdbmsDatabaseConfig
 {

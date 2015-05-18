@@ -23,6 +23,7 @@ import com.flipkart.portkey.common.exception.QueryExecutionException;
 import com.flipkart.portkey.common.exception.QueryNotSupportedException;
 import com.flipkart.portkey.common.exception.ShardNotAvailableException;
 import com.flipkart.portkey.common.persistence.ShardingManager;
+import com.flipkart.portkey.common.persistence.TransactionManager;
 import com.flipkart.portkey.common.persistence.query.UpdateQuery;
 import com.flipkart.portkey.redis.connection.ConnectionManager;
 import com.flipkart.portkey.redis.keyparser.DefaultKeyParser;
@@ -129,12 +130,8 @@ public class RedisShardingManager implements ShardingManager, InitializingBean
 				String field = keyList.get(1);
 				String serialized = null;
 				serialized = mapper.serialize(bean);
-				Long retVal = conn.hset(key, field, serialized);
+				conn.hset(key, field, serialized);
 				primaryKey = key + ":" + field;
-				if (retVal == 0)
-				{
-					logger.debug("Key already exists in redis: Outer key:" + key + "Inner key:" + field);
-				}
 			}
 			else
 			{
@@ -458,6 +455,12 @@ public class RedisShardingManager implements ShardingManager, InitializingBean
 	@Override
 	// TODO:Santosh:Implement this
 	public <T extends Entity> int insert(List<T> beans) throws QueryNotSupportedException
+	{
+		throw new QueryNotSupportedException("Method not supported for redis implementation");
+	}
+
+	@Override
+	public <T extends Entity> TransactionManager getTransactionManager(T bean) throws QueryNotSupportedException
 	{
 		throw new QueryNotSupportedException("Method not supported for redis implementation");
 	}

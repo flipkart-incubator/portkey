@@ -11,6 +11,7 @@ import com.flipkart.portkey.common.exception.ShardNotAvailableException;
 import com.flipkart.portkey.common.sharding.ShardIdentifier;
 import com.flipkart.portkey.rdbms.persistence.config.RdbmsConnectionConfig;
 import com.flipkart.portkey.rdbms.sharding.RdbmsShardIdentifierForSingleShard;
+import com.flipkart.portkey.rdbms.transaction.RdbmsTransactionManager;
 
 public class RdbmsSingleShardedDatabaseConfig implements RdbmsDatabaseConfig
 {

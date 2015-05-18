@@ -25,6 +25,7 @@ import com.flipkart.portkey.common.exception.QueryExecutionException;
 import com.flipkart.portkey.common.persistence.query.SqlQuery;
 import com.flipkart.portkey.rdbms.mapper.RdbmsMapper;
 import com.flipkart.portkey.rdbms.persistence.config.RdbmsConnectionConfig;
+import com.flipkart.portkey.rdbms.transaction.RdbmsTransactionManager;
 
 /**
  * @author santosh.p
