@@ -8,7 +8,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.flipkart.portkey.common.enumeration.DataStoreType;
 import com.flipkart.portkey.common.enumeration.ShardStatus;
@@ -20,7 +21,7 @@ import com.google.common.collect.Table;
  */
 public class ShardLifeCycleManagerImpl implements ShardLifeCycleManager
 {
-	private static final Logger logger = Logger.getLogger(ShardLifeCycleManagerImpl.class);
+	private static final Logger logger = LoggerFactory.getLogger(ShardLifeCycleManagerImpl.class);
 	private Map<DataStoreType, Table<String, String, ShardStatus>> dataStoreTypeToShardStatusTableMap;
 	private static ShardLifeCycleManagerImpl instance = null;
 
