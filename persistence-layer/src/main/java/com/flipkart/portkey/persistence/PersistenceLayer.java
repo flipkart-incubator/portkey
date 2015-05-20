@@ -2,6 +2,7 @@ package com.flipkart.portkey.persistence;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -578,5 +579,19 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 	        throws PortKeyException
 	{
 		return dataStoreTypeToShardingManagerMap.get(type).getTransactionManager(bean);
+	}
+
+	public <T extends Entity> TransactionLayer getTransactionLayer(T bean) throws PortKeyException
+	{
+		WriteConfig writeConfig = getWriteConfigForEntity(bean.getClass());
+		List<DataStoreType> writeOrder = writeConfig.getWriteOrder();
+		LinkedHashMap<DataStoreType, TransactionManager> dataStoreTypeToTransactionManagerMap =
+		        new LinkedHashMap<DataStoreType, TransactionManager>();
+		for (DataStoreType type : writeOrder)
+		{
+			dataStoreTypeToTransactionManagerMap.put(type, dataStoreTypeToShardingManagerMap.get(type)
+			        .getTransactionManager(bean));
+		}
+		return new TransactionLayer(dataStoreTypeToTransactionManagerMap);
 	}
 }

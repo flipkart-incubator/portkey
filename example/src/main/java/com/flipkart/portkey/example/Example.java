@@ -24,7 +24,9 @@ import org.springframework.context.support.FileSystemXmlApplicationContext;
 
 import com.flipkart.portkey.common.enumeration.DataStoreType;
 import com.flipkart.portkey.common.exception.PortKeyException;
+import com.flipkart.portkey.common.exception.QueryExecutionException;
 import com.flipkart.portkey.common.persistence.Result;
+import com.flipkart.portkey.common.persistence.TransactionManager;
 import com.flipkart.portkey.common.persistence.query.UpdateQuery;
 import com.flipkart.portkey.example.dao.Employee;
 import com.flipkart.portkey.example.dao.EmployeeSharded;
@@ -41,7 +43,7 @@ public class Example
 
 	@SuppressWarnings ("resource")
 	public static void main(String[] args) throws IllegalAccessException, InvocationTargetException,
-	        NoSuchMethodException
+	        NoSuchMethodException, PortKeyException
 	{
 		ApplicationContext context =
 		        new FileSystemXmlApplicationContext("src/main/resources/external/portkey-application-context.xml");
@@ -63,6 +65,8 @@ public class Example
 		updateTransactionalFailureWithNoRowsUpdate();
 		insertTransactionalSuccess();
 		insertTransactionalFailure();
+		transactionalSuccess();
+		transactionalFailure();
 		cleanUp();
 
 		// test sharded
@@ -79,6 +83,184 @@ public class Example
 		cleanUp2();
 		logger.info("Success!!");
 		System.exit(0);
+	}
+
+	private static void transactionalSuccess()
+	{
+		if (!cleanUp())
+		{
+			logger.info("Failed to clean up tables");
+			return;
+		}
+		Employee emp = createEmployee();
+		TransactionManager tm;
+		try
+		{
+			tm = pl.getTransactionManager(emp, DataStoreType.RDBMS);
+		}
+		catch (PortKeyException e)
+		{
+			logger.info("Failure in transactionalSuccess: Exception while trying to get transaction manager instance");
+			return;
+		}
+		tm.begin();
+		try
+		{
+			tm.insert(emp);
+		}
+		catch (QueryExecutionException e)
+		{
+			logger.info("Failure in transactionalSuccess: Exception while trying to insert pojo");
+			return;
+		}
+		Employee emp2 = createEmployee();
+		try
+		{
+			tm.insert(emp2);
+		}
+		catch (Exception e)
+		{
+			logger.info("Failure in transactionalSuccess: Exception while trying to insert pojo");
+			return;
+		}
+		try
+		{
+			List<Employee> r = tm.getByCriteria(Employee.class, new HashMap<String, Object>());
+			if (r.size() != 2)
+			{
+				logger.info("Failure in transactionalSuccess: Expected two rows received " + r.size());
+				return;
+			}
+			if (!(r.get(0).equals(emp) && r.get(1).equals(emp2) || r.get(0).equals(emp2) && r.get(1).equals(emp)))
+			{
+				logger.info("Failure in transactionalSuccess: expected !=received, expected=" + emp + " and " + emp2
+				        + ", received=" + r.get(0) + " and " + r.get(1));
+			}
+		}
+		catch (QueryExecutionException e)
+		{
+			logger.info("Failure in transactionalSuccess: Exception while trying to get result from db");
+			return;
+		}
+		try
+		{
+			tm.commit();
+		}
+		catch (PortKeyException e)
+		{
+			logger.info("Failure in transactionalSuccess: Exception while trying commit");
+			return;
+		}
+		try
+		{
+			List<Employee> r = pl.getByCriteria(Employee.class, new HashMap<String, Object>());
+			if (r.size() != 2)
+			{
+				logger.info("Failure in transactionalSuccess: Expected two rows received " + r.size());
+				return;
+			}
+			if (!(r.get(0).equals(emp) && r.get(1).equals(emp2) || r.get(0).equals(emp2) && r.get(1).equals(emp)))
+			{
+				logger.info("Failure in transactionalSuccess: expected !=received, expected=" + emp + " and " + emp2
+				        + ", received=" + r.get(0) + " and " + r.get(1));
+			}
+		}
+		catch (QueryExecutionException e)
+		{
+			logger.info("Failure in transactionalSuccess: Exception while trying to get result from db");
+			return;
+		}
+	}
+
+	private static void transactionalFailure() throws PortKeyException
+	{
+		if (!cleanUp())
+		{
+			logger.info("Failed to clean up tables");
+			return;
+		}
+		Employee emp = createEmployee();
+		TransactionManager tm;
+		try
+		{
+			tm = pl.getTransactionManager(emp, DataStoreType.RDBMS);
+		}
+		catch (PortKeyException e)
+		{
+			logger.info("Failure in transactionalFailure: Exception while trying to get transaction manager instance");
+			return;
+		}
+		tm.begin();
+		try
+		{
+			tm.insert(emp);
+		}
+		catch (QueryExecutionException e)
+		{
+			logger.info("Failure in transactionalFailure: Exception while trying to insert pojo");
+			return;
+		}
+		Employee emp2 = createEmployee();
+		try
+		{
+			tm.insert(emp2);
+		}
+		catch (Exception e)
+		{
+			logger.info("Failure in transactionalFailure: Exception while trying to insert pojo");
+			return;
+		}
+		try
+		{
+			List<Employee> r = tm.getByCriteria(Employee.class, new HashMap<String, Object>());
+			if (r.size() != 2)
+			{
+				logger.info("Failure in transactionalFailure: Expected two rows received " + r.size());
+				return;
+			}
+			if (!(r.get(0).equals(emp) && r.get(1).equals(emp2) || r.get(0).equals(emp2) && r.get(1).equals(emp)))
+			{
+				logger.info("Failure in transactionalFailure: expected !=received, expected=" + emp + " and " + emp2
+				        + ", received=" + r.get(0) + " and " + r.get(1));
+			}
+		}
+		catch (QueryExecutionException e)
+		{
+			logger.info("Failure in transactionalFailure: Exception while trying to get result from db");
+			return;
+		}
+
+		boolean exceptionEncountered = false;
+		Employee emp3 = createEmployee();
+		emp3.setPanCardNumber(RandomStringUtils.random(20, true, true));
+		try
+		{
+			tm.insert(emp2);
+		}
+		catch (Exception e)
+		{
+			exceptionEncountered = true;
+		}
+		if (!exceptionEncountered)
+		{
+			logger.info("Failure in transactionalFailure: expected exception caught none");
+			return;
+		}
+		tm.rollback();
+		try
+		{
+			List<Employee> r = pl.getByCriteria(Employee.class, new HashMap<String, Object>());
+			if (r != null && r.size() != 0)
+			{
+				logger.info("Failure in transactionalFailure: Expected zero rows received " + r.size());
+				return;
+			}
+		}
+		catch (QueryExecutionException e)
+		{
+			logger.info("Failure in transactionalFailure: Exception while trying to get result from db");
+			return;
+		}
 	}
 
 	private static Employee createEmployee()
