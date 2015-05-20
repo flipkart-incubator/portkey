@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.flipkart.portkey.common.entity.Entity;
+import com.flipkart.portkey.common.exception.PortKeyException;
 import com.flipkart.portkey.common.exception.QueryExecutionException;
 
 public interface TransactionManager
@@ -11,7 +12,7 @@ public interface TransactionManager
 
 	public void begin();
 
-	public void commit();
+	public void commit() throws PortKeyException;
 
 	public void rollback();
 

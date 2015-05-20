@@ -13,6 +13,8 @@ import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 import redis.clients.jedis.exceptions.JedisConnectionException;
 
+import com.flipkart.portkey.common.exception.ShardNotAvailableException;
+
 /**
  * Connection manager for redis. Internally uses jedis pool for pooling.
  * @author santosh.p
@@ -252,7 +254,7 @@ public class ConnectionManager
 		}
 	}
 
-	public Jedis getConnection()
+	public Jedis getConnection() throws ShardNotAvailableException
 	{
 		logger.debug("inside connectionmanager.getConnection");
 		String key = getJedisPoolMapKey();
@@ -266,7 +268,7 @@ public class ConnectionManager
 			}
 			catch (JedisConnectionException e)
 			{
-				return null;
+				throw new ShardNotAvailableException("Could not get resource from jedis pool");
 			}
 		}
 		logger.debug("no jedis pool available, returning null");

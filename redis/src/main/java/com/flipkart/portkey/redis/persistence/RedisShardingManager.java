@@ -15,7 +15,6 @@ import org.springframework.beans.factory.InitializingBean;
 
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPoolConfig;
-import redis.clients.jedis.exceptions.JedisConnectionException;
 
 import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.common.exception.InvalidAnnotationException;
@@ -26,17 +25,12 @@ import com.flipkart.portkey.common.persistence.ShardingManager;
 import com.flipkart.portkey.common.persistence.TransactionManager;
 import com.flipkart.portkey.common.persistence.query.UpdateQuery;
 import com.flipkart.portkey.redis.connection.ConnectionManager;
-import com.flipkart.portkey.redis.keyparser.DefaultKeyParser;
-import com.flipkart.portkey.redis.keyparser.KeyParserInterface;
-import com.flipkart.portkey.redis.mapper.DefaultRedisMapper;
-import com.flipkart.portkey.redis.mapper.RedisMapper;
 import com.flipkart.portkey.redis.metadata.RedisMetaData;
-import com.flipkart.portkey.redis.metadata.RedisMetaDataCache;
 
 /**
  * @author santosh.p
  */
-public class RedisShardingManager implements ShardingManager, InitializingBean
+public class RedisShardingManager extends RedisPersistenceManager implements ShardingManager, InitializingBean
 {
 	private static final Logger logger = Logger.getLogger(RedisShardingManager.class);
 	String host = "localhost";
@@ -44,10 +38,7 @@ public class RedisShardingManager implements ShardingManager, InitializingBean
 	int database = 0;
 	String password;
 	JedisPoolConfig poolConfig = null;
-
 	ConnectionManager cm;
-	KeyParserInterface keyParser = new DefaultKeyParser();
-	RedisMapper mapper = new DefaultRedisMapper();
 
 	public void setHost(String host)
 	{
@@ -96,62 +87,18 @@ public class RedisShardingManager implements ShardingManager, InitializingBean
 		// No need of healthcheck with redis sentinel
 	}
 
-	private <T extends Entity> RedisMetaData getMetaData(Class<T> clazz)
-	{
-		return RedisMetaDataCache.getInstance().getMetaData(clazz);
-	}
-
 	@Override
 	public <T extends Entity> int insert(T bean) throws ShardNotAvailableException
 	{
-		RedisMetaData metaData = getMetaData(bean.getClass());
-		List<String> keyList = keyParser.parsePrimaryKeyPattern(bean, metaData);
-		String primaryKey = null;
 		Jedis conn = null;
 		try
 		{
 			conn = cm.getConnection();
-			if (conn == null)
-			{
-				throw new ShardNotAvailableException("Failed to acquire redis connection to insert bean, host=" + host
-				        + ", port=" + port + ", bean=" + bean);
-			}
-			if (keyList.size() == 1)
-			{
-				String key = keyList.get(0);
-				String serialized = null;
-				serialized = mapper.serialize(bean);
-				conn.set(key, serialized);
-				primaryKey = key;
-			}
-			else if (keyList.size() == 2)
-			{
-				String key = keyList.get(0);
-				String field = keyList.get(1);
-				String serialized = null;
-				serialized = mapper.serialize(bean);
-				conn.hset(key, field, serialized);
-				primaryKey = key + ":" + field;
-			}
-			else
-			{
-				throw new InvalidAnnotationException("Invalid key format, key:" + keyList);
-			}
-		}
-		catch (JedisConnectionException e)
-		{
-			throw new ShardNotAvailableException("Failed to acquire redis connection to insert bean, host=" + host
-			        + ", port=" + port + ", bean=" + bean);
+			insert(bean, conn);
 		}
 		finally
 		{
 			cm.returnConnection(conn);
-		}
-
-		List<String> secondaryKeys = keyParser.parseSecondaryKeyPatterns(bean, metaData);
-		for (String secondaryKey : secondaryKeys)
-		{
-			conn.set(secondaryKey, primaryKey);
 		}
 		return 1;
 	}
@@ -188,12 +135,6 @@ public class RedisShardingManager implements ShardingManager, InitializingBean
 				conn.del(key);
 			}
 		}
-		catch (JedisConnectionException e)
-		{
-			throw new ShardNotAvailableException(
-			        "Failed to acquire redis connection while trying delete secondary keys, host=" + host + ", port="
-			                + port + ", bean=" + bean);
-		}
 		finally
 		{
 			cm.returnConnection(conn);
@@ -220,12 +161,6 @@ public class RedisShardingManager implements ShardingManager, InitializingBean
 				String field = primaryKeys.get(1);
 				conn.hdel(key, field);
 			}
-		}
-		catch (JedisConnectionException e)
-		{
-			throw new ShardNotAvailableException(
-			        "Failed to acquire redis connection while trying to delete primary key,, host=" + host + ", port="
-			                + port + ", bean=" + bean);
 		}
 		finally
 		{
@@ -266,11 +201,6 @@ public class RedisShardingManager implements ShardingManager, InitializingBean
 		try
 		{
 			conn = cm.getConnection();
-			if (conn == null)
-			{
-				throw new ShardNotAvailableException("Failed to acquire redis connection, host=" + host + ", port="
-				        + port);
-			}
 			keyList = keyParser.parsePrimaryKeyPattern(criteria, metaData);
 			if (keyList.size() == 1)
 			{
@@ -287,12 +217,6 @@ public class RedisShardingManager implements ShardingManager, InitializingBean
 			{
 				throw new InvalidAnnotationException("Invalid key format, key:" + keyList);
 			}
-		}
-		catch (JedisConnectionException e)
-		{
-			throw new ShardNotAvailableException(
-			        "Failed to acquire redis connection while trying to read bean from key, host=" + host + ", port="
-			                + port + ", key" + keyList);
 		}
 		finally
 		{
@@ -334,12 +258,6 @@ public class RedisShardingManager implements ShardingManager, InitializingBean
 			{
 				throw new InvalidAnnotationException("Invalid key format, key:" + primaryKeys);
 			}
-		}
-		catch (JedisConnectionException e)
-		{
-			throw new ShardNotAvailableException(
-			        "Failed to acquire redis connection while trying to read bean from key, host=" + host + ", port="
-			                + port + ", key" + key);
 		}
 		finally
 		{
@@ -460,8 +378,10 @@ public class RedisShardingManager implements ShardingManager, InitializingBean
 	}
 
 	@Override
-	public <T extends Entity> TransactionManager getTransactionManager(T bean) throws QueryNotSupportedException
+	public <T extends Entity> TransactionManager getTransactionManager(T bean) throws ShardNotAvailableException
 	{
-		throw new QueryNotSupportedException("Method not supported for redis implementation");
+		Jedis conn = null;
+		conn = cm.getConnection();
+		return new RedisTransactionManager(conn);
 	}
 }
