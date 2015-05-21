@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.flipkart.portkey</groupId>
 	<artifactId>portkey</artifactId>
-	<version>0.1.1-SNAPSHOT</version>
+	<version>0.2.0-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	<name>Portkey</name>
 	<description>Portkey parent project</description>
@@ -35,7 +35,7 @@
 		<module>example</module>
 	</modules>
 	<properties>
-		<portkey.version>0.1.1-SNAPSHOT</portkey.version>
+		<portkey.version>0.2.0-SNAPSHOT</portkey.version>
 		<maven.compiler.target>1.6</maven.compiler.target>
 		<maven.compiler.source>1.6</maven.compiler.source>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
