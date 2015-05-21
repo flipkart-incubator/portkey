@@ -6,7 +6,8 @@ package com.flipkart.portkey.redis.connection;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
@@ -21,7 +22,7 @@ import com.flipkart.portkey.common.exception.ShardNotAvailableException;
  */
 public class ConnectionManager
 {
-	private static final Logger logger = Logger.getLogger(ConnectionManager.class);
+	private static final Logger logger = LoggerFactory.getLogger(ConnectionManager.class);
 	private String host = "localhost";
 	private int port = 6379;
 

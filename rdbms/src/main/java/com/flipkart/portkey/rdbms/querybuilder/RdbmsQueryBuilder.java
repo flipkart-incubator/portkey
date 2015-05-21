@@ -8,7 +8,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.ibatis.jdbc.SqlBuilder;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.flipkart.portkey.common.util.PortKeyUtils;
 import com.flipkart.portkey.rdbms.metadata.RdbmsTableMetaData;
@@ -19,7 +20,7 @@ import com.flipkart.portkey.rdbms.metadata.annotation.RdbmsField;
  */
 public class RdbmsQueryBuilder
 {
-	private static Logger logger = Logger.getLogger(RdbmsQueryBuilder.class);
+	private static Logger logger = LoggerFactory.getLogger(RdbmsQueryBuilder.class);
 	private static RdbmsQueryBuilder instance;
 
 	public static RdbmsQueryBuilder getInstance()

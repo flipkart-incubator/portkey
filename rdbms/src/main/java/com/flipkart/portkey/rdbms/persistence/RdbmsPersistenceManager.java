@@ -9,7 +9,8 @@ import java.util.Map;
 
 import javax.sql.DataSource;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -32,7 +33,7 @@ import com.flipkart.portkey.rdbms.transaction.RdbmsTransactionManager;
  */
 public class RdbmsPersistenceManager
 {
-	private static final Logger logger = Logger.getLogger(RdbmsPersistenceManager.class);
+	private static final Logger logger = LoggerFactory.getLogger(RdbmsPersistenceManager.class);
 	private final DataSource master;
 	private final List<DataSource> slaves;
 	private DataSourceTransactionManager transactionManager;

@@ -5,18 +5,19 @@ package com.flipkart.portkey.common.serializer;
 
 import java.io.IOException;
 
-import org.apache.log4j.Logger;
 import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author santosh.p
  */
 public class JsonSerializer extends Serializer
 {
-	private static Logger logger = Logger.getLogger(JsonSerializer.class);
+	private static Logger logger = LoggerFactory.getLogger(JsonSerializer.class);
 
 	/**
      * 

@@ -7,7 +7,8 @@ import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.common.exception.InvalidAnnotationException;
@@ -21,7 +22,7 @@ import com.flipkart.portkey.rdbms.metadata.annotation.RdbmsField;
  */
 public class RdbmsMetaDataCache implements MetaDataCache
 {
-	private static Logger logger = Logger.getLogger(RdbmsMetaDataCache.class);
+	private static Logger logger = LoggerFactory.getLogger(RdbmsMetaDataCache.class);
 	private Map<Class<? extends Entity>, RdbmsTableMetaData> entityToMetaDataMap;
 	private static RdbmsMetaDataCache instance = null;
 
@@ -110,7 +111,7 @@ public class RdbmsMetaDataCache implements MetaDataCache
 		}
 		if (!primaryKeyPresent)
 		{
-			throw new InvalidAnnotationException("Primary key is not set for class" + clazz);
+			throw new InvalidAnnotationException("Primary key is not set for " + clazz);
 		}
 		String shardKeyField = rdbmsDataStore.shardKeyField();
 		rdbmsTableMetaData.setShardKeyFieldName(shardKeyField);

@@ -18,8 +18,9 @@ import java.util.Map;
 
 import org.apache.commons.beanutils.BeanUtils;
 import org.apache.commons.beanutils.PropertyUtils;
-import org.apache.log4j.Logger;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.RowMapper;
 
 import com.flipkart.portkey.common.entity.Entity;
@@ -33,7 +34,7 @@ import com.flipkart.portkey.rdbms.metadata.RdbmsTableMetaData;
  */
 public class RdbmsMapper<V extends Entity> implements RowMapper<V>
 {
-	private static final Logger logger = Logger.getLogger(RdbmsMapper.class);
+	private static final Logger logger = LoggerFactory.getLogger(RdbmsMapper.class);
 	private Class<V> clazz;
 	private static Map<Class<? extends Entity>, RdbmsMapper<? extends Entity>> classToMapperMap =
 	        new HashMap<Class<? extends Entity>, RdbmsMapper<? extends Entity>>();
@@ -142,23 +143,23 @@ public class RdbmsMapper<V extends Entity> implements RowMapper<V>
 		}
 		catch (IllegalAccessException e)
 		{
-			logger.debug(e);
-			e.printStackTrace();
+			logger.info("Exception while trying to set field value into bean, bean:" + bean + ", fieldName:"
+			        + fieldName + ", value:" + value, e);
 		}
 		catch (InvocationTargetException e)
 		{
-			logger.debug(e);
-			e.printStackTrace();
+			logger.info("Exception while trying to set field value into bean, bean:" + bean + ", fieldName:"
+			        + fieldName + ", value:" + value, e);
 		}
 		catch (NoSuchMethodException e)
 		{
-			logger.debug(e);
-			e.printStackTrace();
+			logger.info("Exception while trying to set field value into bean, bean:" + bean + ", fieldName:"
+			        + fieldName + ", value:" + value, e);
 		}
 		catch (IllegalArgumentException e)
 		{
-			logger.debug(e);
-			e.printStackTrace();
+			logger.info("Exception while trying to set field value into bean, bean:" + bean + ", fieldName:"
+			        + fieldName + ", value:" + value, e);
 		}
 	}
 
@@ -180,12 +181,12 @@ public class RdbmsMapper<V extends Entity> implements RowMapper<V>
 		}
 		catch (InstantiationException e)
 		{
-			logger.warn("Exception in creating class instance:" + e);
+			logger.info("Exception in creating class instance:" + e);
 			return null;
 		}
 		catch (IllegalAccessException e)
 		{
-			logger.warn("Exception in creating class instance:" + e);
+			logger.info("Exception in creating class instance:" + e);
 			return null;
 		}
 

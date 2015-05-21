@@ -7,9 +7,10 @@ import java.util.Map;
 
 import junit.framework.Assert;
 
-import org.apache.log4j.Logger;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.flipkart.portkey.rdbms.dao.Person;
 import com.flipkart.portkey.rdbms.metadata.RdbmsMetaDataCache;
@@ -17,7 +18,7 @@ import com.flipkart.portkey.rdbms.metadata.RdbmsTableMetaData;
 
 public class RdbmsQueryBuilderTest
 {
-	Logger logger = Logger.getLogger(RdbmsQueryBuilderTest.class);
+	Logger logger = LoggerFactory.getLogger(RdbmsQueryBuilderTest.class);
 
 	@Test
 	public void testGetInsertQuery()

@@ -18,7 +18,8 @@ import java.util.Random;
 import java.util.Set;
 
 import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.FileSystemXmlApplicationContext;
 
@@ -38,7 +39,7 @@ import com.flipkart.portkey.persistence.PersistenceLayer;
  */
 public class Example
 {
-	private static Logger logger = Logger.getLogger(Example.class);
+	private static Logger logger = LoggerFactory.getLogger(Example.class);
 	private static PersistenceLayer pl = null;
 
 	@SuppressWarnings ("resource")

@@ -10,7 +10,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
 
 import redis.clients.jedis.Jedis;
@@ -32,7 +33,7 @@ import com.flipkart.portkey.redis.metadata.RedisMetaData;
  */
 public class RedisShardingManager extends RedisPersistenceManager implements ShardingManager, InitializingBean
 {
-	private static final Logger logger = Logger.getLogger(RedisShardingManager.class);
+	private static final Logger logger = LoggerFactory.getLogger(RedisShardingManager.class);
 	String host = "localhost";
 	int port = 6379;
 	int database = 0;

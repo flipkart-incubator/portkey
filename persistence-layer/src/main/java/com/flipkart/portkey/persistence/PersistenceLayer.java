@@ -9,7 +9,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.util.Assert;
 
@@ -33,7 +34,7 @@ import com.flipkart.portkey.common.persistence.query.UpdateQuery;
  */
 public class PersistenceLayer implements PersistenceLayerInterface, InitializingBean
 {
-	private static final Logger logger = Logger.getLogger(PersistenceLayer.class);
+	private static final Logger logger = LoggerFactory.getLogger(PersistenceLayer.class);
 	private EntityPersistencePreference defaultPersistencePreference;
 	private Map<Class<? extends Entity>, EntityPersistencePreference> entityPersistencePreferenceMap =
 	        new HashMap<Class<? extends Entity>, EntityPersistencePreference>();
