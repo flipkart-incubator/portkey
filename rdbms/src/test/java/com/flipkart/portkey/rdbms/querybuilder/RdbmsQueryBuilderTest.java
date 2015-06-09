@@ -1,7 +1,7 @@
 package com.flipkart.portkey.rdbms.querybuilder;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -80,25 +80,24 @@ public class RdbmsQueryBuilderTest
 	public void testGetUpdateByCriteriaQuery()
 	{
 		String expected =
-		        "UPDATE person" + "\nSET `firstName`=:firstName, `lastName`=:lastName, `mod_count`=mod_count+1"
-		                + "\nWHERE (`id`=:id)";
+		        "UPDATE person"
+		                + "\nSET `firstName`=:firstName_update, `lastName`=:lastName_update, `someAttribute`=:someAttribute_update, `mod_count`=mod_count+1"
+		                + "\nWHERE (`id`=:id_criteria AND `someAttribute`=:someAttribute_criteria)";
 		String tableName = "person";
-		List<String> columnsToBeUpdated = new ArrayList<String>();
-		columnsToBeUpdated.add("firstName");
-		columnsToBeUpdated.add("lastName");
-		columnsToBeUpdated.add("mod_count");
-		List<String> columnsInCriteria = new ArrayList<String>();
-		columnsInCriteria.add("id");
-		Map<String, Object> columnToValueMap = new HashMap<String, Object>();
-		columnToValueMap.put("firstName", "someFirstName");
-		columnToValueMap.put("lastName", "someLastName");
+		Map<String, Object> updateColumnToValueMap = new LinkedHashMap<String, Object>();
+		updateColumnToValueMap.put("firstName", "someFirstName");
+		updateColumnToValueMap.put("lastName", "someLastName");
+		updateColumnToValueMap.put("someAttribute", "newValue");
 		RdbmsSpecialValue modCount = new RdbmsSpecialValue();
 		modCount.setValue("mod_count+1");
-		columnToValueMap.put("mod_count", modCount);
-		columnToValueMap.put("id", "someId");
+		updateColumnToValueMap.put("mod_count", modCount);
+		Map<String, Object> criteriaColumnToValueMap = new LinkedHashMap<String, Object>();
+		criteriaColumnToValueMap.put("id", "someId");
+		criteriaColumnToValueMap.put("someAttribute", "oldValue");
+		Map<String, Object> placeHolderToValueMap = new LinkedHashMap<String, Object>();
 		String actual =
-		        RdbmsQueryBuilder.getInstance().getUpdateByCriteriaQuery(tableName, columnsToBeUpdated,
-		                columnsInCriteria, columnToValueMap);
+		        RdbmsQueryBuilder.getInstance().getUpdateByCriteriaQuery(tableName, updateColumnToValueMap,
+		                criteriaColumnToValueMap, placeHolderToValueMap);
 		Assert.assertEquals(expected, actual);
 	}
 

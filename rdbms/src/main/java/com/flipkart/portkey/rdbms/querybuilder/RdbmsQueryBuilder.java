@@ -171,35 +171,40 @@ public class RdbmsQueryBuilder
 		return updateQuery;
 	}
 
-	public String getUpdateByCriteriaQuery(String tableName, List<String> columnsToBeUpdated,
-	        List<String> columnsInCriteria, Map<String, Object> columnToValueMap)
+	public String getUpdateByCriteriaQuery(String tableName, Map<String, Object> updateColumnToValueMap,
+	        Map<String, Object> criteriaColumnToValueMap, Map<String, Object> placeHolderToValueMap)
 	{
 		SqlBuilder.BEGIN();
 		SqlBuilder.UPDATE(tableName);
-		for (String column : columnsToBeUpdated)
+		for (String column : updateColumnToValueMap.keySet())
 		{
-			if (columnToValueMap.get(column) != null
-			        && columnToValueMap.get(column).getClass().equals(RdbmsSpecialValue.class))
+			if (updateColumnToValueMap.get(column) != null
+			        && updateColumnToValueMap.get(column).getClass().equals(RdbmsSpecialValue.class))
 			{
-				RdbmsSpecialValue specialValue = (RdbmsSpecialValue) columnToValueMap.get(column);
+				RdbmsSpecialValue specialValue = (RdbmsSpecialValue) updateColumnToValueMap.get(column);
 				SqlBuilder.SET("`" + column + "`" + "=" + PortKeyUtils.toString(specialValue));
 			}
 			else
 			{
-				SqlBuilder.SET("`" + column + "`" + "=:" + column);
+				String placeHolder = column + "_update";
+				SqlBuilder.SET("`" + column + "`" + "=:" + placeHolder);
+				placeHolderToValueMap.put(placeHolder, updateColumnToValueMap.get(column));
 			}
 		}
-		for (String column : columnsInCriteria)
+		for (String column : criteriaColumnToValueMap.keySet())
 		{
-			if (columnToValueMap.get(column) != null)
+			String placeHolder = column + "_criteria";
+			placeHolderToValueMap.put(placeHolder, criteriaColumnToValueMap.get(column));
+			if (criteriaColumnToValueMap.get(column) != null)
 			{
-				SqlBuilder.WHERE("`" + column + "`" + "=:" + column);
+				SqlBuilder.WHERE("`" + column + "`" + "=:" + placeHolder);
 			}
 			else
 			{
-				SqlBuilder.WHERE("`" + column + "`" + " IS :" + column);
+				SqlBuilder.WHERE("`" + column + "`" + " IS :" + placeHolder);
 			}
 		}
+
 		String updateQuery = SqlBuilder.SQL();
 		logger.debug(updateQuery);
 		return updateQuery;

@@ -1,6 +1,6 @@
 package com.flipkart.portkey.rdbms.transaction;
 
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -16,7 +16,6 @@ import org.springframework.transaction.support.DefaultTransactionDefinition;
 import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.common.exception.QueryExecutionException;
 import com.flipkart.portkey.common.persistence.TransactionManager;
-import com.flipkart.portkey.common.util.PortKeyUtils;
 import com.flipkart.portkey.rdbms.mapper.RdbmsMapper;
 import com.flipkart.portkey.rdbms.metadata.RdbmsMetaDataCache;
 import com.flipkart.portkey.rdbms.metadata.RdbmsTableMetaData;
@@ -165,13 +164,11 @@ public class RdbmsTransactionManager implements TransactionManager
 		Map<String, Object> updateColumnToValueMap = RdbmsHelper.generateColumnToValueMap(clazz, updateValuesMap);
 		Map<String, Object> criteriaColumnToValueMap = RdbmsHelper.generateColumnToValueMap(clazz, criteria);
 		String tableName = metaData.getTableName();
-		Map<String, Object> columnToValueMap = PortKeyUtils.mergeMaps(updateColumnToValueMap, criteriaColumnToValueMap);
-		List<String> columnsToBeUpdated = new ArrayList<String>(updateColumnToValueMap.keySet());
-		List<String> columnsInCriteria = new ArrayList<String>(criteriaColumnToValueMap.keySet());
+		Map<String, Object> placeHolderToValueMap = new HashMap<String, Object>();
 		String updateQuery =
-		        RdbmsQueryBuilder.getInstance().getUpdateByCriteriaQuery(tableName, columnsToBeUpdated,
-		                columnsInCriteria, columnToValueMap);
-		return executeUpdate(updateQuery, columnToValueMap);
+		        RdbmsQueryBuilder.getInstance().getUpdateByCriteriaQuery(tableName, updateColumnToValueMap,
+		                criteriaColumnToValueMap, placeHolderToValueMap);
+		return executeUpdate(updateQuery, placeHolderToValueMap);
 	}
 
 	public <T extends Entity> int delete(Class<T> clazz, Map<String, Object> criteria) throws QueryExecutionException

@@ -1,6 +1,7 @@
 package com.flipkart.portkey.rdbms.persistence;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -109,24 +110,22 @@ public class RdbmsShardingManager implements ShardingManager
 		Map<String, Object> updateColumnToValueMap = RdbmsHelper.generateColumnToValueMap(clazz, updateValuesMap);
 		Map<String, Object> criteriaColumnToValueMap = RdbmsHelper.generateColumnToValueMap(clazz, criteria);
 		String tableName = metaData.getTableName();
-		Map<String, Object> columnToValueMap = PortKeyUtils.mergeMaps(updateColumnToValueMap, criteriaColumnToValueMap);
-		List<String> columnsToBeUpdated = new ArrayList<String>(updateColumnToValueMap.keySet());
-		List<String> columnsInCriteria = new ArrayList<String>(criteriaColumnToValueMap.keySet());
+		Map<String, Object> placeHolderToValueMap = new HashMap<String, Object>();
 		String updateQuery =
-		        RdbmsQueryBuilder.getInstance().getUpdateByCriteriaQuery(tableName, columnsToBeUpdated,
-		                columnsInCriteria, columnToValueMap);
+		        RdbmsQueryBuilder.getInstance().getUpdateByCriteriaQuery(tableName, updateColumnToValueMap,
+		                criteriaColumnToValueMap, placeHolderToValueMap);
 		if (criteria.containsKey(shardKeyFieldName))
 		{
 			String shardKey = PortKeyUtils.toString(criteria.get(shardKeyFieldName));
 			RdbmsPersistenceManager pm = databaseConfig.getPersistenceManager(shardKey);
-			return pm.executeUpdate(updateQuery, columnToValueMap);
+			return pm.executeUpdate(updateQuery, placeHolderToValueMap);
 		}
 		else
 		{
 			List<RdbmsPersistenceManager> persistenceManagersList = databaseConfig.getAllPersistenceManagers();
 			for (RdbmsPersistenceManager pm : persistenceManagersList)
 			{
-				rowsUpdated += pm.executeUpdate(updateQuery, columnToValueMap);
+				rowsUpdated += pm.executeUpdate(updateQuery, placeHolderToValueMap);
 			}
 		}
 		return rowsUpdated;
@@ -156,14 +155,12 @@ public class RdbmsShardingManager implements ShardingManager
 		Map<String, Object> updateFieldNameToValueMap = query.getUpdateFieldNameToValueMap();
 		Map<String, Object> updateColumnToValueMap =
 		        RdbmsHelper.generateColumnToValueMap(query.getClazz(), updateFieldNameToValueMap);
-		Map<String, Object> columnToValueMap = PortKeyUtils.mergeMaps(criteriaColumnToValueMap, updateColumnToValueMap);
-		ArrayList<String> columnsToBeUpdated = new ArrayList<String>(updateColumnToValueMap.keySet());
-		ArrayList<String> columnsInCriteria = new ArrayList<String>(criteriaColumnToValueMap.keySet());
+		Map<String, Object> placeHolderToValueMap = new HashMap<String, Object>();
 		String queryString =
-		        RdbmsQueryBuilder.getInstance().getUpdateByCriteriaQuery(tableName, columnsToBeUpdated,
-		                columnsInCriteria, columnToValueMap);
+		        RdbmsQueryBuilder.getInstance().getUpdateByCriteriaQuery(tableName, updateColumnToValueMap,
+		                criteriaColumnToValueMap, placeHolderToValueMap);
 		sqlQuery.setQuery(queryString);
-		sqlQuery.setColumnToValueMap(columnToValueMap);
+		sqlQuery.setColumnToValueMap(placeHolderToValueMap);
 		return sqlQuery;
 	}
 
