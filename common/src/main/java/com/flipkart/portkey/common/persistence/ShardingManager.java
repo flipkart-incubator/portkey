@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.flipkart.portkey.common.entity.Entity;
+import com.flipkart.portkey.common.entity.JoinEntity;
 import com.flipkart.portkey.common.exception.PortKeyException;
 import com.flipkart.portkey.common.exception.QueryExecutionException;
 import com.flipkart.portkey.common.exception.ShardNotAvailableException;
@@ -63,4 +64,10 @@ public interface ShardingManager
 	public <T extends Entity> int insert(List<T> beans) throws QueryExecutionException;
 
 	public <T extends Entity> TransactionManager getTransactionManager(T bean) throws PortKeyException;
+
+	public <T extends JoinEntity> List<T> getByJoinCriteria(Class<T> clazz, List<String> attributeNames,
+	        Map<String, Object> criteria) throws QueryExecutionException;
+
+	public <T extends JoinEntity> List<T> getByJoinCriteria(Class<T> clazz, List<String> attributeNames,
+	        Map<String, Object> criteria, boolean readMaster) throws QueryExecutionException;
 }

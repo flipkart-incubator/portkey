@@ -18,6 +18,7 @@ import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPoolConfig;
 
 import com.flipkart.portkey.common.entity.Entity;
+import com.flipkart.portkey.common.entity.JoinEntity;
 import com.flipkart.portkey.common.exception.InvalidAnnotationException;
 import com.flipkart.portkey.common.exception.QueryExecutionException;
 import com.flipkart.portkey.common.exception.QueryNotSupportedException;
@@ -384,5 +385,19 @@ public class RedisShardingManager extends RedisPersistenceManager implements Sha
 		Jedis conn = null;
 		conn = cm.getConnection();
 		return new RedisTransactionManager(conn);
+	}
+
+	@Override
+	public <T extends JoinEntity> List<T> getByJoinCriteria(Class<T> clazz, List<String> attributeNames,
+	        Map<String, Object> criteria) throws QueryExecutionException
+	{
+		throw new QueryNotSupportedException("Method not supported for redis implementation");
+	}
+
+	@Override
+	public <T extends JoinEntity> List<T> getByJoinCriteria(Class<T> clazz, List<String> attributeNames,
+	        Map<String, Object> criteria, boolean readMaster) throws QueryExecutionException
+	{
+		throw new QueryNotSupportedException("Method not supported for redis implementation");
 	}
 }

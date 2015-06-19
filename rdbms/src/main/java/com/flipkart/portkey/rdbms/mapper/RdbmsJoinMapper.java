@@ -23,7 +23,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.RowMapper;
 
-import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.common.entity.JoinEntity;
 import com.flipkart.portkey.common.serializer.Serializer;
 import com.flipkart.portkey.common.util.PortKeyUtils;
@@ -34,26 +33,26 @@ import com.flipkart.portkey.rdbms.metadata.RdbmsTableMetaData;
 /**
  * @author santosh.p
  */
-public class RdbmsMapper<V extends Entity> implements RowMapper<V>
+public class RdbmsJoinMapper<V extends JoinEntity> implements RowMapper<V>
 {
-	private static final Logger logger = LoggerFactory.getLogger(RdbmsMapper.class);
+	private static final Logger logger = LoggerFactory.getLogger(RdbmsJoinMapper.class);
 	private Class<V> clazz;
-	private static Map<Class<? extends Entity>, RdbmsMapper<? extends Entity>> classToMapperMap =
-	        new HashMap<Class<? extends Entity>, RdbmsMapper<? extends Entity>>();
+	private static Map<Class<? extends JoinEntity>, RdbmsJoinMapper<? extends JoinEntity>> classToMapperMap =
+	        new HashMap<Class<? extends JoinEntity>, RdbmsJoinMapper<? extends JoinEntity>>();
 	private static final ObjectMapper mapper = new ObjectMapper();
 
-	protected RdbmsMapper(Class<V> clazz)
+	protected RdbmsJoinMapper(Class<V> clazz)
 	{
 		this.clazz = clazz;
 	}
 
-	public static <T extends Entity> RdbmsMapper<T> getInstance(Class<T> clazz)
+	public static <T extends JoinEntity> RdbmsJoinMapper<T> getInstance(Class<T> clazz)
 	{
 		if (classToMapperMap.containsKey(clazz))
 		{
-			return (RdbmsMapper<T>) classToMapperMap.get(clazz);
+			return (RdbmsJoinMapper<T>) classToMapperMap.get(clazz);
 		}
-		RdbmsMapper<T> mapper = new RdbmsMapper(clazz);
+		RdbmsJoinMapper<T> mapper = new RdbmsJoinMapper(clazz);
 		classToMapperMap.put(clazz, mapper);
 		return mapper;
 	}
@@ -71,7 +70,7 @@ public class RdbmsMapper<V extends Entity> implements RowMapper<V>
 		return false;
 	}
 
-	public static <T extends Entity> Object get(T bean, String fieldName)
+	public static <T extends JoinEntity> Object get(T bean, String fieldName)
 	{
 		try
 		{
@@ -115,7 +114,7 @@ public class RdbmsMapper<V extends Entity> implements RowMapper<V>
 		return serialized;
 	}
 
-	public static <T extends Entity> Object get(Class<T> clazz, String fieldName, Object value)
+	public static <T extends JoinEntity> Object get(Class<T> clazz, String fieldName, Object value)
 	{
 		if (value == null || isTypeRdbmsCompatible(value.getClass()))
 		{
@@ -136,7 +135,7 @@ public class RdbmsMapper<V extends Entity> implements RowMapper<V>
 		return serialized;
 	}
 
-	public static <T extends Entity> void put(T bean, String fieldName, Object value)
+	public static <T extends JoinEntity> void put(T bean, String fieldName, Object value)
 	{
 
 		try
@@ -212,14 +211,14 @@ public class RdbmsMapper<V extends Entity> implements RowMapper<V>
 			return null;
 		}
 
-		RdbmsTableMetaData tableMetaData;
-		tableMetaData = RdbmsMetaDataCache.getInstance().getTableMetaData(clazz);
+		RdbmsJoinMetaData joinMetaData;
+		joinMetaData = RdbmsMetaDataCache.getInstance().getJoinMetaData(clazz);
 		ResultSetMetaData metadata = resultSet.getMetaData();
 
 		for (int i = 1; i <= metadata.getColumnCount(); i++)
 		{
 			String columnName = metadata.getColumnLabel(i);
-			String fieldName = tableMetaData.getColumnNameToFieldNameMap().get(columnName);
+			String fieldName = joinMetaData.getColumnNameToFieldNameMap().get(columnName);
 
 			if ((fieldName == null || fieldName.isEmpty()))
 			{

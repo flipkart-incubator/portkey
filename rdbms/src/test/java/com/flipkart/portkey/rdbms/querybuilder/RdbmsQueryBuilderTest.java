@@ -23,7 +23,7 @@ public class RdbmsQueryBuilderTest
 	@Test
 	public void testGetInsertQuery()
 	{
-		RdbmsTableMetaData metaData = RdbmsMetaDataCache.getInstance().getMetaData(Person.class);
+		RdbmsTableMetaData metaData = RdbmsMetaDataCache.getInstance().getTableMetaData(Person.class);
 		String actual = RdbmsQueryBuilder.getInstance().getInsertQuery(metaData);
 		String expected =
 		        "INSERT INTO person" + "\n (`id`,`first_name`,`last_name`,`age`,`mod_count`,`last_modified`)"
@@ -40,7 +40,7 @@ public class RdbmsQueryBuilderTest
 		                + "\n (`id`,`first_name`,`last_name`,`age`,`mod_count`,`last_modified`)"
 		                + "\nVALUES (:id,:first_name,:last_name,:age,:mod_count,now())"
 		                + "\nON DUPLICATE KEY UPDATE `first_name`=:first_name,`last_name`=:last_name,`age`=:age,`mod_count`=mod_count+1,`last_modified`=now()";
-		RdbmsTableMetaData metaData = RdbmsMetaDataCache.getInstance().getMetaData(Person.class);
+		RdbmsTableMetaData metaData = RdbmsMetaDataCache.getInstance().getTableMetaData(Person.class);
 		String actual = RdbmsQueryBuilder.getInstance().getUpsertQuery(metaData);
 		Assert.assertEquals(expected, actual);
 	}
@@ -48,7 +48,7 @@ public class RdbmsQueryBuilderTest
 	@Test
 	public void testGetUpsertQueryWithSpecificColumnsToBeUpdated()
 	{
-		RdbmsTableMetaData metaData = RdbmsMetaDataCache.getInstance().getMetaData(Person.class);
+		RdbmsTableMetaData metaData = RdbmsMetaDataCache.getInstance().getTableMetaData(Person.class);
 		List<String> fieldsToBeUpdatedOnDuplicate = new ArrayList<String>();
 		fieldsToBeUpdatedOnDuplicate.add("firstName");
 		fieldsToBeUpdatedOnDuplicate.add("lastName");
@@ -71,7 +71,7 @@ public class RdbmsQueryBuilderTest
 		                + "\n (`id`,`first_name`,`last_name`,`age`,`mod_count`,`last_modified`)"
 		                + "\nVALUES (:id,:first_name,:last_name,:age,:mod_count,now())"
 		                + "\nON DUPLICATE KEY UPDATE `first_name`=:first_name,`last_name`=:last_name,`age`=:age,`mod_count`=mod_count+1,`last_modified`=now()";
-		RdbmsTableMetaData metaData = RdbmsMetaDataCache.getInstance().getMetaData(Person.class);
+		RdbmsTableMetaData metaData = RdbmsMetaDataCache.getInstance().getTableMetaData(Person.class);
 		String actual = RdbmsQueryBuilder.getInstance().getUpsertQuery(metaData);
 		Assert.assertEquals(expected, actual);
 	}

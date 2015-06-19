@@ -7,7 +7,9 @@ import java.util.List;
 import java.util.Map;
 
 import com.flipkart.portkey.common.entity.Entity;
+import com.flipkart.portkey.common.entity.JoinEntity;
 import com.flipkart.portkey.rdbms.mapper.RdbmsMapper;
+import com.flipkart.portkey.rdbms.metadata.RdbmsJoinMetaData;
 import com.flipkart.portkey.rdbms.metadata.RdbmsMetaDataCache;
 import com.flipkart.portkey.rdbms.metadata.RdbmsTableMetaData;
 import com.flipkart.portkey.rdbms.metadata.annotation.RdbmsField;
@@ -31,11 +33,30 @@ public class RdbmsHelper
 		return columnToValueMap;
 	}
 
+	public static <T extends JoinEntity> Map<String, Object> generateJoinColumnToValueMap(Class<T> clazz,
+	        Map<String, Object> fieldNameToValueMap)
+	{
+		Map<String, Object> columnToValueMap = new HashMap<String, Object>();
+		RdbmsJoinMetaData metaData = RdbmsMetaDataCache.getInstance().getJoinMetaData(clazz);
+		if (fieldNameToValueMap == null || fieldNameToValueMap.size() == 0)
+		{
+			return columnToValueMap;
+		}
+		for (String fieldName : fieldNameToValueMap.keySet())
+		{
+			String columnName = metaData.getColumnNameFromFieldName(fieldName);
+			Object valueBeforeSerialization = fieldNameToValueMap.get(fieldName);
+			Object value = RdbmsMapper.get(clazz, fieldName, valueBeforeSerialization);
+			columnToValueMap.put(columnName, value);
+		}
+		return columnToValueMap;
+	}
+
 	public static <T extends Entity> Map<String, Object> generateColumnToValueMap(Class<T> clazz,
 	        Map<String, Object> fieldNameToValueMap)
 	{
 		Map<String, Object> columnToValueMap = new HashMap<String, Object>();
-		RdbmsTableMetaData metaData = RdbmsMetaDataCache.getInstance().getMetaData(clazz);
+		RdbmsTableMetaData metaData = RdbmsMetaDataCache.getInstance().getTableMetaData(clazz);
 		for (String fieldName : fieldNameToValueMap.keySet())
 		{
 			String columnName = metaData.getColumnNameFromFieldName(fieldName);

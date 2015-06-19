@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
@@ -24,7 +25,6 @@ import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.common.enumeration.ShardStatus;
 import com.flipkart.portkey.common.exception.QueryExecutionException;
 import com.flipkart.portkey.common.persistence.query.SqlQuery;
-import com.flipkart.portkey.rdbms.mapper.RdbmsMapper;
 import com.flipkart.portkey.rdbms.persistence.config.RdbmsConnectionConfig;
 import com.flipkart.portkey.rdbms.transaction.RdbmsTransactionManager;
 
@@ -146,7 +146,7 @@ public class RdbmsPersistenceManager
 	}
 
 	private <T extends Entity> List<T> executeQuery(DataSource dataSource, String query,
-	        Map<String, Object> columnToValueMap, RdbmsMapper<T> mapper) throws QueryExecutionException
+	        Map<String, Object> columnToValueMap, RowMapper<T> mapper) throws QueryExecutionException
 	{
 		List<T> result;
 		NamedParameterJdbcTemplate temp = new NamedParameterJdbcTemplate(dataSource);
@@ -163,7 +163,7 @@ public class RdbmsPersistenceManager
 	}
 
 	public <T extends Entity> List<T> executeQuery(boolean readMaster, String query,
-	        Map<String, Object> columnToValueMap, RdbmsMapper<T> mapper) throws QueryExecutionException
+	        Map<String, Object> columnToValueMap, RowMapper<T> mapper) throws QueryExecutionException
 	{
 		if (readMaster)
 		{

@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.flipkart.portkey.common.entity.Entity;
+import com.flipkart.portkey.common.entity.JoinEntity;
 import com.flipkart.portkey.common.enumeration.DataStoreType;
 import com.flipkart.portkey.common.exception.PortKeyException;
 import com.flipkart.portkey.common.exception.QueryExecutionException;
@@ -58,4 +59,7 @@ public interface PersistenceLayerInterface
 	public Result updateBySql(String databaseName, String sql, Map<String, Object> criteria) throws PortKeyException;
 
 	public <T extends Entity> void insert(List<T> beans) throws PortKeyException;
+
+	public <T extends JoinEntity> List<T> getByJoinCriteria(Class<T> clazz, List<String> attributeNames,
+	        Map<String, Object> criteria) throws PortKeyException;
 }

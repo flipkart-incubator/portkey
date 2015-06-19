@@ -49,7 +49,7 @@ public class RdbmsMultiShardedDatabaseConfig implements RdbmsDatabaseConfig
 	@Override
 	public <T extends Entity> RdbmsPersistenceManager getPersistenceManager(T bean) throws ShardNotAvailableException
 	{
-		RdbmsTableMetaData metaData = metaDataCache.getMetaData(bean.getClass());
+		RdbmsTableMetaData metaData = metaDataCache.getTableMetaData(bean.getClass());
 		String shardKeyFieldName = metaData.getShardKeyFieldName();
 		String shardKey = PortKeyUtils.toString(PortKeyUtils.getFieldValueFromBean(bean, shardKeyFieldName));
 		List<String> liveShards = getShardsAvailableForWrite();
@@ -114,7 +114,7 @@ public class RdbmsMultiShardedDatabaseConfig implements RdbmsDatabaseConfig
 	@Override
 	public <T extends Entity> RdbmsTransactionManager getTransactionManager(T bean) throws ShardNotAvailableException
 	{
-		RdbmsTableMetaData metaData = metaDataCache.getMetaData(bean.getClass());
+		RdbmsTableMetaData metaData = metaDataCache.getTableMetaData(bean.getClass());
 		String shardKeyFieldName = metaData.getShardKeyFieldName();
 		String shardKey = PortKeyUtils.toString(PortKeyUtils.getFieldValueFromBean(bean, shardKeyFieldName));
 		List<String> liveShards = getShardsAvailableForWrite();

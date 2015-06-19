@@ -15,6 +15,7 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.util.Assert;
 
 import com.flipkart.portkey.common.entity.Entity;
+import com.flipkart.portkey.common.entity.JoinEntity;
 import com.flipkart.portkey.common.entity.persistence.EntityPersistencePreference;
 import com.flipkart.portkey.common.entity.persistence.ReadConfig;
 import com.flipkart.portkey.common.entity.persistence.WriteConfig;
@@ -427,6 +428,30 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		        + ", criteria" + criteriaMap);
 	}
 
+	private <T extends JoinEntity> List<T> performGetByJoinCriteriaQuery(Class<T> clazz, List<String> fieldNameList,
+	        Map<String, Object> criteriaMap) throws QueryExecutionException
+	{
+		List<T> result = new ArrayList<T>();
+		ReadConfig readConfig = getReadConfigForEntity(clazz);
+		List<DataStoreType> readOrder = readConfig.getReadOrder();
+		for (DataStoreType type : readOrder)
+		{
+			try
+			{
+				ShardingManager shardingManager = dataStoreTypeToShardingManagerMap.get(type);
+				result = shardingManager.getByJoinCriteria(clazz, fieldNameList, criteriaMap);
+			}
+			catch (QueryExecutionException e)
+			{
+				logger.warn("Exception while trying to fetch from data store:" + type, e);
+				continue;
+			}
+			return result;
+		}
+		throw new QueryExecutionException("Failed to execute query, class=" + clazz + ", fieldNames=" + fieldNameList
+		        + ", criteria" + criteriaMap);
+	}
+
 	@Override
 	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, Map<String, Object> criteriaMap)
 	        throws QueryExecutionException
@@ -594,5 +619,12 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 			        .getTransactionManager(bean));
 		}
 		return new TransactionLayer(dataStoreTypeToTransactionManagerMap);
+	}
+
+	@Override
+	public <T extends JoinEntity> List<T> getByJoinCriteria(Class<T> clazz, List<String> attributeNames,
+	        Map<String, Object> criteria) throws PortKeyException
+	{
+		return performGetByJoinCriteriaQuery(clazz, attributeNames, criteria);
 	}
 }

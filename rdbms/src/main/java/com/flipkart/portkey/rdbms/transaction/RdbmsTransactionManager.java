@@ -126,7 +126,7 @@ public class RdbmsTransactionManager implements TransactionManager
 
 	public <T extends Entity> int insert(T bean) throws QueryExecutionException
 	{
-		RdbmsTableMetaData metaData = metaDataCache.getMetaData(bean.getClass());
+		RdbmsTableMetaData metaData = metaDataCache.getTableMetaData(bean.getClass());
 		String insertQuery = RdbmsQueryBuilder.getInstance().getInsertQuery(metaData);
 		Map<String, Object> columnToValueMap = RdbmsHelper.generateColumnToValueMap(bean, metaData);
 		return executeUpdate(insertQuery, columnToValueMap);
@@ -134,7 +134,7 @@ public class RdbmsTransactionManager implements TransactionManager
 
 	public <T extends Entity> int upsert(T bean) throws QueryExecutionException
 	{
-		RdbmsTableMetaData metaData = metaDataCache.getMetaData(bean.getClass());
+		RdbmsTableMetaData metaData = metaDataCache.getTableMetaData(bean.getClass());
 		String upsertQuery = RdbmsQueryBuilder.getInstance().getUpsertQuery(metaData);
 		Map<String, Object> columnToValueMap = RdbmsHelper.generateColumnToValueMap(bean, metaData);
 		return executeUpdate(upsertQuery, columnToValueMap);
@@ -143,7 +143,7 @@ public class RdbmsTransactionManager implements TransactionManager
 	public <T extends Entity> int upsert(T bean, List<String> columnsToBeUpdatedOnDuplicate)
 	        throws QueryExecutionException
 	{
-		RdbmsTableMetaData metaData = metaDataCache.getMetaData(bean.getClass());
+		RdbmsTableMetaData metaData = metaDataCache.getTableMetaData(bean.getClass());
 		String upsertQuery = RdbmsQueryBuilder.getInstance().getUpsertQuery(metaData, columnsToBeUpdatedOnDuplicate);
 		Map<String, Object> columnToValueMap = RdbmsHelper.generateColumnToValueMap(bean, metaData);
 		return executeUpdate(upsertQuery, columnToValueMap);
@@ -151,7 +151,7 @@ public class RdbmsTransactionManager implements TransactionManager
 
 	public <T extends Entity> int update(T bean) throws QueryExecutionException
 	{
-		RdbmsTableMetaData metaData = metaDataCache.getMetaData(bean.getClass());
+		RdbmsTableMetaData metaData = metaDataCache.getTableMetaData(bean.getClass());
 		String updateQuery = RdbmsQueryBuilder.getInstance().getUpdateByPkQuery(metaData);
 		Map<String, Object> columnToValueMap = RdbmsHelper.generateColumnToValueMap(bean, metaData);
 		return executeUpdate(updateQuery, columnToValueMap);
@@ -160,7 +160,7 @@ public class RdbmsTransactionManager implements TransactionManager
 	public <T extends Entity> int update(Class<T> clazz, Map<String, Object> updateValuesMap,
 	        Map<String, Object> criteria) throws QueryExecutionException
 	{
-		RdbmsTableMetaData metaData = metaDataCache.getMetaData(clazz);
+		RdbmsTableMetaData metaData = metaDataCache.getTableMetaData(clazz);
 		Map<String, Object> updateColumnToValueMap = RdbmsHelper.generateColumnToValueMap(clazz, updateValuesMap);
 		Map<String, Object> criteriaColumnToValueMap = RdbmsHelper.generateColumnToValueMap(clazz, criteria);
 		String tableName = metaData.getTableName();
@@ -173,7 +173,7 @@ public class RdbmsTransactionManager implements TransactionManager
 
 	public <T extends Entity> int delete(Class<T> clazz, Map<String, Object> criteria) throws QueryExecutionException
 	{
-		RdbmsTableMetaData metaData = metaDataCache.getMetaData(clazz);
+		RdbmsTableMetaData metaData = metaDataCache.getTableMetaData(clazz);
 		String tableName = metaData.getTableName();
 		Map<String, Object> deleteCriteriaColumnToValueMap = RdbmsHelper.generateColumnToValueMap(clazz, criteria);
 		String deleteQuery =
@@ -184,7 +184,7 @@ public class RdbmsTransactionManager implements TransactionManager
 	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, Map<String, Object> criteria)
 	        throws QueryExecutionException
 	{
-		RdbmsTableMetaData metaData = metaDataCache.getMetaData(clazz);
+		RdbmsTableMetaData metaData = metaDataCache.getTableMetaData(clazz);
 		String tableName = metaData.getTableName();
 		Map<String, Object> criteriaColumnToValueMap = RdbmsHelper.generateColumnToValueMap(clazz, criteria);
 		String getQuery = RdbmsQueryBuilder.getInstance().getGetByCriteriaQuery(tableName, criteriaColumnToValueMap);
@@ -195,7 +195,7 @@ public class RdbmsTransactionManager implements TransactionManager
 	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, List<String> attributeNames,
 	        Map<String, Object> criteria) throws QueryExecutionException
 	{
-		RdbmsTableMetaData metaData = RdbmsMetaDataCache.getInstance().getMetaData(clazz);
+		RdbmsTableMetaData metaData = RdbmsMetaDataCache.getInstance().getTableMetaData(clazz);
 		String tableName = metaData.getTableName();
 		List<String> columnsInSelect = RdbmsHelper.generateColumnsListFromFieldNamesList(metaData, attributeNames);
 		Map<String, Object> criteriaColumnToValueMap = RdbmsHelper.generateColumnToValueMap(clazz, criteria);

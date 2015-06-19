@@ -12,7 +12,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.flipkart.portkey.common.util.PortKeyUtils;
+import com.flipkart.portkey.rdbms.metadata.RdbmsJoinMetaData;
 import com.flipkart.portkey.rdbms.metadata.RdbmsTableMetaData;
+import com.flipkart.portkey.rdbms.metadata.annotation.JoinCriteria;
+import com.flipkart.portkey.rdbms.metadata.annotation.JoinField;
 import com.flipkart.portkey.rdbms.metadata.annotation.RdbmsField;
 
 /**
@@ -274,5 +277,65 @@ public class RdbmsQueryBuilder
 		String getQuery = SqlBuilder.SQL();
 		logger.debug(getQuery);
 		return getQuery;
+	}
+
+	public String getGetByJoinCriteriaQuery(RdbmsJoinMetaData joinMetaData, List<String> fieldNames,
+	        List<String> criteriaAttributes)
+	{
+		List<JoinCriteria> joinCriteriaList = joinMetaData.getJoinCriteriaList();
+		StringBuilder query = new StringBuilder("SELECT ");
+		StringBuilder attributeListBuilder = new StringBuilder();
+		for (String fieldName : fieldNames)
+		{
+			JoinField field = joinMetaData.getJoinFieldFromFieldName(fieldName);
+			attributeListBuilder.append(joinMetaData.getAliasFromTableName(field.tableName()));
+			attributeListBuilder.append(".");
+			attributeListBuilder.append(field.columnName());
+			attributeListBuilder.append(", ");
+		}
+		query.append(attributeListBuilder.substring(0, attributeListBuilder.length() - 2));
+		query.append("\nFROM ");
+		StringBuilder joinCriteriaBuilder = new StringBuilder();
+		boolean firstCriteria = true;
+		for (JoinCriteria criteria : joinCriteriaList)
+		{
+			if (firstCriteria)
+			{
+				joinCriteriaBuilder.append(criteria.srcTable());
+				joinCriteriaBuilder.append(" AS ");
+				joinCriteriaBuilder.append(joinMetaData.getAliasFromTableName(criteria.srcTable()));
+				firstCriteria = false;
+			}
+			joinCriteriaBuilder.append(" ");
+			joinCriteriaBuilder.append(criteria.joinType());
+			joinCriteriaBuilder.append(" ");
+			joinCriteriaBuilder.append(criteria.destTable());
+			joinCriteriaBuilder.append(" AS ");
+			joinCriteriaBuilder.append(joinMetaData.getAliasFromTableName(criteria.destTable()));
+			joinCriteriaBuilder.append(" ON ");
+			joinCriteriaBuilder.append(joinMetaData.getAliasFromTableName(criteria.srcTable()));
+			joinCriteriaBuilder.append(".");
+			joinCriteriaBuilder.append(criteria.srcColumn());
+			joinCriteriaBuilder.append(criteria.criteriaValue());
+			joinCriteriaBuilder.append(joinMetaData.getAliasFromTableName(criteria.destTable()));
+			joinCriteriaBuilder.append(".");
+			joinCriteriaBuilder.append(criteria.destColumn());
+		}
+		query.append(joinCriteriaBuilder);
+
+		if (criteriaAttributes != null && criteriaAttributes.size() > 0)
+		{
+			StringBuilder queryCriteriaBuilder = new StringBuilder();
+			queryCriteriaBuilder.append("\nWHERE ");
+			for (String attribute : criteriaAttributes)
+			{
+				queryCriteriaBuilder.append(joinMetaData.getAliasFromTableName(joinMetaData
+				        .getTableNameFromFieldName(attribute)) + "." + attribute + "=:" + attribute);
+				queryCriteriaBuilder.append(",");
+			}
+			query.append(queryCriteriaBuilder.substring(0, queryCriteriaBuilder.length() - 1));
+		}
+		logger.debug(query.toString());
+		return query.toString();
 	}
 }
