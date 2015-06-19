@@ -19,8 +19,8 @@
 	<util:map id="databaseNameToDatabaseConfigMap"
 		key-type="java.lang.String"
 		value-type="com.flipkart.portkey.rdbms.persistence.RdbmsDatabaseConfig">
-<!-- 		<entry key="portkey_example" value-ref="databaseConfig" /> -->
-<!-- 		<entry key="portkey_example_sharded" value-ref="shardedDatabaseConfig" /> -->
+		<entry key="portkey_example" value-ref="databaseConfig" />
+		<entry key="portkey_example_sharded" value-ref="shardedDatabaseConfig" />
 		<entry key="test_db" value-ref="databaseConfig_test_db"/>
 	</util:map>
 
