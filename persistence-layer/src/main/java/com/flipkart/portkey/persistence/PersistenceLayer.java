@@ -26,9 +26,11 @@ import com.flipkart.portkey.common.exception.QueryExecutionException;
 import com.flipkart.portkey.common.exception.QueryNotSupportedException;
 import com.flipkart.portkey.common.persistence.PersistenceLayerInterface;
 import com.flipkart.portkey.common.persistence.Result;
+import com.flipkart.portkey.common.persistence.Row;
 import com.flipkart.portkey.common.persistence.ShardingManager;
 import com.flipkart.portkey.common.persistence.TransactionManager;
 import com.flipkart.portkey.common.persistence.query.UpdateQuery;
+import com.flipkart.portkey.persistence.helper.PortKeyHelper;
 
 /**
  * @author santosh.p
@@ -492,10 +494,10 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 	}
 
 	@Override
-	public List<Map<String, Object>> getBySql(String databaseName, String sql, Map<String, Object> criteria)
+	public List<Row> getBySql(String databaseName, String sql, Map<String, Object> criteria)
 	        throws QueryExecutionException
 	{
-		List<Map<String, Object>> result;
+		List<Row> result = new ArrayList<Row>();
 		ReadConfig readConfig = getDefaultReadConfig();
 		List<DataStoreType> readOrder = readConfig.getReadOrder();
 		for (DataStoreType type : readOrder)
@@ -503,7 +505,14 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 			try
 			{
 				ShardingManager shardingManager = dataStoreTypeToShardingManagerMap.get(type);
-				result = shardingManager.getBySql(databaseName, sql, criteria);
+				List<Map<String, Object>> intermediateResult = shardingManager.getBySql(databaseName, sql, criteria);
+				if (intermediateResult != null && intermediateResult.size() > 0)
+				{
+					for (Map<String, Object> map : intermediateResult)
+					{
+						result.add(PortKeyHelper.mapToRow(map));
+					}
+				}
 			}
 			catch (QueryExecutionException e)
 			{

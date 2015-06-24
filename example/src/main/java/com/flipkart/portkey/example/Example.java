@@ -18,8 +18,8 @@ import java.util.Random;
 import java.util.Set;
 
 import org.apache.commons.lang3.RandomStringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.FileSystemXmlApplicationContext;
 
@@ -27,6 +27,7 @@ import com.flipkart.portkey.common.enumeration.DataStoreType;
 import com.flipkart.portkey.common.exception.PortKeyException;
 import com.flipkart.portkey.common.exception.QueryExecutionException;
 import com.flipkart.portkey.common.persistence.Result;
+import com.flipkart.portkey.common.persistence.Row;
 import com.flipkart.portkey.common.persistence.TransactionManager;
 import com.flipkart.portkey.common.persistence.query.UpdateQuery;
 import com.flipkart.portkey.example.dao.Employee;
@@ -39,7 +40,7 @@ import com.flipkart.portkey.persistence.PersistenceLayer;
  */
 public class Example
 {
-	private static Logger logger = LoggerFactory.getLogger(Example.class);
+	private static Logger logger = LogManager.getLogger(Example.class);
 	private static PersistenceLayer pl = null;
 
 	@SuppressWarnings ("resource")
@@ -750,7 +751,7 @@ public class Example
 			return;
 		}
 		Employee emp = insertAndReturnBean();
-		List<Map<String, Object>> tupleList = null;
+		List<Row> tupleList = null;
 		try
 		{
 			tupleList = pl.getBySql("portkey_example", "SELECT * FROM employee", null);
@@ -761,17 +762,17 @@ public class Example
 			}
 			else if (tupleList.size() == 1)
 			{
-				Map<String, Object> columnToValueMap = tupleList.get(0);
+				Row row = tupleList.get(0);
 				Field[] fields = Employee.class.getFields();
 				for (Field field : fields)
 				{
 					field.setAccessible(true);
 					String fieldName = field.getName();
-					if (!columnToValueMap.get(fieldName).equals(field.get(emp)))
+					if (!row.get(fieldName).equals(field.get(emp)))
 					{
 						logger.info("Failure in getRsMapBySql: Inconsistent values for field " + field.getName());
 						logger.info("Expected:" + field.get(emp));
-						logger.info("Received:" + columnToValueMap.get(fieldName));
+						logger.info("Received:" + row.get(fieldName));
 						return;
 					}
 				}
@@ -1611,28 +1612,28 @@ public class Example
 			logger.info("Failed to clean up tables");
 		}
 		EmployeeSharded emp = insertAndReturnBean2();
-		List<Map<String, Object>> tupleList = null;
+		List<Row> rs = null;
 		try
 		{
-			tupleList = pl.getBySql("portkey_example_sharded", "SELECT * FROM employee", null);
-			if (tupleList == null || tupleList.size() == 0)
+			rs = pl.getBySql("portkey_example_sharded", "SELECT * FROM employee", null);
+			if (rs == null || rs.size() == 0)
 			{
 				logger.info("Failure in getBeansBySql2: No rows are returned by query");
 				return;
 			}
-			else if (tupleList.size() == 1)
+			else if (rs.size() == 1)
 			{
-				Map<String, Object> columnToValueMap = tupleList.get(0);
+				Row row = rs.get(0);
 				Field[] fields = EmployeeSharded.class.getFields();
 				for (Field field : fields)
 				{
 					field.setAccessible(true);
 					String fieldName = field.getName();
-					if (!columnToValueMap.get(fieldName).equals(field.get(emp)))
+					if (!row.get(fieldName).equals(field.get(emp)))
 					{
 						logger.info("Failure in getRsMapBySql2: Inconsistent values for field " + field.getName());
 						logger.info("Expected:" + field.get(emp));
-						logger.info("Received:" + columnToValueMap.get(fieldName));
+						logger.info("Received:" + row.get(fieldName));
 						return;
 					}
 				}
