@@ -7,6 +7,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.perf4j.StopWatch;
+import org.perf4j.slf4j.Slf4JStopWatch;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.flipkart.portkey.common.entity.Entity;
 import com.flipkart.portkey.common.entity.JoinEntity;
 import com.flipkart.portkey.common.enumeration.DataStoreType;
@@ -31,9 +36,11 @@ import com.flipkart.portkey.rdbms.transaction.RdbmsTransactionManager;
 
 public class RdbmsShardingManager implements ShardingManager
 {
+	private static Logger logger = LoggerFactory.getLogger(RdbmsShardingManager.class);
 	private Map<String, RdbmsDatabaseConfig> databaseNameToDatabaseConfigMap;
 	private ShardLifeCycleManager shardLifeCycleManager = ShardLifeCycleManagerImpl.getInstance(DataStoreType.RDBMS);
 	private RdbmsMetaDataCache metaDataCache = RdbmsMetaDataCache.getInstance();
+	private static StopWatch stopwatch = new Slf4JStopWatch(logger);
 
 	public void setDatabaseNameToDatabaseConfigMap(Map<String, RdbmsDatabaseConfig> databaseNameToDatabaseConfigMap)
 	{
@@ -375,25 +382,38 @@ public class RdbmsShardingManager implements ShardingManager
 	public <T extends Entity> List<T> getBySql(Class<T> clazz, String sql, Map<String, Object> criteria,
 	        boolean readMaster) throws QueryExecutionException
 	{
+		stopwatch.start("Entry: getBySql");
 		List<T> result = new ArrayList<T>();
 		String databaseName = metaDataCache.getTableMetaData(clazz).getDatabaseName();
+		stopwatch.lap("Fetched db name");
 		RdbmsDatabaseConfig databaseConfig = databaseNameToDatabaseConfigMap.get(databaseName);
+		stopwatch.lap("Fetched db config");
 		String shardKeyFieldName = metaDataCache.getShardKeyFieldName(clazz);
+		stopwatch.lap("Fetched shard key field name");
 		RdbmsMapper<T> mapper = RdbmsMapper.getInstance(clazz);
+		stopwatch.lap("Fetched mapper instance");
 		if (criteria != null && criteria.containsKey(shardKeyFieldName))
 		{
 			String shardKey = PortKeyUtils.toString(criteria.get(shardKeyFieldName));
+			stopwatch.lap("Criteria contains shardkey, fetched shard key");
 			RdbmsPersistenceManager pm = databaseConfig.getPersistenceManager(shardKey);
+			stopwatch.lap("Fetched persistence manager");
 			result = pm.executeQuery(readMaster, sql, criteria, mapper);
+			stopwatch.lap("Received result");
 		}
 		else
 		{
+			stopwatch.lap("Criteria doesn't contain shardkey");
 			List<RdbmsPersistenceManager> persistenceManagersList = databaseConfig.getAllPersistenceManagers();
+			stopwatch.lap("Fetched all persistence managers");
 			for (RdbmsPersistenceManager pm : persistenceManagersList)
 			{
+				stopwatch.lap("Fetching data from " + pm);
 				result.addAll(pm.executeQuery(readMaster, sql, criteria, mapper));
+				stopwatch.lap("Added data to result");
 			}
 		}
+		stopwatch.lap("Returning result");
 		return result;
 	}
 

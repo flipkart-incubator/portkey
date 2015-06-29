@@ -9,6 +9,8 @@ import java.util.Map;
 
 import javax.sql.DataSource;
 
+import org.perf4j.StopWatch;
+import org.perf4j.slf4j.Slf4JStopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
@@ -37,6 +39,7 @@ public class RdbmsPersistenceManager
 	private final DataSource master;
 	private final List<DataSource> slaves;
 	private DataSourceTransactionManager transactionManager;
+	private static StopWatch stopwatch = new Slf4JStopWatch(logger);
 
 	public RdbmsPersistenceManager(RdbmsConnectionConfig config)
 	{
