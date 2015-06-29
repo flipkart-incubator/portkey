@@ -17,44 +17,73 @@ public class Row
 		this.map = map;
 	}
 
-	public Byte getByte(String key)
+	public String getString(String key)
 	{
-		return (Byte) map.get(key);
+		if (map.get(key) != null)
+		{
+			return map.get(key).toString();
+		}
+		return null;
 	}
 
 	public Short getShort(String key)
 	{
-		return (Short) map.get(key);
+		String value = getString(key);
+		if (value != null)
+		{
+			return Short.valueOf(value);
+		}
+		return null;
 	}
 
 	public Integer getInt(String key)
 	{
-		return (Integer) map.get(key);
+		String value = getString(key);
+		if (value != null)
+		{
+			return Integer.valueOf(value);
+		}
+		return null;
 	}
 
 	public Long getLong(String key)
 	{
-		return (Long) map.get(key);
+		String value = getString(key);
+		if (value != null)
+		{
+			return Long.valueOf(value);
+		}
+		return null;
 	}
 
 	public Float getFloat(String key)
 	{
-		return (Float) map.get(key);
+		String value = getString(key);
+		if (value != null)
+		{
+			return Float.valueOf(value);
+		}
+		return null;
 	}
 
 	public Double getDouble(String key)
 	{
-		return (Double) map.get(key);
+		String value = getString(key);
+		if (value != null)
+		{
+			return Double.valueOf(value);
+		}
+		return null;
 	}
 
 	public Boolean getBoolean(String key)
 	{
-		return (Boolean) map.get(key);
-	}
-
-	public String getString(String key)
-	{
-		return (String) map.get(key);
+		String value = getString(key);
+		if (value != null)
+		{
+			return Boolean.valueOf(value);
+		}
+		return null;
 	}
 
 	public Object get(String key)

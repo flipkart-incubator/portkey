@@ -41,19 +41,38 @@ public interface PersistenceLayerInterface
 	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, Map<String, Object> criteria)
 	        throws PortKeyException;
 
+	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, Map<String, Object> criteria, boolean readMaster)
+	        throws PortKeyException;
+
 	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, List<String> attributeNames,
 	        Map<String, Object> criteria) throws PortKeyException;
+
+	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, List<String> attributeNames,
+	        Map<String, Object> criteria, boolean readMaster) throws PortKeyException;
 
 	public <T extends Entity> List<T> getBySql(Class<T> clazz, String sql, Map<String, Object> criteria)
 	        throws PortKeyException;
 
+	public <T extends Entity> List<T> getBySql(Class<T> clazz, String sql, Map<String, Object> criteria,
+	        boolean readMaster) throws PortKeyException;
+
 	public List<Row> getBySql(String databaseName, String sql, Map<String, Object> criteria) throws PortKeyException;
+
+	public List<Row> getBySql(String databaseName, String sql, Map<String, Object> criteria, boolean readMaster)
+	        throws PortKeyException;
 
 	public <T extends Entity> List<T> getBySql(Class<T> clazz, Map<DataStoreType, String> sqlMap,
 	        Map<String, Object> criteria) throws PortKeyException;
 
+	public <T extends Entity> List<T> getBySql(Class<T> clazz, Map<DataStoreType, String> sqlMap,
+	        Map<String, Object> criteria, boolean readMaster) throws PortKeyException;
+
 	public List<Map<String, Object>> getBySql(Map<DataStoreType, String> datastoreToDatabaseNameMap,
 	        Map<DataStoreType, String> sqlMap, Map<String, Object> criteria) throws PortKeyException;
+
+	public List<Map<String, Object>> getBySql(Map<DataStoreType, String> datastoreToDatabaseNameMap,
+	        Map<DataStoreType, String> sqlMap, Map<String, Object> criteria, boolean readMaster)
+	        throws PortKeyException;
 
 	public Result updateBySql(String databaseName, String sql, Map<String, Object> criteria) throws PortKeyException;
 
@@ -61,4 +80,7 @@ public interface PersistenceLayerInterface
 
 	public <T extends JoinEntity> List<T> getByJoinCriteria(Class<T> clazz, List<String> attributeNames,
 	        Map<String, Object> criteria) throws PortKeyException;
+
+	public <T extends JoinEntity> List<T> getByJoinCriteria(Class<T> clazz, List<String> attributeNames,
+	        Map<String, Object> criteria, boolean readMaster) throws PortKeyException;
 }

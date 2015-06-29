@@ -400,7 +400,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 	}
 
 	private <T extends Entity> List<T> performGetByCriteriaQuery(Class<T> clazz, List<String> fieldNameList,
-	        Map<String, Object> criteriaMap) throws QueryExecutionException
+	        Map<String, Object> criteriaMap, boolean readMaster) throws QueryExecutionException
 	{
 		List<T> result = new ArrayList<T>();
 		ReadConfig readConfig = getReadConfigForEntity(clazz);
@@ -412,11 +412,11 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 				ShardingManager shardingManager = dataStoreTypeToShardingManagerMap.get(type);
 				if (fieldNameList == null)
 				{
-					result = shardingManager.getByCriteria(clazz, criteriaMap);
+					result = shardingManager.getByCriteria(clazz, criteriaMap, readMaster);
 				}
 				else
 				{
-					result = shardingManager.getByCriteria(clazz, fieldNameList, criteriaMap);
+					result = shardingManager.getByCriteria(clazz, fieldNameList, criteriaMap, readMaster);
 				}
 			}
 			catch (QueryExecutionException e)
@@ -431,7 +431,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 	}
 
 	private <T extends JoinEntity> List<T> performGetByJoinCriteriaQuery(Class<T> clazz, List<String> fieldNameList,
-	        Map<String, Object> criteriaMap) throws QueryExecutionException
+	        Map<String, Object> criteriaMap, boolean readMaster) throws QueryExecutionException
 	{
 		List<T> result = new ArrayList<T>();
 		ReadConfig readConfig = getReadConfigForEntity(clazz);
@@ -441,7 +441,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 			try
 			{
 				ShardingManager shardingManager = dataStoreTypeToShardingManagerMap.get(type);
-				result = shardingManager.getByJoinCriteria(clazz, fieldNameList, criteriaMap);
+				result = shardingManager.getByJoinCriteria(clazz, fieldNameList, criteriaMap, readMaster);
 			}
 			catch (QueryExecutionException e)
 			{
@@ -455,22 +455,36 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 	}
 
 	@Override
+	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, Map<String, Object> criteriaMap, boolean readMaster)
+	        throws QueryExecutionException
+	{
+		return performGetByCriteriaQuery(clazz, null, criteriaMap, readMaster);
+	}
+
+	@Override
 	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, Map<String, Object> criteriaMap)
 	        throws QueryExecutionException
 	{
-		return performGetByCriteriaQuery(clazz, null, criteriaMap);
+		return getByCriteria(clazz, criteriaMap, false);
+	}
+
+	@Override
+	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, List<String> fieldNameList,
+	        Map<String, Object> criteriaMap, boolean readMaster) throws QueryExecutionException
+	{
+		return performGetByCriteriaQuery(clazz, fieldNameList, criteriaMap, readMaster);
 	}
 
 	@Override
 	public <T extends Entity> List<T> getByCriteria(Class<T> clazz, List<String> fieldNameList,
 	        Map<String, Object> criteriaMap) throws QueryExecutionException
 	{
-		return performGetByCriteriaQuery(clazz, fieldNameList, criteriaMap);
+		return getByCriteria(clazz, fieldNameList, criteriaMap, false);
 	}
 
 	@Override
-	public <T extends Entity> List<T> getBySql(Class<T> clazz, String sql, Map<String, Object> criteria)
-	        throws QueryExecutionException
+	public <T extends Entity> List<T> getBySql(Class<T> clazz, String sql, Map<String, Object> criteria,
+	        boolean readMaster) throws QueryExecutionException
 	{
 		List<T> result = new ArrayList<T>();
 		ReadConfig readConfig = getReadConfigForEntity(clazz);
@@ -480,7 +494,7 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 			try
 			{
 				ShardingManager shardingManager = dataStoreTypeToShardingManagerMap.get(type);
-				result = shardingManager.getBySql(clazz, sql, criteria);
+				result = shardingManager.getBySql(clazz, sql, criteria, readMaster);
 			}
 			catch (QueryExecutionException e)
 			{
@@ -494,7 +508,14 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 	}
 
 	@Override
-	public List<Row> getBySql(String databaseName, String sql, Map<String, Object> criteria)
+	public <T extends Entity> List<T> getBySql(Class<T> clazz, String sql, Map<String, Object> criteria)
+	        throws QueryExecutionException
+	{
+		return getBySql(clazz, sql, criteria, false);
+	}
+
+	@Override
+	public List<Row> getBySql(String databaseName, String sql, Map<String, Object> criteria, boolean readMaster)
 	        throws QueryExecutionException
 	{
 		List<Row> result = new ArrayList<Row>();
@@ -505,7 +526,8 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 			try
 			{
 				ShardingManager shardingManager = dataStoreTypeToShardingManagerMap.get(type);
-				List<Map<String, Object>> intermediateResult = shardingManager.getBySql(databaseName, sql, criteria);
+				List<Map<String, Object>> intermediateResult =
+				        shardingManager.getBySql(databaseName, sql, criteria, readMaster);
 				if (intermediateResult != null && intermediateResult.size() > 0)
 				{
 					for (Map<String, Object> map : intermediateResult)
@@ -525,8 +547,15 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 	}
 
 	@Override
+	public List<Row> getBySql(String databaseName, String sql, Map<String, Object> criteria)
+	        throws QueryExecutionException
+	{
+		return getBySql(databaseName, sql, criteria, false);
+	}
+
+	@Override
 	public <T extends Entity> List<T> getBySql(Class<T> clazz, Map<DataStoreType, String> sqlMap,
-	        Map<String, Object> criteria) throws QueryExecutionException
+	        Map<String, Object> criteria, boolean readMaster) throws QueryExecutionException
 	{
 		List<T> result = null;
 		ReadConfig readConfig = getReadConfigForEntity(clazz);
@@ -551,8 +580,15 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 	}
 
 	@Override
+	public <T extends Entity> List<T> getBySql(Class<T> clazz, Map<DataStoreType, String> sqlMap,
+	        Map<String, Object> criteria) throws QueryExecutionException
+	{
+		return getBySql(clazz, sqlMap, criteria, false);
+	}
+
+	@Override
 	public List<Map<String, Object>> getBySql(Map<DataStoreType, String> datStoreTypeToDatabaseNameMap,
-	        Map<DataStoreType, String> dataStoreTypeToSqlMap, Map<String, Object> criteria)
+	        Map<DataStoreType, String> dataStoreTypeToSqlMap, Map<String, Object> criteria, boolean readMaster)
 	        throws QueryExecutionException
 	{
 		List<Map<String, Object>> result = null;
@@ -577,6 +613,14 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 		}
 		throw new QueryExecutionException("Failed to execute query sqlMap=" + dataStoreTypeToSqlMap + ", criteria="
 		        + criteria);
+	}
+
+	@Override
+	public List<Map<String, Object>> getBySql(Map<DataStoreType, String> datStoreTypeToDatabaseNameMap,
+	        Map<DataStoreType, String> dataStoreTypeToSqlMap, Map<String, Object> criteria)
+	        throws QueryExecutionException
+	{
+		return getBySql(datStoreTypeToDatabaseNameMap, dataStoreTypeToSqlMap, criteria, false);
 	}
 
 	@Override
@@ -632,8 +676,15 @@ public class PersistenceLayer implements PersistenceLayerInterface, Initializing
 
 	@Override
 	public <T extends JoinEntity> List<T> getByJoinCriteria(Class<T> clazz, List<String> attributeNames,
+	        Map<String, Object> criteria, boolean readMaster) throws PortKeyException
+	{
+		return performGetByJoinCriteriaQuery(clazz, attributeNames, criteria, readMaster);
+	}
+
+	@Override
+	public <T extends JoinEntity> List<T> getByJoinCriteria(Class<T> clazz, List<String> attributeNames,
 	        Map<String, Object> criteria) throws PortKeyException
 	{
-		return performGetByJoinCriteriaQuery(clazz, attributeNames, criteria);
+		return getByJoinCriteria(clazz, attributeNames, criteria, false);
 	}
 }
