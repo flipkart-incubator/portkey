@@ -165,23 +165,23 @@ public class RdbmsMapper<V extends Entity> implements RowMapper<V>
 		}
 		catch (IllegalAccessException e)
 		{
-			logger.info("Exception while trying to set field value into bean, bean:" + bean + ", fieldName:"
-			        + fieldName + ", value:" + value, e);
+			logger.info("Exception while trying to set field value into bean, bean:" + bean + ", fieldName:" + fieldName
+			        + ", value:" + value, e);
 		}
 		catch (InvocationTargetException e)
 		{
-			logger.info("Exception while trying to set field value into bean, bean:" + bean + ", fieldName:"
-			        + fieldName + ", value:" + value, e);
+			logger.info("Exception while trying to set field value into bean, bean:" + bean + ", fieldName:" + fieldName
+			        + ", value:" + value, e);
 		}
 		catch (NoSuchMethodException e)
 		{
-			logger.info("Exception while trying to set field value into bean, bean:" + bean + ", fieldName:"
-			        + fieldName + ", value:" + value, e);
+			logger.info("Exception while trying to set field value into bean, bean:" + bean + ", fieldName:" + fieldName
+			        + ", value:" + value, e);
 		}
 		catch (IllegalArgumentException e)
 		{
-			logger.info("Exception while trying to set field value into bean, bean:" + bean + ", fieldName:"
-			        + fieldName + ", value:" + value, e);
+			logger.info("Exception while trying to set field value into bean, bean:" + bean + ", fieldName:" + fieldName
+			        + ", value:" + value, e);
 		}
 	}
 
@@ -220,6 +220,11 @@ public class RdbmsMapper<V extends Entity> implements RowMapper<V>
 		{
 			String columnName = metadata.getColumnLabel(i);
 			String fieldName = tableMetaData.getColumnNameToFieldNameMap().get(columnName);
+
+			if ((fieldName == null || fieldName.isEmpty()))
+			{
+				fieldName = tableMetaData.getColumnNameToFieldNameMap().get(columnName.toLowerCase());
+			}
 
 			if ((fieldName == null || fieldName.isEmpty()))
 			{
